@@ -1,8 +1,16 @@
 export function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:2000';
+  if (process.env.NEXT_PUBLIC_API_URL !== undefined && process.env.NEXT_PUBLIC_API_URL !== '') {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 }
 
 export function getSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
 }
-
