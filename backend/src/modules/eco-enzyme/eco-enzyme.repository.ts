@@ -1,4 +1,4 @@
-import { PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, Product } from "../../../generated/prisma";
+import { PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, Product, QrCode } from "../../../generated/prisma";
 import { normalizeBatchCode } from "../../utils/code";
 
 export interface FindAllBatchesOptions {
@@ -20,6 +20,7 @@ export class EcoEnzymeRepository {
     data: (EcoEnzymeBatch & {
       _count: { inspectionLogs: number };
       allocatedProduct?: Product | null;
+      qrCode?: QrCode | null;
       previousBatch?: { id: string; publicCode: string; containerName: string } | null;
       nextBatches?: { id: string; publicCode: string; containerName: string }[];
     })[];
@@ -64,6 +65,7 @@ export class EcoEnzymeRepository {
             select: { inspectionLogs: true },
           },
           allocatedProduct: true,
+          qrCode: true,
           previousBatch: {
             select: {
               id: true,
@@ -91,6 +93,7 @@ export class EcoEnzymeRepository {
   async findById(id: string): Promise<(EcoEnzymeBatch & {
     inspectionLogs: EcoEnzymeLog[];
     allocatedProduct?: Product | null;
+    qrCode?: QrCode | null;
     previousBatch?: { id: string; publicCode: string; containerName: string } | null;
     nextBatches?: { id: string; publicCode: string; containerName: string }[];
   }) | null> {
@@ -101,6 +104,7 @@ export class EcoEnzymeRepository {
           orderBy: { logDate: "desc" },
         },
         allocatedProduct: true,
+        qrCode: true,
         previousBatch: {
           select: {
             id: true,
@@ -121,9 +125,38 @@ export class EcoEnzymeRepository {
     });
   }
 
-  async findByBatchCode(batchCode: string): Promise<EcoEnzymeBatch | null> {
-    return this.prisma.ecoEnzymeBatch.findUnique({
-      where: { batchCode },
+  async findByBatchCode(batchCode: string): Promise<(EcoEnzymeBatch & { qrCode?: QrCode | null }) | null> {
+    return this.prisma.ecoEnzymeBatch.findFirst({
+      where: { batchCode: { equals: batchCode.trim(), mode: "insensitive" } },
+      include: { qrCode: true },
+      orderBy: [
+        { archivedAt: { sort: "asc", nulls: "first" } },
+        { createdAt: "desc" },
+      ],
+    });
+  }
+
+  async findByBatchCodeOrContainerName(
+    batchCode: string | null,
+    containerName: string
+  ): Promise<(EcoEnzymeBatch & { qrCode?: QrCode | null }) | null> {
+    const trimmedName = containerName.trim();
+    const orConditions: any[] = [];
+    if (batchCode?.trim()) {
+      orConditions.push({ batchCode: { equals: batchCode.trim(), mode: "insensitive" } });
+    }
+    if (trimmedName) {
+      orConditions.push({ containerName: { equals: trimmedName, mode: "insensitive" } });
+    }
+    if (orConditions.length === 0) return null;
+
+    return this.prisma.ecoEnzymeBatch.findFirst({
+      where: { OR: orConditions },
+      include: { qrCode: true },
+      orderBy: [
+        { archivedAt: { sort: "asc", nulls: "first" } },
+        { createdAt: "desc" },
+      ],
     });
   }
 
@@ -138,8 +171,13 @@ export class EcoEnzymeRepository {
           { batchCode: { equals: rawTrimmed, mode: "insensitive" } },
           { batchCode: { equals: normalized, mode: "insensitive" } },
           { containerName: { equals: rawTrimmed, mode: "insensitive" } },
+          { qrCode: { code: { equals: normalized, mode: "insensitive" } } },
         ],
       },
+      orderBy: [
+        { archivedAt: { sort: "asc", nulls: "first" } },
+        { createdAt: "desc" },
+      ],
       select: {
         id: true,
         publicCode: true,
@@ -157,6 +195,8 @@ export class EcoEnzymeRepository {
         residueUsage: true,
         archivedAt: true,
         qrPrintedAt: true,
+        qrCodeId: true,
+        qrCode: true,
         updatedAt: true,
         previousBatch: {
           select: {
@@ -190,10 +230,70 @@ export class EcoEnzymeRepository {
 
   async existsByPublicCode(publicCode: string): Promise<boolean> {
     const normalized = normalizeBatchCode(publicCode);
-    const count = await this.prisma.ecoEnzymeBatch.count({
-      where: { publicCode: normalized },
+    const [batchCount, qrCount] = await Promise.all([
+      this.prisma.ecoEnzymeBatch.count({
+        where: { publicCode: normalized },
+      }),
+      this.prisma.qrCode.count({
+        where: { code: normalized },
+      }),
+    ]);
+    return batchCount > 0 || qrCount > 0;
+  }
+
+  async findQrCodeByCode(code: string): Promise<QrCode | null> {
+    const normalized = normalizeBatchCode(code);
+    if (!normalized) return null;
+    return this.prisma.qrCode.findFirst({
+      where: { code: { equals: normalized, mode: "insensitive" } },
     });
-    return count > 0;
+  }
+
+  async findQrCodeByKeyOrName(
+    entityType: string,
+    primaryKey: string | null,
+    primaryName: string
+  ): Promise<QrCode | null> {
+    if (primaryKey) {
+      const byKey = await this.prisma.qrCode.findFirst({
+        where: {
+          entityType,
+          primaryKey: { equals: primaryKey, mode: "insensitive" },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      if (byKey) return byKey;
+    }
+
+    if (primaryName) {
+      const byName = await this.prisma.qrCode.findFirst({
+        where: {
+          entityType,
+          primaryName: { equals: primaryName, mode: "insensitive" },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      if (byName) return byName;
+    }
+
+    return null;
+  }
+
+  async createQrCode(data: {
+    code: string;
+    entityType: string;
+    primaryKey: string | null;
+    primaryName: string;
+    targetUrl: string;
+  }): Promise<QrCode> {
+    return this.prisma.qrCode.create({ data });
+  }
+
+  async linkQrCodeToBatch(batchId: string, qrCodeId: string): Promise<void> {
+    await this.prisma.ecoEnzymeBatch.updateMany({
+      where: { id: batchId, qrCodeId: null },
+      data: { qrCodeId },
+    });
   }
 
   async create(data: {
@@ -210,7 +310,8 @@ export class EcoEnzymeRepository {
     photoUrl?: string | null;
     notes?: string | null;
     previousBatchId?: string | null;
-  }): Promise<EcoEnzymeBatch> {
+    qrCodeId?: string | null;
+  }): Promise<EcoEnzymeBatch & { qrCode?: QrCode | null }> {
     return this.prisma.ecoEnzymeBatch.create({
       data: {
         publicCode: data.publicCode,
@@ -226,7 +327,11 @@ export class EcoEnzymeRepository {
         photoUrl: data.photoUrl,
         notes: data.notes,
         previousBatchId: data.previousBatchId || null,
+        qrCodeId: data.qrCodeId ?? null,
         status: "IN_PROGRESS",
+      },
+      include: {
+        qrCode: true,
       },
     });
   }
@@ -257,14 +362,16 @@ export class EcoEnzymeRepository {
       qrPrintedAt: Date | null;
     }>
   ): Promise<EcoEnzymeBatch> {
-    // KEAMANAN KETAT: publicCode dibuang jika terkirim ke update
+    // KEAMANAN KETAT: publicCode & qrCodeId dibuang jika terkirim ke update
     const sanitizedData = { ...data };
     delete (sanitizedData as any).publicCode;
+    delete (sanitizedData as any).qrCodeId;
     delete (sanitizedData as any).id;
 
     return this.prisma.ecoEnzymeBatch.update({
       where: { id },
       data: sanitizedData,
+      include: { qrCode: true },
     });
   }
 
@@ -274,6 +381,7 @@ export class EcoEnzymeRepository {
       data: {
         archivedAt: new Date(),
       },
+      include: { qrCode: true },
     });
   }
 
@@ -283,6 +391,7 @@ export class EcoEnzymeRepository {
       data: {
         archivedAt: null,
       },
+      include: { qrCode: true },
     });
   }
 
@@ -292,6 +401,7 @@ export class EcoEnzymeRepository {
       data: {
         qrPrintedAt: new Date(),
       },
+      include: { qrCode: true },
     });
   }
 
@@ -321,6 +431,9 @@ export class EcoEnzymeRepository {
           allocatedProductId: data.allocatedProductId,
           allocatedUnitsAdded: data.allocatedUnitsAdded ?? 0,
           notes: data.notes,
+        },
+        include: {
+          qrCode: true,
         },
       });
 

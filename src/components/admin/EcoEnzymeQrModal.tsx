@@ -19,11 +19,11 @@ import {
   Settings,
   RotateCcw,
 } from 'lucide-react';
-import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
-import { EcoEnzymeBatch } from '@/types';
+import { EcoEnzymeBatch, QrCodeRecord } from '@/types';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
-import { buildBatchUrl } from '@/lib/batch-url';
+import { buildBatchUrl, isTemporaryBaseUrl } from '@/lib/batch-url';
 import { parseOrganicWasteTypes } from '@/lib/eco-enzyme';
+import { PersistentQrCode } from '@/components/shared/PersistentQrCode';
 import { toast } from 'sonner';
 
 interface EcoEnzymeQrModalProps {
@@ -31,6 +31,7 @@ interface EcoEnzymeQrModalProps {
   onClose: () => void;
   batch: EcoEnzymeBatch | null;
   onQrPrinted?: () => void;
+  onQrSaved?: (qr: QrCodeRecord) => void;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -48,8 +49,13 @@ export function EcoEnzymeQrModal({
   onClose,
   batch,
   onQrPrinted,
+  onQrSaved,
 }: EcoEnzymeQrModalProps) {
   const [copied, setCopied] = useState(false);
+  const [savedQrOverride, setSavedQrOverride] = useState<{
+    batchId: string;
+    qrCode: QrCodeRecord;
+  } | null>(null);
   const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('tp_qr_base_url') || '';
@@ -89,8 +95,30 @@ export function EcoEnzymeQrModal({
     setShowDomainInput(false);
   };
 
+  const activeQr =
+    (savedQrOverride?.batchId === batch.id ? savedQrOverride.qrCode : null) ||
+    batch.qrCode ||
+    null;
+  const effectiveCode = activeQr?.code || batch.publicCode;
+  const storedTargetUrl = activeQr?.targetUrl?.trim() || '';
+  const isStoredTargetPublic =
+    Boolean(storedTargetUrl) &&
+    (storedTargetUrl.startsWith('https://') || storedTargetUrl.startsWith('http://')) &&
+    !isTemporaryBaseUrl(storedTargetUrl);
+
+  let storedOrigin = '';
+  if (isStoredTargetPublic) {
+    try {
+      storedOrigin = new URL(storedTargetUrl).origin;
+    } catch {
+      storedOrigin = '';
+    }
+  }
+
   const effectiveBaseUrl =
-    customBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+    customBaseUrl ||
+    storedOrigin ||
+    (typeof window !== 'undefined' ? window.location.origin : '');
   const isLocalhost =
     effectiveBaseUrl.includes('localhost') || effectiveBaseUrl.includes('127.0.0.1');
   const isPrivateIp =
@@ -100,11 +128,12 @@ export function EcoEnzymeQrModal({
     effectiveBaseUrl.includes('172.31.');
   const isPublicUrl = !isLocalhost && !isPrivateIp;
 
-  const qrCanonicalUrl = buildBatchUrl(batch.publicCode, {
-    short: true,
-    baseUrl: customBaseUrl || undefined,
-  });
-  const fullWebUrl = buildBatchUrl(batch.publicCode, {
+  const qrCanonicalUrl = customBaseUrl
+    ? buildBatchUrl(effectiveCode, { short: true, baseUrl: customBaseUrl })
+    : isStoredTargetPublic
+    ? storedTargetUrl
+    : buildBatchUrl(effectiveCode, { short: true });
+  const fullWebUrl = buildBatchUrl(effectiveCode, {
     short: false,
     baseUrl: customBaseUrl || undefined,
   });
@@ -207,7 +236,7 @@ export function EcoEnzymeQrModal({
       ctx.stroke();
 
       // Kode Galon Badge
-      const gallonCode = batch.batchCode || batch.publicCode;
+      const gallonCode = batch.batchCode || effectiveCode;
       ctx.fillStyle = '#EBF4E9';
       ctx.fillRect(40, 90, width - 80, 34);
       ctx.strokeStyle = '#2C5F2D';
@@ -224,7 +253,7 @@ export function EcoEnzymeQrModal({
       // Public code text
       ctx.fillStyle = '#666666';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(batch.publicCode, width / 2, 322);
+      ctx.fillText(effectiveCode, width / 2, 322);
 
       // Box Detail Bahan & Tanggal
       ctx.fillStyle = '#FAFBF9';
@@ -291,7 +320,7 @@ export function EcoEnzymeQrModal({
       const pngUrl = exportCanvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = pngUrl;
-      link.download = `label-galon-${batch.batchCode || batch.publicCode}.png`;
+      link.download = `label-galon-${batch.batchCode || effectiveCode}.png`;
       link.click();
 
       toast.success('Label stiker galon PNG berhasil diunduh');
@@ -321,7 +350,7 @@ export function EcoEnzymeQrModal({
       const url = URL.createObjectURL(svgBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `qr-${batch.batchCode || batch.publicCode}.svg`;
+      link.download = `qr-${batch.batchCode || effectiveCode}.svg`;
       link.click();
       URL.revokeObjectURL(url);
 
@@ -352,7 +381,7 @@ export function EcoEnzymeQrModal({
               {batch.containerName}
             </h3>
             <p className="text-xs text-stone-500 font-mono">
-              Kode Galon: <strong className="text-emerald-800">{batch.batchCode || batch.publicCode}</strong>
+              Kode Galon: <strong className="text-emerald-800">{batch.batchCode || effectiveCode}</strong>
             </p>
           </div>
           <button
@@ -400,30 +429,29 @@ export function EcoEnzymeQrModal({
             <div className="mb-2.5 w-full bg-[#EBF4E9] py-1.5 px-3 rounded-lg border border-[#CFE1CC]">
               <span className="text-[10px] uppercase font-bold text-stone-500 block">KODE GALON</span>
               <span className="font-mono text-base font-black text-[#012D1D] tracking-wider">
-                {batch.batchCode || batch.publicCode}
+                {batch.batchCode || effectiveCode}
               </span>
             </div>
 
             {/* QR CODE DISPLAY */}
-            <div
-              ref={canvasRef}
-              className="bg-white p-2.5 rounded-xl border border-stone-200 shadow-xs inline-block mb-2"
-            >
-              <QRCodeCanvas
+            <div className="mb-2">
+              <PersistentQrCode
                 value={qrCanonicalUrl}
+                qrCode={batch.qrCode}
+                entityType="ECO_ENZYME_BATCH"
+                entityId={batch.id}
+                entityKey={batch.batchCode}
+                entityName={batch.containerName}
                 size={160}
                 level="Q"
                 marginSize={2}
-              />
-            </div>
-
-            {/* Hidden SVG for raw export */}
-            <div ref={svgRef} className="hidden">
-              <QRCodeSVG
-                value={qrCanonicalUrl}
-                size={300}
-                level="Q"
-                marginSize={2}
+                canvasWrapperRef={canvasRef}
+                svgWrapperRef={svgRef}
+                reused={batch.reusedQr}
+                onSaved={(savedQr) => {
+                  setSavedQrOverride({ batchId: batch.id, qrCode: savedQr });
+                  onQrSaved?.(savedQr);
+                }}
               />
             </div>
 

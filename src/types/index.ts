@@ -1,3 +1,15 @@
+export interface QrCodeRecord {
+  id: string;
+  code: string;
+  entityType: 'ECO_ENZYME_BATCH' | 'PRODUCT' | (string & {});
+  primaryKey?: string | null;
+  primaryName: string;
+  targetUrl: string;
+  qrDataUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Program {
   id: string;
   title: string;
@@ -17,6 +29,8 @@ export interface Program {
 
 export interface Product {
   id: string;
+
+  productCode?: string;
 
   name: string;
 
@@ -42,6 +56,9 @@ export interface Product {
     | 'OUT_OF_STOCK';
 
   whatsappLink: string;
+
+  qrCodeId?: string | null;
+  qrCode?: QrCodeRecord | null;
 }
 
 export interface News {
@@ -239,6 +256,9 @@ export interface EcoEnzymeBatch {
   notes?: string | null;
   archivedAt?: string | null;
   qrPrintedAt?: string | null;
+  qrCodeId?: string | null;
+  qrCode?: QrCodeRecord | null;
+  reusedQr?: boolean;
   previousBatchId?: string | null;
   previousBatch?: { id: string; publicCode: string; containerName: string } | null;
   nextBatch?: { id: string; publicCode: string; containerName: string } | null;

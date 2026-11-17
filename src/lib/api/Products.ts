@@ -18,7 +18,13 @@ export const BASE_URL = getBaseUrl();
 // ─── Helper: bangun URL gambar penuh ─────────────────────────────────────────
 export function getImageUrl(imagePath?: string | null): string {
   if (!imagePath) return '';
-  if (imagePath.startsWith('http')) return imagePath;
+  if (
+    imagePath.startsWith('http') ||
+    imagePath.startsWith('data:') ||
+    imagePath.startsWith('/')
+  ) {
+    return imagePath;
+  }
   // "uploads/products/xxx.png" → "http://localhost:2000/uploads/products/xxx.png"
   return `${BASE_URL}/${imagePath}`;
 }

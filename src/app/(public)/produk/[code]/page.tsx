@@ -1,0 +1,336 @@
+import React from 'react';
+import { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  MessageCircle,
+  Package,
+  QrCode,
+  ShoppingBag,
+  Sparkles,
+  Tag,
+  XCircle,
+} from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+interface PageProps {
+  params: Promise<{ code: string }>;
+}
+
+const DEFAULT_WHATSAPP = '6281234567890';
+
+function decodeIdentifier(rawCode: string): string {
+  try {
+    return decodeURIComponent(rawCode).trim();
+  } catch {
+    return rawCode.trim();
+  }
+}
+
+async function findProductByCode(rawCode: string) {
+  const identifier = decodeIdentifier(rawCode);
+  if (!identifier) return null;
+
+  const normalized = identifier.toUpperCase();
+
+  return prisma.product.findFirst({
+    where: {
+      OR: [
+        { productCode: { equals: normalized, mode: 'insensitive' } },
+        { id: identifier },
+        { qrCode: { code: { equals: normalized, mode: 'insensitive' } } },
+      ],
+    },
+    include: { qrCode: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+function resolveProductImageSrc(image?: string | null): string | null {
+  if (!image || !image.trim()) return null;
+  const trimmed = image.trim();
+  if (
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('/')
+  ) {
+    return trimmed;
+  }
+  return `/${trimmed.replace(/^\/+/, '')}`;
+}
+
+function getCategoryMeta(category: string) {
+  switch (category) {
+    case 'ORGANIC':
+      return {
+        label: 'Produk Organik',
+        badgeClass: 'bg-[#FCE7F3] text-[#BE185D] border-[#FBCFE8]',
+      };
+    case 'UPCYCLED_GOODS':
+      return {
+        label: 'Kerajinan Daur Ulang',
+        badgeClass: 'bg-[#FEEFD8] text-[#B45309] border-[#FDE68A]',
+      };
+    case 'ZERO_WASTE':
+      return {
+        label: 'Zero Waste',
+        badgeClass: 'bg-[#E2F5EB] text-[#166534] border-[#BBF7D0]',
+      };
+    default:
+      return {
+        label: category.replace(/_/g, ' '),
+        badgeClass: 'bg-stone-100 text-stone-700 border-stone-200',
+      };
+  }
+}
+
+function getStockMeta(stockLabel: string, stock: number) {
+  switch (stockLabel) {
+    case 'BULK_AVAILABLE':
+      return {
+        label: `Stok Grosir Tersedia${stock > 0 ? ` (${stock} unit)` : ''}`,
+        badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        isAvailable: true,
+      };
+    case 'OUT_OF_STOCK':
+      return {
+        label: 'Stok Sedang Habis',
+        badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+        isAvailable: false,
+      };
+    case 'IN_STOCK':
+    default:
+      return {
+        label: `Tersedia${stock > 0 ? ` (${stock} unit)` : ''}`,
+        badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        isAvailable: true,
+      };
+  }
+}
+
+function buildWhatsappHref(
+  whatsappLink: string | null | undefined,
+  productName: string,
+  productCode: string
+): string {
+  const defaultMsg = encodeURIComponent(
+    `Halo Teman Pilah, saya tertarik memesan produk ${productName} (${productCode}).`
+  );
+  if (!whatsappLink || !whatsappLink.trim()) {
+    return `https://wa.me/${DEFAULT_WHATSAPP}?text=${defaultMsg}`;
+  }
+  const trimmed = whatsappLink.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  let digits = trimmed.replace(/\D/g, '');
+  if (digits.startsWith('08')) {
+    digits = `62${digits.slice(1)}`;
+  }
+  return `https://wa.me/${digits || DEFAULT_WHATSAPP}?text=${defaultMsg}`;
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { code } = await params;
+  const product = await findProductByCode(code);
+
+  if (!product) {
+    return {
+      title: 'Produk Tidak Ditemukan | Teman Pilah',
+      description: 'Detail produk daur ulang Teman Pilah tidak ditemukan.',
+    };
+  }
+
+  const priceText = `Rp ${Number(product.price).toLocaleString('id-ID')}${
+    product.priceUnit ? ` ${product.priceUnit}` : ''
+  }`;
+  const title = `${product.name} (${product.productCode}) | Teman Pilah`;
+  const description =
+    product.description ||
+    `Produk daur ulang komunitas Teman Pilah — ${product.name} (${priceText}).`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+    },
+  };
+}
+
+export default async function PublicProductDetailPage({ params }: PageProps) {
+  const { code } = await params;
+  const product = await findProductByCode(code);
+
+  if (!product) {
+    notFound();
+  }
+
+  const imageSrc = resolveProductImageSrc(product.image);
+  const categoryMeta = getCategoryMeta(product.category);
+  const stockMeta = getStockMeta(product.stockLabel, product.stock);
+  const formattedPrice = `Rp ${Number(product.price).toLocaleString('id-ID')}`;
+  const whatsappHref = buildWhatsappHref(
+    product.whatsappLink,
+    product.name,
+    product.productCode
+  );
+  const qrCodeValue = product.qrCode?.code || product.productCode;
+
+  return (
+    <div className="min-h-screen bg-[#F8F6F1] pt-24 pb-20 px-4 sm:px-6 relative overflow-hidden">
+      <div className="absolute -right-24 top-28 opacity-20 pointer-events-none rotate-[20deg]">
+        <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
+      </div>
+      <div className="absolute -left-20 bottom-24 opacity-25 pointer-events-none">
+        <ConcentricCircles size={300} color="#FC9634" />
+      </div>
+
+      <div className="max-w-4xl mx-auto relative z-10 space-y-6">
+        <div>
+          <Link
+            href="/#products"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#4A5546] hover:text-[#012D1D] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Kembali ke Katalog Produk</span>
+          </Link>
+        </div>
+
+        <article className="bg-white rounded-3xl border border-[#E3E8DC] shadow-lg overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Product Image */}
+            <div className="bg-[#FAFBF9] border-b md:border-b-0 md:border-r border-[#E3E8DC] flex items-center justify-center p-6 sm:p-8 min-h-[300px] sm:min-h-[380px]">
+              {imageSrc ? (
+                <div className="w-full h-full max-h-[380px] rounded-2xl overflow-hidden bg-white border border-stone-200 shadow-xs flex items-center justify-center">
+                  <img
+                    src={imageSrc}
+                    alt={product.name}
+                    className="w-full h-full object-cover max-h-[380px]"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-72 rounded-2xl border-2 border-dashed border-[#D5E3D2] bg-white flex flex-col items-center justify-center text-stone-400 gap-2">
+                  <ShoppingBag className="w-12 h-12 text-emerald-700/40" />
+                  <span className="text-xs font-medium">
+                    Foto produk belum tersedia
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Product Info */}
+            <div className="p-6 sm:p-8 flex flex-col justify-between gap-6">
+              <div className="space-y-4">
+                {/* Category & Code Badges */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${categoryMeta.badgeClass}`}
+                  >
+                    <Tag className="w-3 h-3" />
+                    {categoryMeta.label}
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[#EBF4E9] text-[#012D1D] border border-[#CFE1CC]">
+                    <Package className="w-3 h-3" />
+                    {product.productCode}
+                  </span>
+
+                  {qrCodeValue && qrCodeValue !== product.productCode && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                      <QrCode className="w-3 h-3" />
+                      {qrCodeValue}
+                    </span>
+                  )}
+                </div>
+
+                {/* Product Name */}
+                <h1 className="text-2xl sm:text-3xl font-black text-[#012D1D] leading-tight">
+                  {product.name}
+                </h1>
+
+                {/* Price + Unit */}
+                <div className="flex items-baseline gap-1.5 bg-[#FAFBF9] border border-[#EDF2E8] rounded-2xl px-4 py-3">
+                  <span className="text-2xl sm:text-3xl font-black text-[#012D1D]">
+                    {formattedPrice}
+                  </span>
+                  {product.priceUnit && (
+                    <span className="text-xs sm:text-sm font-semibold text-stone-500">
+                      {product.priceUnit}
+                    </span>
+                  )}
+                </div>
+
+                {/* Stock Status */}
+                <div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border ${stockMeta.badgeClass}`}
+                  >
+                    {stockMeta.isAvailable ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <XCircle className="w-4 h-4" />
+                    )}
+                    {stockMeta.label}
+                  </span>
+                </div>
+
+                {/* Description */}
+                <div className="pt-2 border-t border-stone-100">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+                    Deskripsi Produk
+                  </h2>
+                  <p className="text-sm text-[#42493E] leading-relaxed whitespace-pre-line">
+                    {product.description ||
+                      'Produk ramah lingkungan hasil karya komunitas Bank Sampah Teman Pilah.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3 pt-2">
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl bg-[#012D1D] hover:bg-[#0B4A31] text-white font-bold text-sm shadow-md transition-all active:scale-[0.99]"
+                >
+                  <MessageCircle className="w-4 h-4 text-[#80E478]" />
+                  <span>
+                    {stockMeta.isAvailable
+                      ? 'Pesan via WhatsApp'
+                      : 'Tanyakan Stok via WhatsApp'}
+                  </span>
+                </a>
+
+                <div className="flex items-center justify-between text-[11px] text-stone-500 px-1">
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                    Produk Resmi Komunitas Teman Pilah
+                  </span>
+                  <Link
+                    href="/#products"
+                    className="font-bold text-[#012D1D] hover:underline"
+                  >
+                    Lihat Produk Lain
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+}

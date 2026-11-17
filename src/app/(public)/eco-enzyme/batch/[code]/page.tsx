@@ -1,12 +1,10 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getBaseUrl } from '@/lib/api-config';
-import { normalizeBatchCode } from '@/lib/batch-url';
+import { getBatchByPublicCode } from '@/lib/server/eco-enzyme-service';
+import { AppError } from '@/lib/server/error';
 import { EcoEnzymeBatch } from '@/types';
 import { BatchDetailClient } from './BatchDetailClient';
-
-const BASE_URL = getBaseUrl();
 
 // Pastikan halaman selalu dinamis (tidak tersangkut stale-cache) saat QR discan
 export const dynamic = 'force-dynamic';
@@ -17,20 +15,20 @@ interface PageProps {
 }
 
 async function fetchBatch(rawCode: string): Promise<EcoEnzymeBatch | null> {
-  const code = normalizeBatchCode(rawCode);
+  let code = rawCode;
   try {
-    const res = await fetch(`${BASE_URL}/api/eco-enzyme/public/${encodeURIComponent(code)}`, {
-      cache: 'no-store',
-    });
+    code = decodeURIComponent(rawCode);
+  } catch {
+    code = rawCode;
+  }
 
-    if (!res.ok) {
-      return null;
-    }
-
-    const json = await res.json();
-    return json.data || null;
+  try {
+    const batch = await getBatchByPublicCode(code);
+    return JSON.parse(JSON.stringify(batch)) as EcoEnzymeBatch;
   } catch (error) {
-    console.error(`Failed to fetch public batch ${code}:`, error);
+    if (!(error instanceof AppError && error.statusCode === 404)) {
+      console.error(`Failed to fetch public batch ${code}:`, error);
+    }
     return null;
   }
 }

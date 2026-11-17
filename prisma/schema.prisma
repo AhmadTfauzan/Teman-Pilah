@@ -44,9 +44,29 @@ model Product {
   stock        Int
   stockLabel   StockLabel
   whatsappLink String?
+  qrCodeId     String?
+  qrCode       QrCode?    @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
   createdAt    DateTime   @default(now())
 
   allocatedEcoEnzymeBatches EcoEnzymeBatch[]
+}
+
+model QrCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  entityType  String   // "ECO_ENZYME_BATCH" | "PRODUCT"
+  primaryKey  String?  // normalized uppercase batchCode or productCode
+  primaryName String   // normalized lowercase trimmed containerName or product.name
+  targetUrl   String   // canonical site/relative path e.g. "https://teman-pilahfe-main.vercel.app/b/EE-2611-J3TKN5"
+  qrDataUrl   String?  @db.Text // cached data URL from qrcode.react
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  batches     EcoEnzymeBatch[]
+  products    Product[]
+
+  @@index([entityType, primaryKey])
+  @@index([entityType, primaryName])
 }
 
 enum NewsStatus {
@@ -174,8 +194,8 @@ enum EnzymeFailureReason {
 
 model EcoEnzymeBatch {
   id                     String               @id @default(cuid())
-  publicCode             String               @unique
-  batchCode              String               @unique
+  publicCode             String
+  batchCode              String
   containerName          String
   containerCapacityLiter Decimal              @default(50) @db.Decimal(8, 2)
 
@@ -212,6 +232,8 @@ model EcoEnzymeBatch {
 
   // QR Code & Pemantauan Fisik
   qrPrintedAt            DateTime?
+  qrCodeId               String?
+  qrCode                 QrCode?              @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
 
   // Pemakaian Ulang Galon (Suksesi Batch)
   previousBatchId        String?
@@ -225,6 +247,11 @@ model EcoEnzymeBatch {
   updatedAt              DateTime             @updatedAt
 
   inspectionLogs         EcoEnzymeLog[]
+
+  @@index([publicCode])
+  @@index([batchCode])
+  @@index([containerName])
+  @@index([qrCodeId])
 }
 
 model EcoEnzymeLog {

@@ -226,7 +226,7 @@ export function EcoEnzymeModal({
               <div>
                 <p className="font-bold">Siklus Baru untuk Wadah: {containerName}</p>
                 <p className="text-[11px] text-amber-800 mt-0.5">
-                  Sistem akan membuat Barcode & QR Code baru untuk menggantikan label lama pada wadah ini.
+                  QR Code permanen milik wadah ini akan dipakai kembali secara otomatis (1 wadah = 1 QR Code), sehingga label fisik yang sudah ditempel tidak perlu diganti.
                 </p>
               </div>
             </div>
@@ -271,6 +271,9 @@ export function EcoEnzymeModal({
                 onChange={(e) => setContainerName(e.target.value)}
                 className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2.5 text-stone-900 focus:outline-none focus:border-emerald-600"
               />
+              <p className="text-[11px] text-stone-500 mt-1">
+                Jika nama wadah / kode galon sama dengan yang sudah ada, QR Code sebelumnya akan dipakai kembali (tidak membuat QR ganda).
+              </p>
             </div>
           </div>
 

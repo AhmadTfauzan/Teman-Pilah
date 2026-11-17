@@ -178,9 +178,14 @@ export default function AdminEcoEnzymePage() {
         toast.success('Data galon berhasil diperbarui');
       } else {
         const newBatch = await ecoEnzymeApi.create(data);
-        toast.success('Galon berhasil didaftarkan!', {
-          description: `Kode: ${newBatch.batchCode || newBatch.publicCode}`,
-        });
+        toast.success(
+          newBatch.reusedQr
+            ? 'Galon berhasil didaftarkan (memakai QR permanen yang sudah ada)'
+            : 'Galon berhasil didaftarkan!',
+          {
+            description: `Kode: ${newBatch.batchCode || newBatch.publicCode}`,
+          }
+        );
         setActiveQrBatch(newBatch);
         setIsQrModalOpen(true);
       }
@@ -712,6 +717,30 @@ export default function AdminEcoEnzymePage() {
         }}
         batch={activeQrBatch}
         onQrPrinted={loadData}
+        onQrSaved={(savedQr) => {
+          setActiveQrBatch((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  qrCodeId: savedQr.id,
+                  qrCode: savedQr,
+                  publicCode: savedQr.code || prev.publicCode,
+                }
+              : prev
+          );
+          setBatches((prev) =>
+            prev.map((b) =>
+              b.id === activeQrBatch?.id
+                ? {
+                    ...b,
+                    qrCodeId: savedQr.id,
+                    qrCode: savedQr,
+                    publicCode: savedQr.code || b.publicCode,
+                  }
+                : b
+            )
+          );
+        }}
       />
 
       {/* 3. Modal Panen */}

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { QrCode } from 'lucide-react';
 import { Product } from '@/types';
 
 interface ProductTableProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
+  onShowQr?: (product: Product) => void;
 }
 
 const getCategoryStyles = (category: string) => {
@@ -53,7 +55,7 @@ const TrashIcon = () => (
   </svg>
 );
 
-export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) {
+export function ProductTable({ products, onEdit, onDelete, onShowQr }: ProductTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
   const totalPages = Math.ceil(products.length / itemsPerPage) || 1;
@@ -112,10 +114,17 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                 >
                   {/* Title & Dot */}
                   <div className="w-[350px] flex items-center gap-4">
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#22C55E]" />
-                    <span className="text-[14px] font-bold text-[#1B361F] line-clamp-1">
-                      {product.name}
-                    </span>
+                    <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#22C55E]" />
+                    <div className="min-w-0">
+                      <span className="text-[14px] font-bold text-[#1B361F] line-clamp-1 block">
+                        {product.name}
+                      </span>
+                      {product.productCode && (
+                        <span className="inline-block mt-0.5 font-mono text-[10px] font-semibold text-[#5E6B58] bg-[#F3F5F0] border border-[#E3E8DC] px-1.5 py-0.5 rounded">
+                          {product.productCode}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Category */}
@@ -127,6 +136,17 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
 
                   {/* Actions */}
                   <div className="flex flex-1 items-center justify-end gap-3">
+                    {onShowQr && (
+                      <button
+                        type="button"
+                        onClick={() => onShowQr(product)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold transition-colors"
+                        title="Lihat & Cetak QR Code Produk"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>QR</span>
+                      </button>
+                    )}
 
                     <button
                       type="button"

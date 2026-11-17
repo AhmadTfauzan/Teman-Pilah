@@ -5,6 +5,7 @@ import { Product } from '@/types';
 import { toast } from 'sonner';
 import { ProductTable } from '@/components/admin/ProductTable';
 import { ProductModal } from '@/components/admin/ProductModal';
+import { ProductQrModal } from '@/components/admin/ProductQrModal';
 import { SuccessModal } from '@/components/admin/SuccessModal';
 import { DeleteModal } from '@/components/admin/DeleteModal';
 import { productApi } from '@/lib/api/Products';
@@ -127,6 +128,7 @@ export default function AdminProducts() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [activeQrProduct, setActiveQrProduct] = useState<Product | null>(null);
   const [successModal, setSuccessModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -138,15 +140,19 @@ export default function AdminProducts() {
     name: string;
   }>({ isOpen: false, id: '', name: '' });
 
-  const fetchProducts = async () => {
-    setIsLoading(true);
+  const fetchProducts = async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const data = await productApi.getAll();
       setProducts(data);
     } catch (error) {
       toast.error('Gagal mengambil data produk dari server');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -158,8 +164,11 @@ export default function AdminProducts() {
     let result = [...products];
 
     if (searchTerm) {
-      result = result.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const q = searchTerm.toLowerCase();
+      result = result.filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) ||
+          (item.productCode && item.productCode.toLowerCase().includes(q))
       );
     }
 
@@ -328,7 +337,20 @@ export default function AdminProducts() {
       <ProductTable 
         products={filteredProducts} 
         onEdit={handleOpenModal} 
-        onDelete={handleDeleteClick} 
+        onDelete={handleDeleteClick}
+        onShowQr={(product) => setActiveQrProduct(product)}
+      />
+
+      <ProductQrModal
+        isOpen={Boolean(activeQrProduct)}
+        onClose={() => setActiveQrProduct(null)}
+        product={activeQrProduct}
+        onQrSaved={(savedQr) => {
+          setActiveQrProduct((prev) =>
+            prev ? { ...prev, qrCodeId: savedQr.id, qrCode: savedQr } : prev
+          );
+          fetchProducts(true);
+        }}
       />
 
       <ProductModal 

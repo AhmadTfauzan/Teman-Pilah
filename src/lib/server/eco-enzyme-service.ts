@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "./error";
-import { parsePagination, buildPaginationMeta, PaginationMeta } from "./pagination";
-import { generatePublicBatchCode, normalizeBatchCode } from "./code";
+import { parsePagination, buildPaginationMeta } from "./pagination";
+import { normalizeBatchCode } from "./code";
+import { resolveOrCreateQrCode } from "./qr-code-service";
 import { EnzymeResidueUsage } from "@prisma/client";
 
 export function enrichBatchDynamicStatus(batch: any): any {
@@ -78,6 +79,7 @@ export async function getAllBatches(params: {
       include: {
         _count: { select: { inspectionLogs: true } },
         allocatedProduct: true,
+        qrCode: true,
         previousBatch: {
           select: { id: true, publicCode: true, containerName: true },
         },
@@ -112,6 +114,7 @@ export async function getBatchById(id: string) {
     include: {
       inspectionLogs: { orderBy: { logDate: "desc" } },
       allocatedProduct: true,
+      qrCode: true,
       previousBatch: {
         select: { id: true, publicCode: true, containerName: true },
       },
@@ -141,9 +144,15 @@ export async function getBatchByPublicCode(publicCode: string) {
         { batchCode: { equals: rawTrimmed, mode: "insensitive" } },
         { batchCode: { equals: normalized, mode: "insensitive" } },
         { containerName: { equals: rawTrimmed, mode: "insensitive" } },
+        { qrCode: { code: { equals: normalized, mode: "insensitive" } } },
       ],
     },
+    orderBy: [
+      { archivedAt: { sort: "asc", nulls: "first" } },
+      { createdAt: "desc" },
+    ],
     include: {
+      qrCode: true,
       inspectionLogs: {
         orderBy: { dayNumber: "asc" },
       },
@@ -191,6 +200,8 @@ export async function getBatchByPublicCode(publicCode: string) {
     residueUsage: isHarvested ? enriched.residueUsage : null,
     archivedAt: enriched.archivedAt ?? null,
     qrPrintedAt: enriched.qrPrintedAt ?? null,
+    qrCodeId: enriched.qrCodeId ?? enriched.qrCode?.id ?? null,
+    qrCode: enriched.qrCode ?? null,
     updatedAt: enriched.updatedAt,
     nextBatch: nextBatch ? {
       id: nextBatch.id,
@@ -205,15 +216,6 @@ export async function getBatchByPublicCode(publicCode: string) {
       fungusColor: log.fungusColor,
     })),
   };
-}
-
-async function generateUniquePublicCode(date: Date): Promise<string> {
-  for (let i = 0; i < 5; i++) {
-    const code = generatePublicBatchCode(date);
-    const count = await prisma.ecoEnzymeBatch.count({ where: { publicCode: code } });
-    if (count === 0) return code;
-  }
-  throw new AppError("Gagal menghasilkan kode unik batch", 500);
 }
 
 export async function createBatch(input: {
@@ -238,23 +240,39 @@ export async function createBatch(input: {
   let harvestEstimate: Date;
   if (input.harvestEstimate) {
     harvestEstimate = new Date(input.harvestEstimate);
+    if (isNaN(harvestEstimate.getTime())) {
+      throw new AppError("Format tanggal panen tidak valid", 400);
+    }
   } else {
     harvestEstimate = new Date(startDate);
     harvestEstimate.setDate(harvestEstimate.getDate() + 89);
   }
 
-  const batchCode = input.batchCode?.trim() || `EE-${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}-${Math.floor(100 + Math.random() * 900)}`;
-
-  const existing = await prisma.ecoEnzymeBatch.findUnique({ where: { batchCode } });
-  if (existing) {
-    throw new AppError(`Kode batch '${batchCode}' sudah digunakan`, 409);
+  if (input.previousBatchId) {
+    const prev = await prisma.ecoEnzymeBatch.findUnique({
+      where: { id: input.previousBatchId },
+      select: { id: true },
+    });
+    if (!prev) {
+      throw new AppError("Batch sebelumnya yang dipilih tidak valid", 400);
+    }
   }
 
-  const publicCode = await generateUniquePublicCode(startDate);
+  const batchCode =
+    input.batchCode?.trim() ||
+    `EE-${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}-${Math.floor(100 + Math.random() * 900)}`;
 
-  return prisma.ecoEnzymeBatch.create({
+  const { qrCode, reused } = await resolveOrCreateQrCode({
+    entityType: "ECO_ENZYME_BATCH",
+    previousEntityId: input.previousBatchId,
+    entityKey: batchCode,
+    entityName: input.containerName,
+    pathPrefix: "/b",
+  });
+
+  const created = await prisma.ecoEnzymeBatch.create({
     data: {
-      publicCode,
+      publicCode: qrCode.code,
       batchCode,
       containerName: input.containerName,
       containerCapacityLiter: input.containerCapacityLiter ?? 50,
@@ -267,9 +285,27 @@ export async function createBatch(input: {
       photoUrl: input.photoUrl,
       notes: input.notes,
       previousBatchId: input.previousBatchId || null,
+      qrCodeId: qrCode.id,
       status: "IN_PROGRESS",
     },
+    include: {
+      qrCode: true,
+      allocatedProduct: true,
+      previousBatch: {
+        select: { id: true, publicCode: true, containerName: true },
+      },
+      nextBatches: {
+        select: { id: true, publicCode: true, containerName: true },
+        take: 1,
+        orderBy: { createdAt: "desc" },
+      },
+    },
   });
+
+  return {
+    ...enrichBatchDynamicStatus(created),
+    reusedQr: reused,
+  };
 }
 
 export async function updateBatch(id: string, input: any) {
@@ -303,9 +339,21 @@ export async function updateBatch(id: string, input: any) {
     updateData.harvestEstimate = new Date(input.harvestEstimate);
   }
 
+  if (!existing.qrCodeId) {
+    const { qrCode } = await resolveOrCreateQrCode({
+      entityType: "ECO_ENZYME_BATCH",
+      entityId: existing.id,
+      entityKey: existing.batchCode,
+      entityName: updateData.containerName ?? existing.containerName,
+      pathPrefix: "/b",
+    });
+    updateData.qrCodeId = qrCode.id;
+  }
+
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: updateData,
+    include: { qrCode: true },
   });
 }
 
@@ -344,6 +392,7 @@ export async function harvestBatch(id: string, input: {
         allocatedUnitsAdded: input.allocatedUnitsAdded ?? 0,
         notes: input.notes,
       },
+      include: { qrCode: true },
     });
 
     if (dataAllocated(input)) {
@@ -368,6 +417,7 @@ export async function archiveBatch(id: string) {
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: { archivedAt: new Date() },
+    include: { qrCode: true },
   });
 }
 
@@ -375,6 +425,7 @@ export async function restoreBatch(id: string) {
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: { archivedAt: null },
+    include: { qrCode: true },
   });
 }
 
@@ -382,6 +433,7 @@ export async function markQrPrinted(id: string) {
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: { qrPrintedAt: new Date() },
+    include: { qrCode: true },
   });
 }
 
@@ -478,6 +530,9 @@ export async function getStats() {
 }
 
 export async function getProductsForAllocation() {
-  return prisma.product.findMany({ orderBy: { name: "asc" } });
+  return prisma.product.findMany({
+    include: { qrCode: true },
+    orderBy: { name: "asc" },
+  });
 }
 

@@ -1,4 +1,4 @@
-import { EcoEnzymeBatch, EcoEnzymeLog } from "../../../generated/prisma";
+import { EcoEnzymeBatch, EcoEnzymeLog, QrCode } from "../../../generated/prisma";
 import { AppError } from "@/middlewares/error.middleware";
 import {
   buildPaginationMeta,
@@ -13,7 +13,7 @@ import {
   HarvestBatchInput,
   UpdateBatchInput,
 } from "./eco-enzyme.validation";
-import { generatePublicBatchCode } from "../../utils/code";
+import { generatePublicBatchCode, normalizeBatchCode } from "../../utils/code";
 
 export interface BatchListResult {
   data: any[];
@@ -25,6 +25,15 @@ export class EcoEnzymeService {
 
   constructor(ecoEnzymeRepository: EcoEnzymeRepository) {
     this.ecoEnzymeRepository = ecoEnzymeRepository;
+  }
+
+  private getCanonicalSiteUrl(): string {
+    const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    const baseUrl =
+      raw && !raw.includes("trycloudflare.com") && !raw.includes("localhost")
+        ? raw
+        : "https://teman-pilahfe-main.vercel.app";
+    return baseUrl.replace(/\/+$/, "");
   }
 
   private generateBatchCode(): string {
@@ -165,6 +174,8 @@ export class EcoEnzymeService {
       residueUsage: isHarvested ? enriched.residueUsage : null,
       archivedAt: enriched.archivedAt ?? null,
       qrPrintedAt: enriched.qrPrintedAt ?? null,
+      qrCodeId: enriched.qrCodeId ?? enriched.qrCode?.id ?? null,
+      qrCode: enriched.qrCode ?? null,
       updatedAt: enriched.updatedAt,
       nextBatch: nextBatch
         ? {
@@ -191,7 +202,92 @@ export class EcoEnzymeService {
     };
   }
 
-  async createBatch(input: CreateBatchInput): Promise<EcoEnzymeBatch> {
+  private async resolveOrCreateBatchQrCode(input: {
+    previousBatchId?: string | null;
+    batchCode: string;
+    containerName: string;
+    startDate: Date;
+  }): Promise<{ qrCode: QrCode; reused: boolean }> {
+    const normalizedKey = input.batchCode.trim().toUpperCase() || null;
+    const normalizedName = input.containerName.trim().toLowerCase();
+
+    if (input.previousBatchId) {
+      const prev = await this.ecoEnzymeRepository.findById(input.previousBatchId);
+      if (!prev) {
+        throw new AppError("Batch sebelumnya yang dipilih tidak valid", 400);
+      }
+
+      if (prev.qrCode) {
+        return { qrCode: prev.qrCode, reused: true };
+      }
+
+      if (prev.publicCode) {
+        const existingQr = await this.ecoEnzymeRepository.findQrCodeByCode(prev.publicCode);
+        if (existingQr) {
+          await this.ecoEnzymeRepository.linkQrCodeToBatch(prev.id, existingQr.id);
+          return { qrCode: existingQr, reused: true };
+        }
+
+        const code = normalizeBatchCode(prev.publicCode);
+        const createdFromPrev = await this.ecoEnzymeRepository.createQrCode({
+          code,
+          entityType: "ECO_ENZYME_BATCH",
+          primaryKey: prev.batchCode.trim().toUpperCase() || normalizedKey,
+          primaryName: prev.containerName.trim().toLowerCase() || normalizedName || code.toLowerCase(),
+          targetUrl: `${this.getCanonicalSiteUrl()}/b/${code}`,
+        });
+        await this.ecoEnzymeRepository.linkQrCodeToBatch(prev.id, createdFromPrev.id);
+        return { qrCode: createdFromPrev, reused: true };
+      }
+    }
+
+    const existingByRegistry = await this.ecoEnzymeRepository.findQrCodeByKeyOrName(
+      "ECO_ENZYME_BATCH",
+      normalizedKey,
+      normalizedName
+    );
+    if (existingByRegistry) {
+      return { qrCode: existingByRegistry, reused: true };
+    }
+
+    const legacyBatch = await this.ecoEnzymeRepository.findByBatchCodeOrContainerName(
+      normalizedKey,
+      input.containerName
+    );
+    if (legacyBatch?.qrCode) {
+      return { qrCode: legacyBatch.qrCode, reused: true };
+    }
+    if (legacyBatch?.publicCode) {
+      const code = normalizeBatchCode(legacyBatch.publicCode);
+      const existingQr = await this.ecoEnzymeRepository.findQrCodeByCode(code);
+      if (existingQr) {
+        await this.ecoEnzymeRepository.linkQrCodeToBatch(legacyBatch.id, existingQr.id);
+        return { qrCode: existingQr, reused: true };
+      }
+
+      const createdFromLegacy = await this.ecoEnzymeRepository.createQrCode({
+        code,
+        entityType: "ECO_ENZYME_BATCH",
+        primaryKey: normalizedKey ?? (legacyBatch.batchCode.trim().toUpperCase() || null),
+        primaryName: normalizedName || legacyBatch.containerName.trim().toLowerCase(),
+        targetUrl: `${this.getCanonicalSiteUrl()}/b/${code}`,
+      });
+      await this.ecoEnzymeRepository.linkQrCodeToBatch(legacyBatch.id, createdFromLegacy.id);
+      return { qrCode: createdFromLegacy, reused: true };
+    }
+
+    const code = await this.generateUniquePublicCode(input.startDate);
+    const created = await this.ecoEnzymeRepository.createQrCode({
+      code,
+      entityType: "ECO_ENZYME_BATCH",
+      primaryKey: normalizedKey,
+      primaryName: normalizedName || code.toLowerCase(),
+      targetUrl: `${this.getCanonicalSiteUrl()}/b/${code}`,
+    });
+    return { qrCode: created, reused: false };
+  }
+
+  async createBatch(input: CreateBatchInput): Promise<EcoEnzymeBatch & { reusedQr?: boolean }> {
     const startDate = new Date(input.startDate);
     if (isNaN(startDate.getTime())) {
       throw new AppError("Format tanggal mulai tidak valid", 400);
@@ -211,23 +307,15 @@ export class EcoEnzymeService {
 
     const batchCode = input.batchCode?.trim() || this.generateBatchCode();
 
-    const existing = await this.ecoEnzymeRepository.findByBatchCode(batchCode);
-    if (existing) {
-      throw new AppError(`Kode batch '${batchCode}' sudah digunakan`, 409);
-    }
+    const { qrCode, reused } = await this.resolveOrCreateBatchQrCode({
+      previousBatchId: input.previousBatchId,
+      batchCode,
+      containerName: input.containerName,
+      startDate,
+    });
 
-    // Validasi previousBatchId jika diberikan (suksesi wadah/galon)
-    if (input.previousBatchId) {
-      const prev = await this.ecoEnzymeRepository.findById(input.previousBatchId);
-      if (!prev) {
-        throw new AppError("Batch sebelumnya yang dipilih tidak valid", 400);
-      }
-    }
-
-    const publicCode = await this.generateUniquePublicCode(startDate);
-
-    return this.ecoEnzymeRepository.create({
-      publicCode,
+    const created = await this.ecoEnzymeRepository.create({
+      publicCode: qrCode.code,
       batchCode,
       containerName: input.containerName,
       containerCapacityLiter: input.containerCapacityLiter ?? 50,
@@ -240,7 +328,13 @@ export class EcoEnzymeService {
       photoUrl: input.photoUrl,
       notes: input.notes,
       previousBatchId: input.previousBatchId || null,
+      qrCodeId: qrCode.id,
     });
+
+    return {
+      ...created,
+      reusedQr: reused,
+    };
   }
 
   async updateBatch(id: string, input: UpdateBatchInput): Promise<EcoEnzymeBatch> {
