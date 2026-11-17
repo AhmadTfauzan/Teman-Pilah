@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-poppins: var(--font-poppins), 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-plus-jakarta-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #012D1D;
+  --color-forest: #0B4A31;
+  --color-leaf: #3B9734;
+  --color-orange-brand: #FC9634;
+  --color-orange-deep: #E8801A;
+  --color-accent: #FC9430;
+  --color-neutral: #3D3D3D;
+  --color-neutral-light: #C9D6CF;
+  --color-bg-light: #F1F4F9;
+  --color-bg: #FFFFFF;
+  --color-border: #E5E2DC;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-neutral font-poppins;
+  }
+}
+
+@layer utilities {
+  @keyframes popIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  
+  .animate-pop {
+    animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #printable-gallon-label,
+  #printable-gallon-label * {
+    visibility: visible !important;
+  }
+
+  #printable-gallon-label {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 90mm !important;
+    max-width: 90mm !important;
+    margin: 0 !important;
+    padding: 5mm !important;
+    box-shadow: none !important;
+    border: 2px dashed #1b3022 !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+}
