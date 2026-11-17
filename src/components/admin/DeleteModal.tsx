@@ -26,14 +26,14 @@ export function DeleteModal({
   const isWarning = variant === 'warning';
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-300">
-      <div className="animate-pop w-[420px] max-w-[92vw] overflow-hidden rounded-[24px] bg-white shadow-xl flex flex-col">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm transition-all duration-300">
+      <div className="animate-pop w-[420px] max-w-[92vw] overflow-hidden rounded-2xl sm:rounded-[24px] bg-white shadow-xl flex flex-col">
         {/* CONTENT */}
-        <div className="flex flex-col items-center px-8 pb-6 pt-8 text-center">
-          <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-full ${isWarning ? 'bg-amber-50 text-amber-600' : 'bg-[#fef2f2] text-[#dc2626]'}`}>
+        <div className="flex flex-col items-center px-5 sm:px-8 pb-5 sm:pb-6 pt-6 sm:pt-8 text-center">
+          <div className={`mb-3 sm:mb-4 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full ${isWarning ? 'bg-amber-50 text-amber-600' : 'bg-[#fef2f2] text-[#dc2626]'}`}>
             <svg
-              width="24"
-              height="24"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -46,8 +46,8 @@ export function DeleteModal({
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
             </svg>
           </div>
-          <h3 className="mb-2 text-[18px] font-bold text-[#1a1c19]">{title}</h3>
-          <div className="text-[13px] leading-relaxed text-[#72796E]">
+          <h3 className="mb-1.5 sm:mb-2 text-base sm:text-[18px] font-bold text-[#1a1c19]">{title}</h3>
+          <div className="text-xs sm:text-[13px] leading-relaxed text-[#72796E]">
             {description ? (
               <p>{description}</p>
             ) : (
@@ -59,7 +59,7 @@ export function DeleteModal({
         </div>
 
         {/* ACTIONS */}
-        <div className="flex items-center justify-center gap-3 bg-[#F9FAF8] px-8 py-5">
+        <div className="flex items-center justify-center gap-2.5 sm:gap-3 bg-[#F9FAF8] px-5 sm:px-8 py-4 sm:py-5">
           <button
             onClick={onClose}
             type="button"

@@ -35,18 +35,90 @@ export function GalleryTable({ items, onEdit, onDelete }: GalleryTableProps) {
   );
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-6">
+    <div className="overflow-hidden rounded-2xl sm:rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-2 sm:mt-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between px-8 py-7 border-b border-[#F0F2EB]">
-        <h2 className="text-[18px] font-bold text-[#1B361F]">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-7 border-b border-[#F0F2EB]">
+        <h2 className="text-base sm:text-[18px] font-bold text-[#1B361F]">
           Semua Item Galeri
         </h2>
-        <p className="text-[13px] text-[#A1A89A]">
+        <p className="text-xs sm:text-[13px] text-[#A1A89A]">
           {items.length} total item
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* MOBILE 2-COLUMN CARD GRID */}
+      <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+        {currentItems.map((item) => (
+          <div
+            key={item.id}
+            className="flex flex-col justify-between rounded-xl border border-[#E8ECE2] bg-[#FAFBF9] overflow-hidden"
+          >
+            <div className="h-24 w-full bg-gray-100 flex items-center justify-center overflow-hidden">
+              {item.image ? (
+                <img
+                  src={getGalleryImageUrl(item.image)}
+                  alt={item.title || 'Gallery'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-[10px] text-gray-400">Tidak ada Foto</span>
+              )}
+            </div>
+
+            <div className="p-2.5 flex flex-col flex-1 justify-between gap-2">
+              <div className="space-y-0.5">
+                <h3 className="text-xs font-bold text-[#2A3426] leading-snug line-clamp-2">
+                  {item.title || <span className="text-gray-400 italic font-normal">Tanpa judul</span>}
+                </h3>
+                {item.description && (
+                  <p className="text-[10px] text-[#72796E] line-clamp-2">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-1.5 border-t border-[#ECEFE7]">
+                <span className="text-[9px] text-[#72796E] truncate">
+                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: '2-digit'
+                  }) : '-'}
+                </span>
+
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(item)}
+                    className="p-1.5 rounded-md text-[#72796E] hover:text-[#2A3426] hover:bg-stone-200/60 transition-colors"
+                    title="Edit Item"
+                  >
+                    <PencilIcon />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onDelete(item.id)}
+                    className="p-1.5 rounded-md text-[#72796E] hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Hapus Item"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {items.length === 0 && (
+          <div className="col-span-2 py-12 text-center">
+            <p className="text-xs text-[#72796e]">Item galeri tidak ditemukan.</p>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP TABLE */}
+      <div className="hidden md:block overflow-x-auto">
         <div className="min-w-[800px]">
           {/* TABLE HEADER */}
           <div className="flex items-center px-8 py-4 bg-[#F9FAF8] border-b border-[#F0F2EB]">
@@ -146,14 +218,14 @@ export function GalleryTable({ items, onEdit, onDelete }: GalleryTableProps) {
 
       {/* FOOTER PAGINATION */}
       {items.length > 0 && (
-        <div className="flex flex-col gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-8 py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-[24px]">
+        <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-2xl sm:rounded-b-[24px]">
           <div className="flex items-center">
-            <p className="text-[14px] font-medium text-[#72796E]">
+            <p className="text-xs sm:text-[14px] font-medium text-[#72796E]">
               Menampilkan {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, items.length)} dari {items.length} item galeri
             </p>
           </div>
 
-          <nav aria-label="Pagination" className="inline-flex items-center gap-2">
+          <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* PREV */}
             <button
               type="button"

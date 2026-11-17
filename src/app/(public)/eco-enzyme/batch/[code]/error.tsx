@@ -13,8 +13,8 @@ export default function BatchDetailError({
   reset: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-[#F8F6F1] pt-28 pb-20 px-4 sm:px-6 flex items-center justify-center">
-      <div className="max-w-md w-full mx-auto text-center bg-white p-7 sm:p-9 rounded-3xl border border-[#E3E8DC] shadow-lg space-y-6">
+    <div className="min-h-screen bg-[#F8F6F1] pt-20 pb-12 sm:pt-28 sm:pb-20 px-3 sm:px-6 flex items-center justify-center">
+      <div className="max-w-md w-full mx-auto text-center bg-white p-5 sm:p-9 rounded-2xl sm:rounded-3xl border border-[#E3E8DC] shadow-lg space-y-4 sm:space-y-6">
         
         {/* ICON */}
         <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700 mx-auto shadow-sm">

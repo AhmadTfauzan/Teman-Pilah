@@ -91,37 +91,37 @@ export function Education({ items }: EducationProps) {
   return (
     <section
       id="edukasi"
-      className="relative w-full overflow-hidden bg-white py-20 lg:py-28"
+      className="relative w-full overflow-hidden bg-white py-10 sm:py-16 lg:py-28"
     >
       {/* ─── DECORATIVE ACCENTS (Figma Frame 48: ConcentricCircles #FC9634 & OutlineLeaf) ─── */}
-      <div className="absolute -right-24 -bottom-24 opacity-35 pointer-events-none">
+      <div className="hidden sm:block absolute -right-24 -bottom-24 opacity-35 pointer-events-none">
         <ConcentricCircles size={360} color="#FC9634" />
       </div>
-      <div className="absolute -left-20 -top-20 opacity-20 pointer-events-none rotate-[-15deg]">
+      <div className="hidden sm:block absolute -left-20 -top-20 opacity-20 pointer-events-none rotate-[-15deg]">
         <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
       </div>
 
       <Container className="relative z-10">
         {/* ─── SECTION HEADER ─── */}
-        <div className="pb-12 max-w-[640px]">
-          <h2 className="font-['Poppins'] font-bold text-3xl sm:text-4xl lg:text-[44px] leading-tight text-[#012D1D] tracking-[-1px]">
+        <div className="pb-6 sm:pb-12 max-w-[640px]">
+          <h2 className="font-['Poppins'] font-bold text-2xl sm:text-4xl lg:text-[44px] leading-tight text-[#012D1D] tracking-[-0.5px] sm:tracking-[-1px]">
             Pusat Edukasi
           </h2>
-          <p className="font-['Poppins'] font-normal text-base sm:text-lg text-[#3D3D3D] mt-2">
+          <p className="font-['Poppins'] font-normal text-xs sm:text-lg text-[#3D3D3D] mt-1 sm:mt-2">
             Pahami cara mengelola sampah dengan benar untuk masa depan yang lebih baik.
           </p>
         </div>
 
         {/* ─── 4 CARDS GRID (Figma: 286px each) ─── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
           {articles.map((art, idx) => (
             <div
               key={art.id || idx}
-              className="flex flex-col justify-between rounded-[14px] bg-white border border-[#D1D8D2] hover:border-[#012D1D] p-4 sm:p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1.5 group"
+              className="flex flex-col justify-between rounded-xl sm:rounded-[14px] bg-white border border-[#D1D8D2] hover:border-[#012D1D] p-2.5 sm:p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1.5 group"
             >
               <div>
                 {/* Image (Figma: 286px x 200px) */}
-                <div className="relative h-[190px] w-full rounded-[10px] overflow-hidden bg-gray-50 border border-black/5 flex items-center justify-center">
+                <div className="relative h-[100px] sm:h-[190px] w-full rounded-[8px] sm:rounded-[10px] overflow-hidden bg-gray-50 border border-black/5 flex items-center justify-center">
                   <img
                     src={art.image}
                     alt={art.title}
@@ -137,26 +137,26 @@ export function Education({ items }: EducationProps) {
                 </div>
 
                 {/* Tag & Reading Time */}
-                <p className="font-['Poppins'] font-semibold text-xs sm:text-sm text-[#012D1D] mt-4">
+                <p className="font-['Poppins'] font-semibold text-[10px] sm:text-sm text-[#012D1D] mt-2 sm:mt-4 truncate">
                   {art.tagLine}
                 </p>
 
                 {/* Title (Figma: 18px 700 #111111) */}
-                <h3 className="font-['Poppins'] font-bold text-lg leading-[25px] text-[#111111] mt-2 group-hover:text-[#FC9634] transition-colors line-clamp-2">
+                <h3 className="font-['Poppins'] font-bold text-xs sm:text-lg leading-snug sm:leading-[25px] text-[#111111] mt-1 sm:mt-2 group-hover:text-[#FC9634] transition-colors line-clamp-2">
                   {art.title}
                 </h3>
 
                 {/* Description (Figma: 14px 400 #3D3D3D) */}
-                <p className="font-['Poppins'] font-normal text-sm leading-[21px] text-[#3D3D3D] mt-2 line-clamp-3">
+                <p className="font-['Poppins'] font-normal text-[11px] sm:text-sm leading-snug sm:leading-[21px] text-[#3D3D3D] mt-1 sm:mt-2 line-clamp-2 sm:line-clamp-3">
                   {art.description}
                 </p>
               </div>
 
               {/* Read Article Link */}
-              <div className="pt-4 mt-auto">
+              <div className="pt-2 sm:pt-4 mt-auto">
                 <Link
                   href={`/edukasi/${art.slug || art.id}`}
-                  className="font-['Poppins'] font-semibold text-base text-[#012D1D] underline underline-offset-4 hover:text-[#FC9634] transition-colors inline-block"
+                  className="font-['Poppins'] font-semibold text-xs sm:text-base text-[#012D1D] underline underline-offset-4 hover:text-[#FC9634] transition-colors inline-block"
                 >
                   Baca artikel
                 </Link>
@@ -166,10 +166,10 @@ export function Education({ items }: EducationProps) {
         </div>
 
         {/* ─── BUTTON: TAMPILKAN SEMUA ARTIKEL ─── */}
-        <div className="mt-12">
+        <div className="mt-6 sm:mt-12">
           <Link
             href="/edukasi"
-            className="inline-flex items-center justify-center w-full sm:w-[255px] h-[48px] rounded-[8px] border-2 border-[#012D1D] text-[#012D1D] font-['Poppins'] font-semibold text-base hover:bg-[#012D1D] hover:text-white transition-all duration-200"
+            className="inline-flex items-center justify-center w-full sm:w-[255px] h-10 sm:h-[48px] rounded-[8px] border-2 border-[#012D1D] text-[#012D1D] font-['Poppins'] font-semibold text-sm sm:text-base hover:bg-[#012D1D] hover:text-white transition-all duration-200"
           >
             Tampilkan semua artikel
           </Link>

@@ -178,31 +178,31 @@ export function EcoEnzymeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-stone-200 my-6 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-8 shadow-2xl border border-stone-200 my-2 sm:my-6 max-h-[92vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-start justify-between pb-4 border-b border-stone-100">
+        <div className="flex items-start justify-between pb-3 sm:pb-4 border-b border-stone-100">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200 mb-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] sm:text-[11px] font-bold border border-emerald-200 mb-1">
               <Beaker className="w-3.5 h-3.5" />
               {initialData ? 'Edit Galon' : 'Input Galon Baru'}
             </div>
-            <h3 className="text-xl font-bold text-stone-900">
+            <h3 className="text-lg sm:text-xl font-bold text-stone-900">
               {initialData ? 'Ubah Data Galon Eco Enzyme' : 'Catat Galon Fermentasi Baru'}
             </h3>
-            <p className="text-xs text-stone-500 mt-0.5">
-              Data akan otomatis dibuatkan Barcode & QR Code untuk ditempel pada fisik galon.
+            <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5">
+              Data akan otomatis dibuatkan Barcode &amp; QR Code untuk ditempel pada fisik galon.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-5">
+        <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4 mt-4 sm:mt-5">
           {/* Read-Only Public Code Banner jika edit */}
           {initialData?.publicCode && (
             <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-3 flex items-center justify-between text-xs">

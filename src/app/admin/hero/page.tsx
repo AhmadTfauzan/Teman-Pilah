@@ -202,16 +202,16 @@ export default function AdminHeroPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 pb-12">
+    <div className="flex flex-col gap-4 sm:gap-8 pb-8 sm:pb-12">
       {/* ─── HEADER ─── */}
-      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+      <header className="flex flex-col justify-between gap-3 sm:gap-5 sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2D5A27] text-white shadow-md">
-              <SlidersHorizontal size={20} />
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#2D5A27] text-white shadow-md shrink-0">
+              <SlidersHorizontal size={18} className="sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1B361F] tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-[#1B361F] tracking-tight leading-tight">
                 Kelola Foto Background Hero
               </h1>
               <p className="text-xs sm:text-sm text-[#5D705C] font-medium mt-0.5">
@@ -223,82 +223,82 @@ export default function AdminHeroPage() {
 
         <button
           onClick={handleOpenAddModal}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FC9430] hover:bg-[#e07f24] px-5 py-2.5 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FC9430] hover:bg-[#e07f24] px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 self-start sm:self-auto"
           type="button"
         >
-          <Plus size={18} strokeWidth={2.5} />
+          <Plus size={16} strokeWidth={2.5} className="sm:w-[18px] sm:h-[18px]" />
           <span>Tambah Foto Baru</span>
         </button>
       </header>
 
       {/* ─── STATS & SEARCH ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-[#E4EAE1] bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold text-[#6E826D] uppercase tracking-wider">Total Slide</p>
-          <p className="text-3xl font-extrabold text-[#1B361F] mt-1">{slides.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-xl sm:rounded-2xl border border-[#E4EAE1] bg-white p-3 sm:p-5 shadow-sm">
+          <p className="text-[10px] sm:text-xs font-semibold text-[#6E826D] uppercase tracking-normal sm:tracking-wider truncate">Total Slide</p>
+          <p className="text-xl sm:text-3xl font-extrabold text-[#1B361F] mt-0.5 sm:mt-1">{slides.length}</p>
         </div>
-        <div className="rounded-2xl border border-[#E4EAE1] bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold text-[#6E826D] uppercase tracking-wider">Slide Aktif</p>
-          <p className="text-3xl font-extrabold text-[#2D5A27] mt-1">
+        <div className="rounded-xl sm:rounded-2xl border border-[#E4EAE1] bg-white p-3 sm:p-5 shadow-sm">
+          <p className="text-[10px] sm:text-xs font-semibold text-[#6E826D] uppercase tracking-normal sm:tracking-wider truncate">Slide Aktif</p>
+          <p className="text-xl sm:text-3xl font-extrabold text-[#2D5A27] mt-0.5 sm:mt-1">
             {slides.filter((s) => s.isActive).length}
           </p>
         </div>
-        <div className="rounded-2xl border border-[#E4EAE1] bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold text-[#6E826D] uppercase tracking-wider">Slide Nonaktif</p>
-          <p className="text-3xl font-extrabold text-[#9A9A9A] mt-1">
+        <div className="rounded-xl sm:rounded-2xl border border-[#E4EAE1] bg-white p-3 sm:p-5 shadow-sm">
+          <p className="text-[10px] sm:text-xs font-semibold text-[#6E826D] uppercase tracking-normal sm:tracking-wider truncate">Nonaktif</p>
+          <p className="text-xl sm:text-3xl font-extrabold text-[#9A9A9A] mt-0.5 sm:mt-1">
             {slides.filter((s) => !s.isActive).length}
           </p>
         </div>
       </div>
 
       {/* ─── SEARCH BAR ─── */}
-      <div className="rounded-2xl border border-[#E4EAE1] bg-white p-3 shadow-sm">
+      <div className="rounded-xl sm:rounded-2xl border border-[#E4EAE1] bg-white p-2 sm:p-3 shadow-sm">
         <div className="relative">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E917D]" />
+          <Search size={16} className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-[#7E917D] sm:w-[18px] sm:h-[18px]" />
           <input
             type="text"
             placeholder="Cari berdasarkan judul, alt text, atau keterangan..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-xl bg-[#F6F8F5] py-2.5 pl-11 pr-4 text-sm text-[#1B361F] placeholder:text-[#9FB19E] focus:outline-none focus:ring-2 focus:ring-[#2D5A27]"
+            className="w-full rounded-lg sm:rounded-xl bg-[#F6F8F5] py-2 sm:py-2.5 pl-10 sm:pl-11 pr-4 text-xs sm:text-sm text-[#1B361F] placeholder:text-[#9FB19E] focus:outline-none focus:ring-2 focus:ring-[#2D5A27]"
           />
         </div>
       </div>
 
       {/* ─── SLIDES LIST (CARDS GRID) ─── */}
       {isLoading ? (
-        <div className="flex items-center justify-center min-h-[350px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2D5A27]" />
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-[#2D5A27]" />
         </div>
       ) : filteredSlides.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#C5D3C2] bg-white p-12 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F1F5EF] text-[#2D5A27]">
-            <Upload size={24} />
+        <div className="rounded-2xl border border-dashed border-[#C5D3C2] bg-white p-8 sm:p-12 text-center">
+          <div className="mx-auto flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#F1F5EF] text-[#2D5A27]">
+            <Upload size={22} />
           </div>
-          <h3 className="mt-4 text-base font-bold text-[#1B361F]">Belum ada foto slide background</h3>
-          <p className="mt-1 text-sm text-[#6E826D]">
+          <h3 className="mt-4 text-sm sm:text-base font-bold text-[#1B361F]">Belum ada foto slide background</h3>
+          <p className="mt-1 text-xs sm:text-sm text-[#6E826D]">
             Tambahkan foto untuk carousel background hero di halaman beranda.
           </p>
           <button
             onClick={handleOpenAddModal}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#2D5A27] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#2D5A27] px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110"
           >
             <Plus size={16} /> Tambah Foto Pertama
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
           {filteredSlides.map((slide, index) => {
             const imgUrl = getHeroImageUrl(slide.imageUrl);
             return (
               <div
                 key={slide.id}
-                className={`group relative flex flex-col rounded-2xl border transition-all duration-200 overflow-hidden bg-white shadow-sm hover:shadow-md ${
+                className={`group relative flex flex-col rounded-xl sm:rounded-2xl border transition-all duration-200 overflow-hidden bg-white shadow-sm hover:shadow-md ${
                   slide.isActive ? 'border-[#C5D3C2]' : 'border-gray-200 opacity-75'
                 }`}
               >
                 {/* Image Thumbnail with Overlay Badges */}
-                <div className="relative h-48 w-full bg-black/10 overflow-hidden">
+                <div className="relative h-28 sm:h-48 w-full bg-black/10 overflow-hidden">
                   <Image
                     src={imgUrl}
                     alt={slide.altText || 'Foto Hero'}
@@ -306,19 +306,20 @@ export default function AdminHeroPage() {
                     unoptimized
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
 
                   {/* Top Left: Sort Order Badge */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-lg bg-black/60 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
-                    <ArrowUpDown size={12} />
-                    <span>Urutan: {slide.sortOrder}</span>
+                  <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 flex items-center gap-1 sm:gap-1.5 rounded-md sm:rounded-lg bg-black/60 px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-bold text-white backdrop-blur-md">
+                    <ArrowUpDown size={10} className="sm:w-3 sm:h-3" />
+                    <span className="sm:hidden">#{slide.sortOrder}</span>
+                    <span className="hidden sm:inline">Urutan: {slide.sortOrder}</span>
                   </div>
 
                   {/* Top Right: Status Badge */}
                   <button
                     onClick={() => handleToggleActive(slide.id)}
                     title={slide.isActive ? 'Klik untuk nonaktifkan' : 'Klik untuk aktifkan'}
-                    className={`absolute top-3 right-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-md transition-all shadow-sm ${
+                    className={`absolute top-1.5 right-1.5 sm:top-3 sm:right-3 flex items-center gap-1 rounded-full px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-semibold backdrop-blur-md transition-all shadow-sm ${
                       slide.isActive
                         ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                         : 'bg-zinc-700 text-zinc-200 hover:bg-zinc-800'
@@ -326,57 +327,59 @@ export default function AdminHeroPage() {
                   >
                     {slide.isActive ? (
                       <>
-                        <CheckCircle2 size={12} /> Aktif
+                        <CheckCircle2 size={10} className="sm:w-3 sm:h-3" /> Aktif
                       </>
                     ) : (
                       <>
-                        <XCircle size={12} /> Nonaktif
+                        <XCircle size={10} className="sm:w-3 sm:h-3" /> Nonaktif
                       </>
                     )}
                   </button>
 
                   {/* Bottom: Caption/Alt */}
-                  <div className="absolute bottom-2.5 left-3 right-3">
-                    <p className="text-xs font-semibold text-white truncate drop-shadow">
+                  <div className="absolute bottom-1.5 left-2 right-2 sm:bottom-2.5 sm:left-3 sm:right-3">
+                    <p className="text-[10px] sm:text-xs font-semibold text-white truncate drop-shadow">
                       {slide.altText || slide.caption || 'Tanpa keterangan'}
                     </p>
                   </div>
                 </div>
 
                 {/* Content details */}
-                <div className="p-4 flex flex-col flex-1 justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs text-[#7B8E79] font-medium">Keterangan / Caption:</p>
-                    <p className="text-sm font-semibold text-[#1B361F] line-clamp-2">
+                <div className="p-2.5 sm:p-5 flex flex-col flex-1 justify-between gap-2 sm:gap-3">
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <p className="text-[10px] sm:text-xs text-[#7B8E79] font-medium">Keterangan:</p>
+                    <p className="text-xs sm:text-sm font-semibold text-[#1B361F] line-clamp-2">
                       {slide.caption || slide.altText || '–'}
                     </p>
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex items-center justify-between border-t border-[#EEF2EC] pt-3 mt-auto">
+                  <div className="flex items-center justify-between border-t border-[#EEF2EC] pt-2 sm:pt-3 mt-auto gap-1">
                     <a
                       href={imgUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D5A27] hover:underline"
+                      className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-[#2D5A27] hover:underline"
                     >
-                      <Eye size={14} /> Lihat Foto
+                      <Eye size={12} className="sm:w-[14px] sm:h-[14px]" />
+                      <span className="sm:hidden">Lihat</span>
+                      <span className="hidden sm:inline">Lihat Foto</span>
                     </a>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <button
                         onClick={() => handleOpenEditModal(slide)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F1F5EF] text-[#2D5A27] hover:bg-[#2D5A27] hover:text-white transition-colors"
+                        className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-[#F1F5EF] text-[#2D5A27] hover:bg-[#2D5A27] hover:text-white transition-colors"
                         title="Edit Slide"
                       >
-                        <Edit2 size={14} />
+                        <Edit2 size={12} className="sm:w-[14px] sm:h-[14px]" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(slide)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors"
+                        className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors"
                         title="Hapus Slide"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} className="sm:w-[14px] sm:h-[14px]" />
                       </button>
                     </div>
                   </div>
@@ -389,10 +392,10 @@ export default function AdminHeroPage() {
 
       {/* ─── ADD / EDIT MODAL ─── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-[#EEF2EC]">
-              <h2 className="text-xl font-bold text-[#1B361F]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2.5 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-8 shadow-2xl overflow-y-auto max-h-[92vh]">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#EEF2EC]">
+              <h2 className="text-lg sm:text-xl font-bold text-[#1B361F]">
                 {editingSlide ? 'Edit Foto Slide Hero' : 'Tambah Foto Slide Hero'}
               </h2>
               <button
@@ -403,7 +406,7 @@ export default function AdminHeroPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <form onSubmit={handleSubmit} className="mt-4 sm:mt-5 space-y-3.5 sm:space-y-4">
               {/* File Upload / Preview */}
               <div>
                 <label className="block text-xs font-bold text-[#1B361F] uppercase tracking-wider mb-2">
@@ -411,7 +414,7 @@ export default function AdminHeroPage() {
                 </label>
 
                 {previewUrl ? (
-                  <div className="relative h-44 w-full rounded-2xl overflow-hidden border border-[#C5D3C2] bg-black/5 group">
+                  <div className="relative h-36 sm:h-44 w-full rounded-xl sm:rounded-2xl overflow-hidden border border-[#C5D3C2] bg-black/5 group">
                     <Image
                       src={previewUrl}
                       alt="Preview"
@@ -430,11 +433,11 @@ export default function AdminHeroPage() {
                 ) : (
                   <label
                     htmlFor="hero-image-input"
-                    className="flex flex-col items-center justify-center h-44 w-full border-2 border-dashed border-[#C5D3C2] hover:border-[#2D5A27] rounded-2xl bg-[#F6F8F5] cursor-pointer transition-colors p-4 text-center"
+                    className="flex flex-col items-center justify-center h-36 sm:h-44 w-full border-2 border-dashed border-[#C5D3C2] hover:border-[#2D5A27] rounded-xl sm:rounded-2xl bg-[#F6F8F5] cursor-pointer transition-colors p-4 text-center"
                   >
-                    <Upload size={28} className="text-[#2D5A27] mb-2" />
-                    <span className="text-sm font-bold text-[#1B361F]">Pilih Foto Background</span>
-                    <span className="text-xs text-[#7E917D] mt-1">
+                    <Upload size={24} className="text-[#2D5A27] mb-2" />
+                    <span className="text-xs sm:text-sm font-bold text-[#1B361F]">Pilih Foto Background</span>
+                    <span className="text-[11px] sm:text-xs text-[#7E917D] mt-1">
                       Format JPG, PNG, atau WebP (Disarankan 1920x1080, Maks 3MB)
                     </span>
                   </label>

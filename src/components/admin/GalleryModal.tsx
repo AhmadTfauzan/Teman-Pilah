@@ -90,30 +90,30 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
       {/* HEADER BAR */}
-      <div className="flex-none px-12 py-6">
+      <div className="flex-none px-4 sm:px-12 py-4 sm:py-6">
         <button 
           onClick={onClose}
-          className="flex items-center text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
+          className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
         >
-          <ArrowLeft size={16} className="mr-2" />
+          <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
           Kembali ke Kelola Galeri
         </button>
-        <h1 className="text-3xl font-serif font-bold text-[#2A3426] mt-6">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#2A3426] mt-3 sm:mt-6">
           {item ? 'Edit Item Galeri' : 'Tambah Item Galeri Baru'}
         </h1>
       </div>
 
       {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 overflow-y-auto px-12 pb-32">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-12 pb-24 sm:pb-32">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           
           {/* LEFT COLUMN (Forms) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
             {/* Judul Galeri */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-[13px] font-bold text-[#72796E]">Judul Galeri</label>
+                <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Judul Galeri</label>
                 <span className="text-[11px] text-[#A1A89A]">{title.length}/100</span>
               </div>
               <input
@@ -121,32 +121,32 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
                 value={title}
                 onChange={(e) => setTitle(e.target.value.slice(0, 100))}
                 placeholder="Contoh: Kunjungan Mahasiswa Telkom, Sosialisasi Zero Waste..."
-                className="w-full border border-[#D6D9D2] rounded-xl p-4 text-[14px] text-[#2A3426] focus:outline-none focus:border-[#27532B] transition-all bg-[#F9FAF8] placeholder:text-[#A1A89A]"
+                className="w-full border border-[#D6D9D2] rounded-xl p-3 sm:p-4 text-sm text-[#2A3426] focus:outline-none focus:border-[#27532B] transition-all bg-[#F9FAF8] placeholder:text-[#A1A89A]"
               />
             </div>
 
             {/* Description */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-[13px] font-bold text-[#72796E]">Deskripsi</label>
+                <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Deskripsi</label>
                 <span className="text-[11px] text-[#A1A89A]">{description.length}/500</span>
               </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, 500))}
                 placeholder="Tulis deskripsi atau catatan singkat untuk aksi nyata ini..."
-                rows={5}
-                className="w-full border border-[#D6D9D2] rounded-xl p-4 text-[14px] text-[#2A3426] focus:outline-none focus:border-[#27532B] transition-all bg-[#F9FAF8] placeholder:text-[#A1A89A] resize-none"
+                rows={4}
+                className="w-full border border-[#D6D9D2] rounded-xl p-3 sm:p-4 text-sm text-[#2A3426] focus:outline-none focus:border-[#27532B] transition-all bg-[#F9FAF8] placeholder:text-[#A1A89A] resize-none"
               />
             </div>
             
           </div>
 
           {/* RIGHT COLUMN (Image Upload) */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-4">
-              <label className="text-[13px] font-bold text-[#72796E]">Foto Galeri</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-3 sm:space-y-4">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Foto Galeri</label>
               
               <div 
                 onClick={() => fileInputRef.current?.click()}
@@ -197,18 +197,18 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
       </div>
 
       {/* FOOTER ACTION BAR */}
-      <div className="absolute bottom-0 left-0 right-0 bg-[#F9FAF8] border-t border-[#F0F2EB] px-12 py-5 flex justify-end gap-3 z-10">
+      <div className="absolute bottom-0 left-0 right-0 bg-[#F9FAF8] border-t border-[#F0F2EB] px-4 sm:px-12 py-3.5 sm:py-5 flex justify-end gap-2.5 sm:gap-3 z-10">
         <button
           onClick={onClose}
           type="button"
-          className="rounded-xl border border-[#D6D9D2] bg-white px-6 py-3 text-[13px] font-bold text-[#72796E] hover:bg-gray-50 transition-colors active:scale-95"
+          className="rounded-xl border border-[#D6D9D2] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-[13px] font-bold text-[#72796E] hover:bg-gray-50 transition-colors active:scale-95"
         >
           Batal
         </button>
         <button
           onClick={handlePreSubmit}
           type="button"
-          className="rounded-xl bg-[#27532B] px-6 py-3 text-[13px] font-bold text-white hover:brightness-110 transition-all active:scale-95"
+          className="rounded-xl bg-[#27532B] px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-[13px] font-bold text-white hover:brightness-110 transition-all active:scale-95"
         >
           {item ? 'Simpan Perubahan' : 'Unggah Item Galeri'}
         </button>

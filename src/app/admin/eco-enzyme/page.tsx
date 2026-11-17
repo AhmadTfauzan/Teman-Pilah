@@ -271,22 +271,22 @@ export default function AdminEcoEnzymePage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       
       {/* ════════════════ TAB SWITCHER ════════════════ */}
-      <div className="flex items-center gap-2 border-b border-stone-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-stone-200 pb-2.5 sm:pb-3 overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab('BATCHES')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+          className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all ${
             activeTab === 'BATCHES'
               ? 'bg-[#012D1D] text-white shadow-sm'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >
-          <Droplet className="w-4 h-4 text-[#80E478]" />
+          <Droplet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#80E478]" />
           <span>Galon Fermentasi</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+          <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-black ${
             activeTab === 'BATCHES' ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'
           }`}>
             {batches.length}
@@ -296,15 +296,15 @@ export default function AdminEcoEnzymePage() {
         <button
           type="button"
           onClick={() => setActiveTab('VIDEOS')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+          className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all ${
             activeTab === 'VIDEOS'
               ? 'bg-[#012D1D] text-white shadow-sm'
               : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
           }`}
         >
-          <Film className="w-4 h-4 text-[#FC9634]" />
-          <span>Kelola Video Edukasi</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+          <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FC9634]" />
+          <span>Video Edukasi</span>
+          <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-black ${
             activeTab === 'VIDEOS' ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'
           }`}>
             {videos.length}
@@ -314,14 +314,14 @@ export default function AdminEcoEnzymePage() {
 
       {/* ════════════════ TAB 1: GALON FERMENTASI ════════════════ */}
       {activeTab === 'BATCHES' && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* Header */}
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">
                 Manajemen Eco Enzyme
               </h1>
-              <p className="text-xs sm:text-sm text-stone-500 mt-1">
+              <p className="text-xs sm:text-sm text-stone-500 mt-0.5 sm:mt-1">
                 Kelola isi fermentasi galon dan cetak barcode QR untuk setiap wadah.
               </p>
             </div>
@@ -331,7 +331,7 @@ export default function AdminEcoEnzymePage() {
                 setEditingBatch(null);
                 setIsBatchModalOpen(true);
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition-all active:scale-95 self-start sm:self-center"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition-all active:scale-95 self-start sm:self-center"
               type="button"
             >
               <Plus className="w-4 h-4 text-[#FC9634]" />
@@ -340,16 +340,16 @@ export default function AdminEcoEnzymePage() {
           </header>
 
           {/* Search & Filter Bar */}
-          <div className="rounded-2xl border border-stone-200 bg-white p-2.5 shadow-xs">
-            <div className="flex flex-col sm:flex-row items-center gap-2.5">
+          <div className="rounded-xl sm:rounded-2xl border border-stone-200 bg-white p-2 sm:p-2.5 shadow-xs">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
               <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-stone-400 absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Cari berdasarkan nama galon, kode, atau buah..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#FAFBF9] border border-stone-200 rounded-xl pl-10 pr-9 py-2 text-xs sm:text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#012D1D] focus:bg-white"
+                  className="w-full bg-[#FAFBF9] border border-stone-200 rounded-xl pl-9 sm:pl-10 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#012D1D] focus:bg-white"
                 />
                 {searchTerm && (
                   <button
@@ -366,7 +366,7 @@ export default function AdminEcoEnzymePage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full h-10 appearance-none bg-[#FAFBF9] border border-stone-200 rounded-xl px-3.5 text-xs font-semibold text-stone-700 focus:outline-none focus:border-[#012D1D] cursor-pointer"
+                  className="w-full h-9 sm:h-10 appearance-none bg-[#FAFBF9] border border-stone-200 rounded-xl px-3 sm:px-3.5 text-xs font-semibold text-stone-700 focus:outline-none focus:border-[#012D1D] cursor-pointer"
                 >
                   <option value="ALL">Semua Galon</option>
                   <option value="FERMENTING">Sedang Fermentasi</option>
@@ -380,29 +380,175 @@ export default function AdminEcoEnzymePage() {
 
           {/* Table Galon */}
           <div className="rounded-2xl border border-stone-200 bg-white shadow-xs overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
-              <h2 className="text-sm font-bold text-stone-900">
+            <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-stone-100">
+              <h2 className="text-xs sm:text-sm font-bold text-stone-900">
                 Daftar Galon Fermentasi
               </h2>
-              <span className="text-xs text-stone-400 font-medium">
+              <span className="text-[11px] sm:text-xs text-stone-400 font-medium">
                 {filteredBatches.length} total galon
               </span>
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex items-center justify-center py-16 sm:py-20">
                 <div className="w-8 h-8 border-3 border-emerald-800 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : filteredBatches.length === 0 ? (
-              <div className="text-center py-16 text-stone-500">
+              <div className="text-center py-12 sm:py-16 px-4 text-stone-500">
                 <p className="text-xs font-semibold text-stone-700">Tidak ada galon yang ditemukan.</p>
                 <p className="text-[11px] text-stone-400 mt-0.5">
                   {searchTerm ? 'Coba ubah kata kunci pencarian.' : 'Silakan klik "Input Galon Baru" untuk mencatat galon.'}
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <>
+                {/* Mobile 2-Column Card Grid */}
+                <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+                  {filteredBatches.map((batch) => {
+                    const displayStatus = batch.displayStatus || batch.status;
+                    const dayPassed = batch.dayPassed || getDayPassed(batch.startDate);
+                    const progress = batch.progressPercent ?? getFermentationProgress(batch.startDate, batch.harvestEstimate);
+                    const daysLeft = getDaysRemaining(batch.harvestEstimate);
+                    const isArchived = Boolean(batch.archivedAt || batch.status === 'ARCHIVED');
+                    const isHarvested = batch.status === 'HARVESTED';
+                    const isReady = displayStatus === 'READY_TO_HARVEST' || progress >= 100;
+
+                    return (
+                      <div
+                        key={batch.id}
+                        className="flex flex-col justify-between rounded-xl border border-stone-200 bg-[#FAFBF9] p-2.5 gap-2"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="font-mono text-[10px] font-black bg-[#012D1D] text-white px-1.5 py-0.5 rounded">
+                              {batch.batchCode || 'GL-01'}
+                            </span>
+                            {isArchived ? (
+                              <span className="text-[9px] font-semibold text-stone-500 bg-stone-200/70 px-1.5 py-0.5 rounded">
+                                Arsip
+                              </span>
+                            ) : isHarvested ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Dipanen
+                              </span>
+                            ) : isReady ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-300">
+                                <Sparkles className="w-2.5 h-2.5 text-emerald-600" /> Siap
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+                                H-{dayPassed}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="font-bold text-stone-900 text-xs leading-snug line-clamp-2">
+                            {batch.containerName}
+                          </h3>
+                        </div>
+
+                        {!isArchived && !isHarvested && !isReady ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[9px] font-bold text-stone-600">
+                              <span>{progress}%</span>
+                              <span>{daysLeft}h lagi</span>
+                            </div>
+                            <div className="w-full bg-stone-200/80 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="bg-[#FC9634] h-full rounded-full"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-stone-500 font-medium">
+                            {Number(batch.waterLiter)}L • {new Date(batch.harvestEstimate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-1 pt-1.5 border-t border-stone-200/80">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveQrBatch(batch);
+                              setIsQrModalOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center gap-1 px-1.5 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-[10px] transition-colors flex-1"
+                            title="Cetak atau unduh label barcode galon"
+                          >
+                            <QrCode className="w-3 h-3 text-emerald-700" />
+                            <span>QR</span>
+                          </button>
+
+                          {!isArchived && !isHarvested && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveHarvestBatch(batch);
+                                setIsHarvestModalOpen(true);
+                              }}
+                              className={`px-1.5 py-1 rounded-md font-bold text-[10px] transition-all flex-1 text-center ${
+                                isReady
+                                  ? 'bg-[#012D1D] text-white'
+                                  : 'bg-stone-200/70 hover:bg-stone-200 text-stone-700'
+                              }`}
+                              title="Catat hasil panen"
+                            >
+                              Panen
+                            </button>
+                          )}
+
+                          <div className="flex items-center gap-0.5 ml-auto">
+                            {!isArchived && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingBatch(batch);
+                                  setIsBatchModalOpen(true);
+                                }}
+                                className="p-1 rounded-md text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
+                                title="Edit data"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                            )}
+
+                            {isArchived ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRestore(batch)}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded-md text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-[10px] font-bold transition-colors"
+                                title="Pulihkan dari arsip"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Pulihkan</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteModal({
+                                    isOpen: true,
+                                    id: batch.id,
+                                    name: `${batch.containerName} (${batch.batchCode || batch.publicCode})`,
+                                  });
+                                }}
+                                className="p-1 rounded-md text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                title="Arsipkan galon"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs">
                   <thead className="bg-[#FAFBF9] text-stone-500 font-semibold border-b border-stone-100">
                     <tr>
                       <th className="py-3 px-6">Wadah &amp; Kode</th>
@@ -569,7 +715,8 @@ export default function AdminEcoEnzymePage() {
                     })}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -577,22 +724,22 @@ export default function AdminEcoEnzymePage() {
 
       {/* ════════════════ TAB 2: VIDEO EDUKASI ECO ENZYME ════════════════ */}
       {activeTab === 'VIDEOS' && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* Header Video */}
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">
                 Kelola Video Edukasi Eco Enzyme
               </h1>
-              <p className="text-xs sm:text-sm text-stone-500 mt-1">
+              <p className="text-xs sm:text-sm text-stone-500 mt-0.5 sm:mt-1">
                 Kelola video panduan manfaat dan cara pembuatan Eco Enzyme yang tampil pada halaman publik.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => loadVideos()}
-                className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors shadow-xs"
+                className="p-2 sm:p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors shadow-xs"
                 title="Segarkan Data"
                 type="button"
               >
@@ -601,7 +748,7 @@ export default function AdminEcoEnzymePage() {
 
               <button
                 onClick={handleOpenAddVideo}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-5 py-2.5 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-4 py-2 sm:px-5 sm:py-2.5 font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
                 type="button"
               >
                 <Plus className="w-4 h-4 text-[#FC9634]" />
@@ -611,27 +758,27 @@ export default function AdminEcoEnzymePage() {
           </header>
 
           {/* Statistik Kartu Video */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
-              <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Total Video</span>
-              <span className="text-2xl font-black text-stone-900 mt-1 block">{videoStats.all}</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-xs">
+              <span className="text-[10px] sm:text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Total Video</span>
+              <span className="text-xl sm:text-2xl font-black text-stone-900 mt-0.5 sm:mt-1 block">{videoStats.all}</span>
             </div>
-            <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
-              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">MP4 Lokal</span>
-              <span className="text-2xl font-black text-emerald-800 mt-1 block">{videoStats.local}</span>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-xs">
+              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">MP4 Lokal</span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-800 mt-0.5 sm:mt-1 block">{videoStats.local}</span>
             </div>
-            <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
-              <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider block">YouTube</span>
-              <span className="text-2xl font-black text-red-700 mt-1 block">{videoStats.youtube}</span>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-xs">
+              <span className="text-[10px] sm:text-[11px] font-bold text-red-600 uppercase tracking-wider block">YouTube</span>
+              <span className="text-xl sm:text-2xl font-black text-red-700 mt-0.5 sm:mt-1 block">{videoStats.youtube}</span>
             </div>
-            <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
-              <span className="text-[11px] font-bold text-stone-600 uppercase tracking-wider block">TikTok / IG</span>
-              <span className="text-2xl font-black text-stone-800 mt-1 block">{videoStats.tiktok + videoStats.instagram}</span>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-stone-200 shadow-xs">
+              <span className="text-[10px] sm:text-[11px] font-bold text-stone-600 uppercase tracking-wider block">TikTok / IG</span>
+              <span className="text-xl sm:text-2xl font-black text-stone-800 mt-0.5 sm:mt-1 block">{videoStats.tiktok + videoStats.instagram}</span>
             </div>
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-xs space-y-3">
+          <div className="rounded-xl sm:rounded-2xl border border-stone-200 bg-white p-2.5 sm:p-3 shadow-xs space-y-2.5 sm:space-y-3">
             <div className="flex flex-col sm:flex-row items-center gap-2.5">
               <div className="relative flex-1 w-full">
                 <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -789,8 +936,8 @@ export default function AdminEcoEnzymePage() {
 
       {/* 7. Modal Preview Video Player */}
       {previewVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-stone-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2.5 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-stone-900 rounded-2xl sm:rounded-3xl max-w-lg w-full p-3.5 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-stone-800">
               <div>
                 <span className="text-[10px] uppercase font-bold text-[#FC9634] block">

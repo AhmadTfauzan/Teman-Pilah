@@ -49,12 +49,12 @@ export function VideoTable({
 
   if (isLoading) {
     return (
-      <div className="w-full bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+      <div className="w-full bg-white rounded-2xl border border-gray-200 p-4 sm:p-8 shadow-sm">
         <div className="space-y-4 animate-pulse">
-          <div className="h-10 bg-gray-200 rounded-lg w-1/3"></div>
-          <div className="h-16 bg-gray-100 rounded-xl"></div>
-          <div className="h-16 bg-gray-100 rounded-xl"></div>
-          <div className="h-16 bg-gray-100 rounded-xl"></div>
+          <div className="h-8 sm:h-10 bg-gray-200 rounded-lg w-1/3"></div>
+          <div className="h-14 sm:h-16 bg-gray-100 rounded-xl"></div>
+          <div className="h-14 sm:h-16 bg-gray-100 rounded-xl"></div>
+          <div className="h-14 sm:h-16 bg-gray-100 rounded-xl"></div>
         </div>
       </div>
     );
@@ -62,19 +62,19 @@ export function VideoTable({
 
   if (videos.length === 0) {
     return (
-      <div className="w-full bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
-        <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
-          <Video size={32} />
+      <div className="w-full bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center shadow-sm">
+        <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
+          <Video size={28} className="sm:w-8 sm:h-8" />
         </div>
-        <h3 className="font-['Poppins'] font-bold text-xl text-gray-900">
+        <h3 className="font-['Poppins'] font-bold text-lg sm:text-xl text-gray-900">
           Belum Ada Video Bank Sampah
         </h3>
-        <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-md mx-auto">
           Mulai tambahkan video kegiatan Bank Sampah dengan memasukkan link dari YouTube, Instagram, atau TikTok.
         </p>
         <button
           onClick={onAddNew}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#012D1D] hover:bg-[#0B4A31] text-white px-6 py-2.5 text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#012D1D] hover:bg-[#0B4A31] text-white px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95"
         >
           <span>Tambah Video Baru</span>
         </button>
@@ -84,7 +84,86 @@ export function VideoTable({
 
   return (
     <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Mobile 2-Column Card Grid */}
+      <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+        {videos.map((video) => (
+          <div
+            key={video.id}
+            className="flex flex-col justify-between rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden"
+          >
+            {/* Thumbnail */}
+            <div className="relative h-24 w-full bg-gray-900">
+              <Image
+                src={getVideoThumbnailUrl(video.thumbnail)}
+                alt={video.title}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+              <span
+                className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold text-white shadow-xs ${
+                  video.platform === 'YouTube'
+                    ? 'bg-red-600'
+                    : video.platform === 'Instagram'
+                    ? 'bg-pink-600'
+                    : 'bg-black'
+                }`}
+              >
+                {video.platform}
+              </span>
+              {video.duration && (
+                <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/75 text-white text-[9px] font-mono">
+                  {video.duration}
+                </span>
+              )}
+            </div>
+
+            {/* Content & Actions */}
+            <div className="p-2.5 flex flex-col flex-1 justify-between gap-2">
+              <div className="space-y-1">
+                <p className="font-['Poppins'] font-bold text-xs text-gray-900 line-clamp-2 leading-snug">
+                  {video.title}
+                </p>
+                {video.category && (
+                  <span className="inline-block text-[9px] font-medium text-gray-700 bg-gray-200/70 px-1.5 py-0.5 rounded-full truncate max-w-full">
+                    {video.category}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 gap-1">
+                <a
+                  href={video.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex-1"
+                  title="Buka Video"
+                >
+                  <ExternalLink size={10} />
+                  <span>Buka</span>
+                </a>
+                <button
+                  onClick={() => onEdit(video)}
+                  className="p-1.5 rounded-md text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  title="Edit Video"
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button
+                  onClick={() => onDelete(video)}
+                  className="p-1.5 rounded-md text-gray-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                  title="Hapus Video"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider font-['Poppins']">

@@ -68,24 +68,24 @@ export function Programs({ programs }: ProgramsProps) {
   return (
     <section
       id="program"
-      className="relative w-full overflow-hidden bg-[#F1F4F9] py-20 lg:py-28"
+      className="relative w-full overflow-hidden bg-[#F1F4F9] py-10 sm:py-16 lg:py-28"
     >
       {/* ─── DECORATIVE ACCENTS (Figma Frame 48: ConcentricCircles #FC9634 & OutlineLeaf) ─── */}
-      <div className="absolute -right-24 -top-24 opacity-35 pointer-events-none">
+      <div className="hidden sm:block absolute -right-24 -top-24 opacity-35 pointer-events-none">
         <ConcentricCircles size={360} color="#FC9634" />
       </div>
-      <div className="absolute -left-20 -bottom-20 opacity-20 pointer-events-none rotate-[-20deg]">
+      <div className="hidden sm:block absolute -left-20 -bottom-20 opacity-20 pointer-events-none rotate-[-20deg]">
         <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
       </div>
 
       <Container className="relative z-10">
         {/* ─── SECTION HEADER ─── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-6 pb-6 sm:pb-12">
           <div>
-            <h2 className="font-['Poppins'] font-bold text-3xl sm:text-4xl lg:text-[44px] leading-tight text-[#012D1D] tracking-[-1px]">
+            <h2 className="font-['Poppins'] font-bold text-2xl sm:text-4xl lg:text-[44px] leading-tight text-[#012D1D] tracking-[-0.5px] sm:tracking-[-1px]">
               Program Unggulan
             </h2>
-            <p className="font-['Poppins'] font-normal text-base sm:text-lg text-[#3D3D3D] mt-2 max-w-[640px]">
+            <p className="font-['Poppins'] font-normal text-xs sm:text-lg text-[#3D3D3D] mt-1 sm:mt-2 max-w-[640px]">
               Inisiatif yang kami jalankan untuk menggerakkan masyarakat menjaga
               kelestarian bumi.
             </p>
@@ -93,21 +93,21 @@ export function Programs({ programs }: ProgramsProps) {
 
           <Link
             href="/program"
-            className="font-['Poppins'] font-semibold text-base text-[#012D1D] underline underline-offset-4 hover:text-[#FC9634] transition-colors whitespace-nowrap self-start md:self-end"
+            className="font-['Poppins'] font-semibold text-xs sm:text-base text-[#012D1D] underline underline-offset-4 hover:text-[#FC9634] transition-colors whitespace-nowrap self-start md:self-end"
           >
             Lihat seluruh program
           </Link>
         </div>
 
         {/* ─── 3 CARDS GRID ─── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8">
           {displayPrograms.map((item, idx) => (
             <div
               key={item.id || idx}
               className="flex flex-col rounded-[10px] bg-white overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 border border-black/5"
             >
               {/* Card Image (Figma: 389px x 240px) */}
-              <div className="relative h-[220px] sm:h-[240px] w-full bg-gray-100 overflow-hidden flex items-center justify-center">
+              <div className="relative h-[105px] sm:h-[220px] lg:h-[240px] w-full bg-gray-100 overflow-hidden flex items-center justify-center">
                 <img
                   src={item.image || `/activity/Pengmas (${(idx % 10) + 1}).jpeg`}
                   alt={item.title}
@@ -123,29 +123,29 @@ export function Programs({ programs }: ProgramsProps) {
               </div>
 
               {/* Card Content (Figma: padding 24px) */}
-              <div className="p-6 flex flex-col flex-1 justify-between gap-4">
-                <div className="space-y-2">
+              <div className="p-2.5 sm:p-6 flex flex-col flex-1 justify-between gap-2 sm:gap-4">
+                <div className="space-y-1 sm:space-y-2">
                   {/* Category Tag */}
-                  <span className="font-['Poppins'] font-semibold text-sm text-[#E8801A] block">
+                  <span className="font-['Poppins'] font-semibold text-[10px] sm:text-sm text-[#E8801A] block line-clamp-1">
                     {item.category || 'Program Komunitas'}
                   </span>
 
                   {/* Title */}
-                  <h3 className="font-['Poppins'] font-bold text-xl sm:text-[22px] leading-snug text-[#012D1D]">
+                  <h3 className="font-['Poppins'] font-bold text-xs sm:text-xl lg:text-[22px] leading-snug text-[#012D1D] line-clamp-2">
                     {item.title}
                   </h3>
 
                   {/* Description */}
-                  <p className="font-['Poppins'] font-normal text-sm sm:text-base text-[#3D3D3D] leading-relaxed line-clamp-3">
+                  <p className="font-['Poppins'] font-normal text-[11px] sm:text-base text-[#3D3D3D] leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-3">
                     {item.description}
                   </p>
                 </div>
 
                 {/* Learn More Link */}
-                <div className="pt-2">
+                <div className="pt-0.5 sm:pt-2">
                   <Link
                     href={`/program/${item.slug || item.id}`}
-                    className="font-['Poppins'] font-semibold text-base text-[#012D1D] underline underline-offset-4 hover:text-[#FC9634] transition-colors inline-block"
+                    className="font-['Poppins'] font-semibold text-xs sm:text-base text-[#012D1D] underline underline-offset-4 hover:text-[#FC9634] transition-colors inline-block"
                   >
                     Pelajari lebih lanjut
                   </Link>

@@ -95,7 +95,7 @@ export default function BankSampahPage() {
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#1E293B]">
       {/* ─── HERO HEADER BANNER ─── */}
-      <section className="relative overflow-hidden bg-[#012D1D] pt-28 sm:pt-32 pb-16 lg:pb-20 text-white">
+      <section className="relative overflow-hidden bg-[#012D1D] pt-20 pb-8 sm:pt-32 sm:pb-14 lg:pb-20 text-white">
         {/* Decorative Figma Accents */}
         <div className="absolute -left-28 -top-24 opacity-25 pointer-events-none">
           <ConcentricCircles size={360} color="#0B4A31" />
@@ -106,7 +106,7 @@ export default function BankSampahPage() {
 
         <Container className="relative z-10">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-[#C9D6CF] font-['Poppins'] mb-6">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-[#C9D6CF] font-['Poppins'] mb-3 sm:mb-6">
             <Link href="/" className="hover:text-white transition-colors">
               Beranda
             </Link>
@@ -115,54 +115,54 @@ export default function BankSampahPage() {
           </div>
 
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#0B4A31] border border-[#3B9734]/40 px-4 py-1.5 text-xs sm:text-sm font-semibold text-[#80E478] mb-4">
-              <Video size={16} />
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-[#0B4A31] border border-[#3B9734]/40 px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-sm font-semibold text-[#80E478] mb-2.5 sm:mb-4">
+              <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Dokumentasi & Video Sosmed Resmi</span>
             </div>
 
-            <h1 className="font-['Poppins'] font-bold text-3xl sm:text-4xl lg:text-5xl leading-tight text-white tracking-[-1px]">
+            <h1 className="font-['Poppins'] font-bold text-2xl sm:text-4xl lg:text-5xl leading-tight text-white tracking-[-0.5px] sm:tracking-[-1px]">
               Bank Sampah Teman Pilah
             </h1>
 
-            <p className="font-['Poppins'] font-normal text-base sm:text-lg text-[#C9D6CF] mt-3 leading-relaxed">
+            <p className="font-['Poppins'] font-normal text-xs sm:text-lg text-[#C9D6CF] mt-2 sm:mt-3 leading-relaxed">
               Jelajahi seluruh video aksi penimbangan berkala, edukasi pemilahan sampah anorganik,
               dan kolaborasi masyarakat yang terintegrasi langsung dengan kanal resmi YouTube,
               Instagram, dan TikTok kami.
             </p>
 
             {/* Official Social Media Badges */}
-            <div className="flex flex-wrap items-center gap-3 pt-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 sm:pt-6">
               <a
                 href="https://www.youtube.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all hover:scale-105"
+                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-sm font-medium text-white transition-all hover:scale-105"
               >
-                {getPlatformIcon('YouTube')}
+                {getPlatformIcon('YouTube', 'w-3.5 h-3.5 sm:w-4 sm:h-4')}
                 <span>YouTube Resmi</span>
-                <ExternalLink size={13} className="text-[#C9D6CF]" />
+                <ExternalLink size={12} className="text-[#C9D6CF]" />
               </a>
 
               <a
                 href="https://www.instagram.com/temanpilah"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all hover:scale-105"
+                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-sm font-medium text-white transition-all hover:scale-105"
               >
-                {getPlatformIcon('Instagram')}
+                {getPlatformIcon('Instagram', 'w-3.5 h-3.5 sm:w-4 sm:h-4')}
                 <span>@temanpilah</span>
-                <ExternalLink size={13} className="text-[#C9D6CF]" />
+                <ExternalLink size={12} className="text-[#C9D6CF]" />
               </a>
 
               <a
                 href="https://www.tiktok.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all hover:scale-105"
+                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-sm font-medium text-white transition-all hover:scale-105"
               >
-                {getPlatformIcon('TikTok')}
+                {getPlatformIcon('TikTok', 'w-3.5 h-3.5 sm:w-4 sm:h-4')}
                 <span>TikTok Resmi</span>
-                <ExternalLink size={13} className="text-[#C9D6CF]" />
+                <ExternalLink size={12} className="text-[#C9D6CF]" />
               </a>
             </div>
           </div>
@@ -170,14 +170,14 @@ export default function BankSampahPage() {
       </section>
 
       {/* ─── FILTER & SEARCH TOOLBAR ─── */}
-      <section className="sticky top-[76px] z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] py-4 shadow-sm">
+      <section className="sticky top-14 md:top-[76px] z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] py-2.5 sm:py-4 shadow-sm">
         <Container>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
             {/* Filter Buttons */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 md:pb-0 no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button
                 onClick={() => setSelectedPlatform('ALL')}
-                className={`rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
                   selectedPlatform === 'ALL'
                     ? 'bg-[#012D1D] text-white shadow-sm'
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
@@ -188,37 +188,37 @@ export default function BankSampahPage() {
 
               <button
                 onClick={() => setSelectedPlatform('YouTube')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
                   selectedPlatform === 'YouTube'
                     ? 'bg-red-600 text-white shadow-sm'
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
                 }`}
               >
-                {getPlatformIcon('YouTube')}
+                {getPlatformIcon('YouTube', 'w-3.5 h-3.5 sm:w-4 sm:h-4')}
                 <span>YouTube ({stats.youtube})</span>
               </button>
 
               <button
                 onClick={() => setSelectedPlatform('Instagram')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
                   selectedPlatform === 'Instagram'
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
                 }`}
               >
-                {getPlatformIcon('Instagram')}
+                {getPlatformIcon('Instagram', 'w-3.5 h-3.5 sm:w-4 sm:h-4')}
                 <span>Instagram ({stats.instagram})</span>
               </button>
 
               <button
                 onClick={() => setSelectedPlatform('TikTok')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
                   selectedPlatform === 'TikTok'
                     ? 'bg-black text-white shadow-sm'
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
                 }`}
               >
-                {getPlatformIcon('TikTok')}
+                {getPlatformIcon('TikTok', 'w-3.5 h-3.5 sm:w-4 sm:h-4')}
                 <span>TikTok ({stats.tiktok})</span>
               </button>
             </div>
@@ -226,15 +226,14 @@ export default function BankSampahPage() {
             {/* Search Input */}
             <div className="relative w-full md:w-80">
               <Search
-                size={18}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                className="w-4 h-4 sm:w-[18px] sm:h-[18px] absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari video atau topik..."
-                className="w-full rounded-full border border-gray-300 bg-[#F8FAF8] pl-10 pr-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#3B9734] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-colors"
+                className="w-full rounded-full border border-gray-300 bg-[#F8FAF8] pl-9 sm:pl-10 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#3B9734] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-colors"
               />
               {searchQuery && (
                 <button
@@ -250,17 +249,17 @@ export default function BankSampahPage() {
       </section>
 
       {/* ─── VIDEO GRID ─── */}
-      <section className="py-12 sm:py-16">
+      <section className="py-6 sm:py-12 lg:py-16">
         <Container>
           {filteredVideos.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
-                <Video size={32} />
+            <div className="text-center py-14 sm:py-20 bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+              <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-3 sm:mb-4">
+                <Video className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
-              <h3 className="font-bold text-xl text-gray-900 font-['Poppins']">
+              <h3 className="font-bold text-lg sm:text-xl text-gray-900 font-['Poppins']">
                 Tidak ada video ditemukan
               </h3>
-              <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-md mx-auto">
                 Coba gunakan kata kunci pencarian yang lain atau ubah filter platform sosial media di atas.
               </p>
               <button
@@ -268,18 +267,18 @@ export default function BankSampahPage() {
                   setSelectedPlatform('ALL');
                   setSearchQuery('');
                 }}
-                className="mt-5 rounded-full bg-[#3B9734] hover:bg-[#2F8029] text-white px-5 py-2 text-sm font-semibold transition-colors shadow-md"
+                className="mt-4 sm:mt-5 rounded-full bg-[#3B9734] hover:bg-[#2F8029] text-white px-5 py-2 text-xs sm:text-sm font-semibold transition-colors shadow-md"
               >
                 Reset Filter
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8">
               {filteredVideos.map((video) => (
                 <div
                   key={video.id}
                   onClick={() => setActiveVideo(video)}
-                  className="group relative flex flex-col rounded-2xl bg-white border border-[#E2E8F0] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                  className="group relative flex flex-col rounded-xl sm:rounded-2xl bg-white border border-[#E2E8F0] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer min-w-0"
                 >
                   {/* Thumbnail Container */}
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-900">
@@ -295,32 +294,32 @@ export default function BankSampahPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20 opacity-80 group-hover:opacity-60 transition-opacity" />
 
                     {/* Platform Tag */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-md bg-white/95 px-2.5 py-1 shadow-sm backdrop-blur-sm">
-                      {getPlatformIcon(video.platform)}
-                      <span className="font-['Poppins'] font-bold text-xs text-gray-900">
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1 sm:gap-1.5 rounded sm:rounded-md bg-white/95 px-1.5 py-0.5 sm:px-2.5 sm:py-1 shadow-sm backdrop-blur-sm">
+                      {getPlatformIcon(video.platform, 'w-3 h-3 sm:w-4 sm:h-4')}
+                      <span className="font-['Poppins'] font-bold text-[9px] sm:text-xs text-gray-900">
                         {video.platform}
                       </span>
                     </div>
 
                     {/* Duration Badge */}
-                    <div className="absolute top-3 right-3 rounded-md bg-black/75 px-2 py-0.5 shadow-sm">
-                      <span className="font-mono text-xs font-medium text-white flex items-center gap-1">
-                        <Clock size={12} />
+                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 rounded sm:rounded-md bg-black/75 px-1.5 py-0.5 sm:px-2 shadow-sm">
+                      <span className="font-mono text-[9px] sm:text-xs font-medium text-white flex items-center gap-0.5 sm:gap-1">
+                        <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         {video.duration}
                       </span>
                     </div>
 
                     {/* Center Play Button Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-12 w-12 rounded-full bg-[#FC9634] group-hover:bg-[#e8801a] group-hover:scale-110 flex items-center justify-center text-[#012D1D] shadow-xl transition-all duration-300">
-                        <Play size={20} className="fill-[#012D1D] ml-0.5" />
+                      <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-[#FC9634] group-hover:bg-[#e8801a] group-hover:scale-110 flex items-center justify-center text-[#012D1D] shadow-xl transition-all duration-300">
+                        <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-[#012D1D] ml-0.5" />
                       </div>
                     </div>
 
                     {/* Views & Category at bottom of thumbnail */}
                     {video.category && (
-                      <div className="absolute bottom-3 left-3">
-                        <span className="rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-medium text-[#C9D6CF] backdrop-blur-sm">
+                      <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 max-w-[calc(100%-1rem)]">
+                        <span className="inline-block truncate max-w-full rounded-full bg-black/60 px-1.5 py-0.5 sm:px-2.5 text-[9px] sm:text-[11px] font-medium text-[#C9D6CF] backdrop-blur-sm">
                           {video.category}
                         </span>
                       </div>
@@ -328,28 +327,28 @@ export default function BankSampahPage() {
                   </div>
 
                   {/* Body Content */}
-                  <div className="p-5 flex flex-col flex-1 justify-between">
+                  <div className="p-2.5 sm:p-5 flex flex-col flex-1 justify-between">
                     <div>
-                      <h3 className="font-['Poppins'] font-bold text-base text-gray-900 line-clamp-2 leading-snug group-hover:text-[#3B9734] transition-colors">
+                      <h3 className="font-['Poppins'] font-bold text-xs sm:text-base text-gray-900 line-clamp-2 leading-snug group-hover:text-[#3B9734] transition-colors">
                         {video.title}
                       </h3>
 
                       {video.description && (
-                        <p className="font-['Poppins'] text-xs text-gray-600 line-clamp-2 mt-2 leading-relaxed">
+                        <p className="hidden sm:block font-['Poppins'] text-xs text-gray-600 line-clamp-2 mt-2 leading-relaxed">
                           {video.description}
                         </p>
                       )}
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 font-['Poppins']">
-                      <span className="flex items-center gap-1">
-                        <Calendar size={13} className="text-gray-400" />
-                        {video.date}
+                    <div className="pt-2 sm:pt-4 mt-2 sm:mt-4 border-t border-gray-100 flex items-center justify-between gap-1 text-[10px] sm:text-xs text-gray-500 font-['Poppins']">
+                      <span className="flex items-center gap-1 min-w-0 truncate">
+                        <Calendar className="w-3 h-3 sm:w-[13px] sm:h-[13px] text-gray-400 shrink-0" />
+                        <span className="truncate">{video.date}</span>
                       </span>
 
-                      <span className="text-[#3B9734] font-semibold flex items-center gap-1 group-hover:underline">
+                      <span className="text-[#3B9734] font-semibold flex items-center gap-0.5 sm:gap-1 group-hover:underline shrink-0">
                         <span>Tonton</span>
-                        <ExternalLink size={12} />
+                        <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                       </span>
                     </div>
                   </div>
@@ -361,38 +360,38 @@ export default function BankSampahPage() {
       </section>
 
       {/* ─── CALL TO ACTION: JADI NASABAH BANK SAMPAH ─── */}
-      <section className="pb-20">
+      <section className="pb-12 sm:pb-20">
         <Container>
-          <div className="relative rounded-3xl bg-gradient-to-r from-[#012D1D] to-[#0B4A31] p-8 sm:p-12 text-white overflow-hidden shadow-2xl">
+          <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#012D1D] to-[#0B4A31] p-5 sm:p-12 text-white overflow-hidden shadow-2xl">
             <div className="absolute -right-20 -bottom-20 opacity-20 pointer-events-none rotate-[20deg]">
               <OutlineLeaf size={320} color="#203220" strokeWidth={6} />
             </div>
 
             <div className="relative z-10 max-w-2xl">
-              <span className="text-xs sm:text-sm font-bold tracking-widest uppercase text-[#FC9634]">
+              <span className="text-[11px] sm:text-sm font-bold tracking-widest uppercase text-[#FC9634]">
                 Aksi Kolektif Warga
               </span>
-              <h2 className="font-['Poppins'] font-bold text-2xl sm:text-3xl lg:text-4xl mt-2 leading-tight">
+              <h2 className="font-['Poppins'] font-bold text-xl sm:text-3xl lg:text-4xl mt-1.5 sm:mt-2 leading-tight">
                 Ingin Ikut Menjadi Nasabah Bank Sampah Teman Pilah?
               </h2>
-              <p className="font-['Poppins'] text-sm sm:text-base text-[#C9D6CF] mt-3 leading-relaxed">
+              <p className="font-['Poppins'] text-xs sm:text-base text-[#C9D6CF] mt-2 sm:mt-3 leading-relaxed">
                 Mulai pilah sampah anorganik dari rumah sekarang. Bawa ke pos penimbangan kami,
                 kumpulkan saldo tabungan, dan tukarkan dengan sembako atau manfaat ekonomi lainnya!
               </p>
 
-              <div className="mt-6 flex flex-wrap items-center gap-4">
+              <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-2.5 sm:gap-4">
                 <a
                   href="https://wa.me/6281234567890?text=Halo%20Admin%20Teman%20Pilah,%20saya%20ingin%20mendaftar%20menjadi%20nasabah%20Bank%20Sampah"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#FC9634] hover:bg-[#e8801a] px-6 py-3 font-['Poppins'] font-bold text-sm text-[#012D1D] shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#FC9634] hover:bg-[#e8801a] px-4 sm:px-6 py-2.5 sm:py-3 font-['Poppins'] font-bold text-xs sm:text-sm text-[#012D1D] shadow-lg transition-transform hover:scale-105 active:scale-95"
                 >
                   <span>Daftar Jadi Nasabah via WhatsApp</span>
                 </a>
 
                 <Link
                   href="/#bank-sampah"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-3 font-['Poppins'] font-semibold text-sm text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 sm:px-5 py-2.5 sm:py-3 font-['Poppins'] font-semibold text-xs sm:text-sm text-white transition-colors"
                 >
                   <ChevronLeft size={16} />
                   <span>Kembali ke Beranda</span>
@@ -405,8 +404,8 @@ export default function BankSampahPage() {
 
       {/* ─── VIDEO MODAL PLAYER & PREVIEW ─── */}
       {activeVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-2xl rounded-2xl bg-[#012D1D] border border-[#0B4A31] p-6 text-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#012D1D] border border-[#0B4A31] p-4 sm:p-6 text-white shadow-2xl">
             {/* Close Button */}
             <button
               onClick={() => setActiveVideo(null)}
@@ -417,31 +416,31 @@ export default function BankSampahPage() {
             </button>
 
             {/* Platform & Duration Tags */}
-            <div className="flex items-center gap-3 mb-3">
-              <span className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-xs font-bold text-black shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 pr-9">
+              <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 sm:px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-black shadow-sm">
                 {getPlatformIcon(activeVideo.platform)}
                 <span>{activeVideo.platform}</span>
               </span>
 
-              <span className="text-xs text-[#C9D6CF] flex items-center gap-1">
+              <span className="text-[11px] sm:text-xs text-[#C9D6CF] flex items-center gap-1">
                 <Clock size={13} />
                 <span>Durasi: {activeVideo.duration}</span>
               </span>
 
               {activeVideo.category && (
-                <span className="text-xs text-[#80E478] font-medium bg-[#0B4A31] px-2.5 py-0.5 rounded-full border border-[#3B9734]/30">
+                <span className="text-[11px] sm:text-xs text-[#80E478] font-medium bg-[#0B4A31] px-2.5 py-0.5 rounded-full border border-[#3B9734]/30">
                   {activeVideo.category}
                 </span>
               )}
             </div>
 
             {/* Title */}
-            <h3 className="text-lg sm:text-xl font-bold font-['Poppins'] mb-3 pr-8 leading-snug">
+            <h3 className="text-base sm:text-xl font-bold font-['Poppins'] mb-3 pr-8 leading-snug">
               {activeVideo.title}
             </h3>
 
             {/* Thumbnail Player Box */}
-            <div className="relative h-60 sm:h-80 w-full rounded-xl overflow-hidden mb-4 border border-[#0B4A31]">
+            <div className="relative h-48 sm:h-80 w-full rounded-xl overflow-hidden mb-3 sm:mb-4 border border-[#0B4A31]">
               <Image
                 src={getVideoThumbnailUrl(activeVideo.thumbnail)}
                 alt={activeVideo.title}
@@ -449,18 +448,18 @@ export default function BankSampahPage() {
                 unoptimized
                 className="object-cover"
               />
-              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-6 text-center">
-                <div className="h-16 w-16 rounded-full bg-[#FC9634] flex items-center justify-center text-[#012D1D] shadow-2xl mb-4 transition-transform hover:scale-110">
-                  <Play size={28} className="fill-[#012D1D] ml-1" />
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-4 sm:p-6 text-center">
+                <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-[#FC9634] flex items-center justify-center text-[#012D1D] shadow-2xl mb-3 sm:mb-4 transition-transform hover:scale-110">
+                  <Play className="w-5 h-5 sm:w-7 sm:h-7 fill-[#012D1D] ml-0.5 sm:ml-1" />
                 </div>
 
                 <a
                   href={activeVideo.videoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#FC9634] hover:bg-[#e8801a] px-6 py-3 font-['Poppins'] font-bold text-sm text-[#012D1D] shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#FC9634] hover:bg-[#e8801a] px-4 sm:px-6 py-2.5 sm:py-3 font-['Poppins'] font-bold text-xs sm:text-sm text-[#012D1D] shadow-lg transition-transform hover:scale-105 active:scale-95"
                 >
-                  <Play size={16} className="fill-[#012D1D]" />
+                  <Play size={15} className="fill-[#012D1D]" />
                   <span>Buka & Tonton di {activeVideo.platform}</span>
                   <ExternalLink size={14} />
                 </a>

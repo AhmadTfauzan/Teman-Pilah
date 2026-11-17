@@ -120,7 +120,7 @@ export function Hero({ initialSlides }: HeroProps) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full h-[820px] max-h-[100vh] min-h-[640px] flex items-center justify-center overflow-hidden bg-[#012D1D] select-none"
+      className="relative w-full h-[490px] sm:h-[640px] lg:h-[820px] max-h-[100vh] min-h-[450px] flex items-center justify-center overflow-hidden bg-[#012D1D] select-none"
     >
       {/* ─── BACKGROUND SLIDES CAROUSEL ─── */}
       <div className="absolute inset-0 z-0">
@@ -156,35 +156,35 @@ export function Hero({ initialSlides }: HeroProps) {
       />
 
       {/* ─── HERO CONTENT CONTAINER (Figma Layout) ─── */}
-      <div className="relative z-20 w-full max-w-[841px] px-5 sm:px-6 text-center flex flex-col items-center pt-20 sm:pt-24">
+      <div className="relative z-20 w-full max-w-[841px] px-4 sm:px-6 text-center flex flex-col items-center pt-12 sm:pt-24">
         {/* HEADING (2 Lines) */}
         <h1 className="font-['Poppins'] font-bold tracking-tight">
-          <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[70px] leading-[1.15] text-[#3B9734] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+          <span className="block text-3xl sm:text-5xl md:text-6xl lg:text-[70px] leading-[1.15] text-[#3B9734] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
             Bersama Membangun
           </span>
-          <span className="block text-[42px] sm:text-[54px] md:text-[66px] lg:text-[75px] leading-[1.15] text-[#FC9634] mt-1 drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]">
+          <span className="block text-[34px] sm:text-[54px] md:text-[66px] lg:text-[75px] leading-[1.15] text-[#FC9634] mt-1 drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]">
             Ekosistem Hijau
           </span>
         </h1>
 
         {/* SUBTITLE PARAGRAPH (Figma spec: 680px max width, Poppins 500, 18px, 31px line-height, #FFFFFF) */}
-        <p className="font-['Poppins'] font-medium text-sm sm:text-base md:text-[18px] leading-relaxed md:leading-[31px] text-white max-w-[680px] mt-6 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+        <p className="font-['Poppins'] font-medium text-xs sm:text-base md:text-[18px] leading-relaxed md:leading-[31px] text-white max-w-[680px] mt-3 sm:mt-6 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
           Ubah kebiasaan buang sampah jadi berkah. Bareng Teman Pilah, kita jaga
           lingkungan jadi lebih asri, sehat, dan bermanfaat lewat aksi sederhana
           setiap hari.
         </p>
 
         {/* CTA BUTTONS */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <div className="mt-5 sm:mt-8 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4">
           <Link
             href="/eco-enzyme"
-            className="inline-flex items-center justify-center rounded-full bg-[#FC9634] hover:bg-[#e8801a] text-white font-['Poppins'] font-bold text-sm sm:text-base px-7 py-3.5 shadow-lg shadow-[#FC9634]/30 transition-all duration-200 hover:scale-105 active:scale-95"
+            className="inline-flex items-center justify-center rounded-full bg-[#FC9634] hover:bg-[#e8801a] text-white font-['Poppins'] font-bold text-xs sm:text-base px-5 py-2.5 sm:px-7 sm:py-3.5 shadow-lg shadow-[#FC9634]/30 transition-all duration-200 hover:scale-105 active:scale-95"
           >
             Eco Enzyme
           </Link>
           <a
             href="#bank-sampah"
-            className="inline-flex items-center justify-center rounded-full bg-[#3B9734] hover:bg-[#2F8029] text-white font-['Poppins'] font-bold text-sm sm:text-base px-7 py-3.5 shadow-lg shadow-[#3B9734]/30 transition-all duration-200 hover:scale-105 active:scale-95"
+            className="inline-flex items-center justify-center rounded-full bg-[#3B9734] hover:bg-[#2F8029] text-white font-['Poppins'] font-bold text-xs sm:text-base px-5 py-2.5 sm:px-7 sm:py-3.5 shadow-lg shadow-[#3B9734]/30 transition-all duration-200 hover:scale-105 active:scale-95"
           >
             Bank Sampah
           </a>
@@ -195,7 +195,7 @@ export function Hero({ initialSlides }: HeroProps) {
           <div
             role="tablist"
             aria-label="Hero Slide Indicator"
-            className="flex items-center justify-center gap-2 mt-12 sm:mt-16"
+            className="flex items-center justify-center gap-2 mt-6 sm:mt-16"
           >
             {slides.map((_, idx) => {
               const isActive = idx === currentIndex;

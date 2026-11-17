@@ -268,49 +268,49 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
       {/* HEADER BAR */}
-      <div className="flex-none px-12 py-6">
+      <div className="flex-none px-4 sm:px-12 py-4 sm:py-6">
         <button 
           onClick={onClose}
-          className="flex items-center text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
+          className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
         >
-          <ArrowLeft size={16} className="mr-2" />
+          <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
           Kembali ke Kelola Program
         </button>
-        <h1 className="text-3xl font-serif font-bold text-[#2A3426] mt-6">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#2A3426] mt-3 sm:mt-6">
           {news ? 'Edit Program' : 'Tambah Program Baru'}
         </h1>
       </div>
 
       {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 overflow-y-auto px-12 pb-32">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-12 pb-24 sm:pb-32">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           
           {/* LEFT COLUMN (Forms) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
             {/* Title & Slug */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-6">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-4 sm:space-y-6">
               <div className="space-y-2">
-                <label className="text-[13px] font-bold text-[#72796E]">Judul Program</label>
+                <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Judul Program</label>
                 <input
                   type="text"
                   placeholder="Masukkan judul program..."
-                  className="w-full px-4 py-3 bg-[#F9FAF8] border border-[#F0F2EB] rounded-[14px] text-[14px] text-[#2A3426] focus:outline-none focus:border-[#c2c9bb]"
+                  className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-[#F9FAF8] border border-[#F0F2EB] rounded-xl sm:rounded-[14px] text-sm text-[#2A3426] focus:outline-none focus:border-[#c2c9bb]"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[13px] font-bold text-[#72796E]">Slug / URL</label>
-                <div className="flex w-full overflow-hidden rounded-[14px] border border-[#F0F2EB]">
-                  <div className="bg-[#F3F4EF] px-4 py-3 flex items-center justify-center border-r border-[#F0F2EB]">
-                    <span className="text-[13px] font-medium text-[#72796E]">temanpilah.com/program/</span>
+                <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Slug / URL</label>
+                <div className="flex flex-col sm:flex-row w-full overflow-hidden rounded-xl sm:rounded-[14px] border border-[#F0F2EB]">
+                  <div className="bg-[#F3F4EF] px-3 sm:px-4 py-1.5 sm:py-3 flex items-center border-b sm:border-b-0 sm:border-r border-[#F0F2EB]">
+                    <span className="text-xs sm:text-[13px] font-medium text-[#72796E]">temanpilah.com/program/</span>
                   </div>
                   <input
                     type="text"
                     placeholder="new-program-slug"
-                    className="flex-1 px-4 py-3 bg-[#F9FAF8] text-[14px] text-[#2A3426] focus:outline-none"
+                    className="flex-1 px-3.5 sm:px-4 py-2.5 sm:py-3 bg-[#F9FAF8] text-sm text-[#2A3426] focus:outline-none"
                     value={slug}
                     onChange={(e) => {
                       const formatted = e.target.value
@@ -326,10 +326,10 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
             </div>
 
             {/* Program Description */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Deskripsi Program</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Deskripsi Program</label>
               
-              <div className="border border-[#F0F2EB] rounded-[14px] overflow-hidden bg-[#F9FAF8] relative">
+              <div className="border border-[#F0F2EB] rounded-xl sm:rounded-[14px] overflow-hidden bg-[#F9FAF8] relative">
                 <style>{`
                   .editor-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.5rem 0 !important; }
                   .editor-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.5rem 0 !important; }
@@ -337,7 +337,7 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
                   .editor-content a { color: #2D5A27 !important; text-decoration: underline !important; }
                 `}</style>
                 {/* Editor Toolbar */}
-                <div className="flex items-center gap-1 border-b border-[#F0F2EB] px-3 py-2 bg-[#F3F4EF] relative">
+                <div className="flex flex-wrap items-center gap-1 border-b border-[#F0F2EB] px-2.5 sm:px-3 py-2 bg-[#F3F4EF] relative">
                   <button type="button" onClick={() => handleFormat('bold')} className={`p-1.5 rounded transition-colors ${activeFormats.bold ? 'bg-[#2D5A27] text-white' : 'text-[#42493E] hover:bg-white'}`}><Bold size={16} strokeWidth={2.5} /></button>
                   <button type="button" onClick={() => handleFormat('italic')} className={`p-1.5 rounded transition-colors ${activeFormats.italic ? 'bg-[#2D5A27] text-white' : 'text-[#42493E] hover:bg-white'}`}><Italic size={16} strokeWidth={2.5} /></button>
                   <button type="button" onClick={() => handleFormat('underline')} className={`p-1.5 rounded transition-colors ${activeFormats.underline ? 'bg-[#2D5A27] text-white' : 'text-[#42493E] hover:bg-white'}`}><Underline size={16} strokeWidth={2.5} /></button>
@@ -350,7 +350,7 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
                   <div className="relative">
                     <button type="button" onClick={handleLinkClick} className="p-1.5 text-[#42493E] hover:bg-white rounded"><Link2 size={16} strokeWidth={2.5} /></button>
                     {showLinkInput && (
-                      <div className="absolute top-full left-0 mt-2 w-96 bg-white border border-[#F0F2EB] rounded-xl shadow-lg p-3 z-50 flex gap-2">
+                      <div className="absolute top-full left-0 mt-2 w-72 sm:w-96 max-w-[85vw] bg-white border border-[#F0F2EB] rounded-xl shadow-lg p-2.5 sm:p-3 z-50 flex gap-2">
                         <input
                           type="url"
                           placeholder="https://..."
@@ -385,11 +385,11 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
             </div>
 
             {/* Program Overview */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Ringkasan Program</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Ringkasan Program</label>
               <textarea
                 placeholder="Tulis ringkasan singkat program..."
-                className="w-full min-h-[100px] px-4 py-3 bg-[#F9FAF8] border border-[#F0F2EB] rounded-[14px] resize-none text-[14px] text-[#2A3426] focus:outline-none focus:border-[#c2c9bb]"
+                className="w-full min-h-[100px] px-3.5 sm:px-4 py-3 bg-[#F9FAF8] border border-[#F0F2EB] rounded-xl sm:rounded-[14px] resize-none text-sm text-[#2A3426] focus:outline-none focus:border-[#c2c9bb]"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
               ></textarea>
@@ -398,11 +398,11 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
           </div>
 
           {/* RIGHT COLUMN (Settings) */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
             
             {/* Image Upload */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-4">
-              <label className="text-[13px] font-bold text-[#72796E]">Banner Program</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-3 sm:space-y-4">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Banner Program</label>
               
               <div className="relative border-2 border-dashed border-[#D6D9D2] rounded-[16px] p-8 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors group overflow-hidden">
                 <input
@@ -427,7 +427,7 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
             </div>
 
             {/* Details */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-5">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-4 sm:space-y-5">
               
               <div className="space-y-2">
                 <label className="text-[13px] font-bold text-[#72796E]">Kemitraan</label>
@@ -491,21 +491,21 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
       </div>
 
       {/* FIXED FOOTER */}
-      <div className="flex-none bg-white border-t border-[#F0F2EB] px-12 py-5 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+      <div className="flex-none bg-white border-t border-[#F0F2EB] px-4 sm:px-12 py-3.5 sm:py-5 flex items-center justify-between gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         <button
           type="button"
           onClick={onClose}
-          className="px-6 py-2.5 rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95"
+          className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-xs sm:text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95"
         >
           Batal
         </button>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {!news && (
             <button
               type="button"
               onClick={(e) => handlePreSubmit(e, 'DRAFT')}
-              className="px-6 py-2.5 rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
+              className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
             >
               Simpan Draft
             </button>
@@ -513,7 +513,7 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
           <button
             type="button"
             onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
-            className="px-8 py-2.5 rounded-[12px] bg-[#8C5A00] text-white font-bold text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
+            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
           >
             {news ? 'Simpan Perubahan' : 'Terbitkan'}
           </button>

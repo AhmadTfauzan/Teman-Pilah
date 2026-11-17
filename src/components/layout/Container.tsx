@@ -15,7 +15,7 @@ export function Container<T extends ElementType = 'div'>({
   ...rest
 }: ContainerProps<T>) {
   const Component = as || 'div';
-  const baseClasses = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8';
+  const baseClasses = 'mx-auto w-full max-w-7xl px-3 sm:px-6 lg:px-8';
   const merged = twMerge(cn(baseClasses, className));
   return (
     <Component className={merged} {...rest}>

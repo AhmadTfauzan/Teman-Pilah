@@ -96,28 +96,28 @@ export function EcoEnzymeLogModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-[#E3E8DC] my-8 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-8 shadow-2xl border border-[#E3E8DC] my-2 sm:my-8 max-h-[92vh] flex flex-col">
         {/* HEADER */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#EDF2E8]">
-          <div>
+        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#EDF2E8]">
+          <div className="min-w-0 pr-2">
             <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[#F0F4EC] text-[#2C5F2D]">
               {batch.batchCode}
             </span>
-            <h3 className="text-xl font-bold text-[#1A2F1D] mt-1">
+            <h3 className="text-lg sm:text-xl font-bold text-[#1A2F1D] mt-1 truncate">
               Catatan Inspeksi: {batch.containerName}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-slate-100 text-[#6C7665] transition-colors"
+            className="p-1.5 rounded-full hover:bg-slate-100 text-[#6C7665] transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* LOG LIST & ADD FORM */}
-        <div className="flex-1 overflow-y-auto py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto py-3.5 sm:py-5 space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#6C7665]">
               Riwayat Pengecekan Berkala ({logs.length})

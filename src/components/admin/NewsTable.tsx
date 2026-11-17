@@ -81,10 +81,10 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
   const endItem = Math.min(startIndex + itemsPerPage, newsList.length);
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-6">
+    <div className="overflow-hidden rounded-2xl sm:rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-2 sm:mt-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between px-8 py-7 border-b border-[#F0F2EB]">
-        <h2 className="text-lg font-bold text-[#2A3426]">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-7 border-b border-[#F0F2EB]">
+        <h2 className="text-base sm:text-lg font-bold text-[#2A3426]">
           Semua Program
         </h2>
         <p className="text-[11px] font-medium text-[#8F9A8A]">
@@ -92,7 +92,63 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* MOBILE 2-COLUMN CARD GRID */}
+      <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+        {paginatedList.map((article) => {
+          const statusStyles = getStatusStyles(article.status);
+
+          return (
+            <div
+              key={article.id}
+              className="flex flex-col justify-between rounded-xl border border-[#E8ECE2] bg-[#FAFBF9] p-2.5 gap-2"
+            >
+              <div className="space-y-1.5">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${statusStyles.bgClass} ${statusStyles.textClass}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${statusStyles.dotClass}`} />
+                  {statusStyles.label}
+                </span>
+
+                <h3 className="text-xs font-bold text-[#2A3426] leading-snug line-clamp-2">
+                  {article.title}
+                </h3>
+
+                <p className="text-[10px] text-[#72796E] font-medium">
+                  {formatDate(article.publishDate || article.createdAt)}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-1 pt-2 border-t border-[#ECEFE7]">
+                <button
+                  type="button"
+                  onClick={() => onEdit(article)}
+                  className="p-1.5 rounded-md text-[#72796E] hover:text-[#2A3426] hover:bg-stone-200/60 transition-colors"
+                  title="Edit Program"
+                >
+                  <PencilIcon />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onDelete(article)}
+                  className="p-1.5 rounded-md text-[#72796E] hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Hapus Program"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {newsList.length === 0 && (
+          <div className="col-span-2 py-12 text-center">
+            <p className="text-xs text-[#72796e]">Program tidak ditemukan.</p>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP TABLE */}
+      <div className="hidden md:block overflow-x-auto">
         <div className="min-w-[800px]">
           {/* TABLE HEADER */}
           <div className="flex items-center border-b border-[#F0F2EB] bg-[#F4F5F2] px-8 py-5">
@@ -166,14 +222,14 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
 
       {/* FOOTER PAGINATION */}
       {newsList.length > 0 && (
-        <div className="flex flex-col gap-4 border-t border-[#F0F2EB] bg-[#F9FAF5] px-8 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF5] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center">
-            <p className="text-[13px] text-[#8F9A8A] font-medium">
+            <p className="text-xs sm:text-[13px] text-[#8F9A8A] font-medium">
               Menampilkan {startItem}–{endItem} dari {newsList.length} program
             </p>
           </div>
 
-          <nav aria-label="Pagination" className="inline-flex items-center gap-1.5">
+          <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}

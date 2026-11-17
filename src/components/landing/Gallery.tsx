@@ -66,33 +66,33 @@ export function Gallery({ items }: GalleryProps) {
   return (
     <section
       id="galeri"
-      className="relative w-full overflow-hidden bg-white py-20 lg:py-28"
+      className="relative w-full overflow-hidden bg-white py-10 sm:py-16 lg:py-28"
     >
       {/* ─── DECORATIVE ACCENTS (Figma Frame 48: ConcentricCircles #3B9734 & OutlineLeaf) ─── */}
-      <div className="absolute -right-24 -top-24 opacity-25 pointer-events-none">
+      <div className="hidden sm:block absolute -right-24 -top-24 opacity-25 pointer-events-none">
         <ConcentricCircles size={360} color="#3B9734" />
       </div>
-      <div className="absolute -left-20 -bottom-20 opacity-20 pointer-events-none rotate-[20deg]">
+      <div className="hidden sm:block absolute -left-20 -bottom-20 opacity-20 pointer-events-none rotate-[20deg]">
         <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
       </div>
 
       <Container className="relative z-10">
         {/* ─── SECTION HEADER ─── */}
-        <div className="pb-12 max-w-[640px]">
-          <h2 className="font-['Poppins'] font-bold text-3xl sm:text-4xl lg:text-[44px] leading-tight text-[#012D1D] tracking-[-1px]">
+        <div className="pb-6 sm:pb-12 max-w-[640px]">
+          <h2 className="font-['Poppins'] font-bold text-2xl sm:text-4xl lg:text-[44px] leading-tight text-[#012D1D] tracking-[-0.5px] sm:tracking-[-1px]">
             Galeri Aksi Nyata
           </h2>
-          <p className="font-['Poppins'] font-normal text-base sm:text-lg text-[#3D3D3D] mt-2">
+          <p className="font-['Poppins'] font-normal text-xs sm:text-lg text-[#3D3D3D] mt-1 sm:mt-2">
             Jejak langkah kami bersama masyarakat dan mitra dalam melestarikan lingkungan.
           </p>
         </div>
 
         {/* ─── ASYMMETRIC GRID (Figma spec) ─── */}
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2.5 sm:gap-5">
           {/* ROW 1: 2 Items (699px & 497px in Figma) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-12 gap-2.5 sm:gap-5">
             {row1[0] && (
-              <div className="lg:col-span-7 relative h-[300px] rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5">
+              <div className="lg:col-span-7 relative h-[145px] sm:h-[240px] lg:h-[300px] rounded-xl sm:rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5">
                 <img
                   src={row1[0].image}
                   alt={row1[0].title}
@@ -110,11 +110,11 @@ export function Gallery({ items }: GalleryProps) {
                   className="absolute inset-0 bg-gradient-to-t from-[#0B4A31] via-[#0B4A31]/50 to-transparent opacity-90 transition-opacity group-hover:opacity-80 pointer-events-none"
                 />
                 {/* Content: Atas = Judul, Bawah = Deskripsi */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col gap-1 z-10">
-                  <span className="font-['Poppins'] font-medium text-sm text-[#C1ECD4] line-clamp-1">
+                <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-6 flex flex-col gap-0.5 sm:gap-1 z-10">
+                  <span className="font-['Poppins'] font-medium text-[10px] sm:text-sm text-[#C1ECD4] line-clamp-1">
                     {row1[0].title}
                   </span>
-                  <h3 className="font-['Poppins'] font-semibold text-lg sm:text-xl text-white line-clamp-2">
+                  <h3 className="font-['Poppins'] font-semibold text-xs sm:text-lg lg:text-xl text-white line-clamp-2">
                     {row1[0].description}
                   </h3>
                 </div>
@@ -122,7 +122,7 @@ export function Gallery({ items }: GalleryProps) {
             )}
 
             {row1[1] && (
-              <div className="lg:col-span-5 relative h-[300px] rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5">
+              <div className="lg:col-span-5 relative h-[145px] sm:h-[240px] lg:h-[300px] rounded-xl sm:rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5">
                 <img
                   src={row1[1].image}
                   alt={row1[1].title}
@@ -138,11 +138,11 @@ export function Gallery({ items }: GalleryProps) {
                   aria-hidden="true"
                   className="absolute inset-0 bg-gradient-to-t from-[#0B4A31] via-[#0B4A31]/50 to-transparent opacity-90 transition-opacity group-hover:opacity-80 pointer-events-none"
                 />
-                <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col gap-1 z-10">
-                  <span className="font-['Poppins'] font-medium text-sm text-[#C1ECD4] line-clamp-1">
+                <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-6 flex flex-col gap-0.5 sm:gap-1 z-10">
+                  <span className="font-['Poppins'] font-medium text-[10px] sm:text-sm text-[#C1ECD4] line-clamp-1">
                     {row1[1].title}
                   </span>
-                  <h3 className="font-['Poppins'] font-semibold text-lg sm:text-xl text-white line-clamp-2">
+                  <h3 className="font-['Poppins'] font-semibold text-xs sm:text-lg lg:text-xl text-white line-clamp-2">
                     {row1[1].description}
                   </h3>
                 </div>
@@ -151,11 +151,11 @@ export function Gallery({ items }: GalleryProps) {
           </div>
 
           {/* ROW 2: 3 Items (392px each in Figma) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-5">
             {row2.map((item, idx) => (
               <div
                 key={item.id || idx}
-                className="relative h-[300px] rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5"
+                className="relative h-[145px] sm:h-[240px] lg:h-[300px] rounded-xl sm:rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5"
               >
                 <img
                   src={item.image}
@@ -172,11 +172,11 @@ export function Gallery({ items }: GalleryProps) {
                   aria-hidden="true"
                   className="absolute inset-0 bg-gradient-to-t from-[#012D1D] via-[#012D1D]/60 to-transparent opacity-90 transition-opacity group-hover:opacity-80 pointer-events-none"
                 />
-                <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col gap-1 z-10">
-                  <span className="font-['Poppins'] font-medium text-sm text-[#C1ECD4] line-clamp-1">
+                <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-6 flex flex-col gap-0.5 sm:gap-1 z-10">
+                  <span className="font-['Poppins'] font-medium text-[10px] sm:text-sm text-[#C1ECD4] line-clamp-1">
                     {item.title}
                   </span>
-                  <h3 className="font-['Poppins'] font-semibold text-lg text-white line-clamp-2">
+                  <h3 className="font-['Poppins'] font-semibold text-xs sm:text-lg text-white line-clamp-2">
                     {item.description}
                   </h3>
                 </div>

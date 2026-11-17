@@ -148,18 +148,18 @@ export default function AdminGallery() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-5 sm:gap-8">
       {/* HEADER */}
-      <header className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+      <header className="flex flex-wrap items-center justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="font-serif text-[32px] font-bold leading-[38.4px] text-[#2A3426] tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-[32px] font-bold leading-tight sm:leading-[38.4px] text-[#2A3426] tracking-tight">
             Kelola Galeri
           </h1>
         </div>
 
         <button
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#27532B] px-5 py-2.5 hover:brightness-110 transition-all text-white font-medium text-[13px]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#27532B] px-3.5 py-2 sm:px-5 sm:py-2.5 hover:brightness-110 transition-all text-white font-medium text-xs sm:text-[13px]"
           type="button"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -171,14 +171,14 @@ export default function AdminGallery() {
       </header>
 
       {/* FILTER SECTION */}
-      <div className="rounded-[20px] border border-[#F0F2EB] bg-white p-2.5 shadow-sm">
+      <div className="rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] bg-white p-2 sm:p-2.5 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           {/* SEARCH */}
           <div className="relative flex-1">
             <label className="sr-only" htmlFor="gallery-search">
               Cari galeri
             </label>
-            <div className="flex h-11 items-center rounded-[14px] bg-[#F9FAF8] pl-10 pr-4">
+            <div className="flex h-10 sm:h-11 items-center rounded-xl sm:rounded-[14px] bg-[#F9FAF8] pl-9 sm:pl-10 pr-4">
               <input
                 id="gallery-search"
                 placeholder="Cari berdasarkan judul atau deskripsi..."
@@ -186,10 +186,10 @@ export default function AdminGallery() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoComplete="off"
-                className="w-full border-none bg-transparent text-[13px] text-[#42493e] outline-none placeholder:text-[#A1A89A]"
+                className="w-full border-none bg-transparent text-xs sm:text-[13px] text-[#42493e] outline-none placeholder:text-[#A1A89A]"
               />
             </div>
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">
+            <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 opacity-50">
               <SearchIcon />
             </div>
           </div>

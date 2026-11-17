@@ -57,12 +57,12 @@ export function EcoEnzymeVideoTable({
 
   if (isLoading) {
     return (
-      <div className="w-full bg-white rounded-3xl border border-stone-200 p-8 shadow-xs">
+      <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-stone-200 p-4 sm:p-8 shadow-xs">
         <div className="space-y-4 animate-pulse">
-          <div className="h-10 bg-stone-200 rounded-xl w-1/3"></div>
-          <div className="h-16 bg-stone-100 rounded-2xl"></div>
-          <div className="h-16 bg-stone-100 rounded-2xl"></div>
-          <div className="h-16 bg-stone-100 rounded-2xl"></div>
+          <div className="h-8 sm:h-10 bg-stone-200 rounded-xl w-1/3"></div>
+          <div className="h-14 sm:h-16 bg-stone-100 rounded-2xl"></div>
+          <div className="h-14 sm:h-16 bg-stone-100 rounded-2xl"></div>
+          <div className="h-14 sm:h-16 bg-stone-100 rounded-2xl"></div>
         </div>
       </div>
     );
@@ -70,19 +70,19 @@ export function EcoEnzymeVideoTable({
 
   if (videos.length === 0) {
     return (
-      <div className="w-full bg-white rounded-3xl border border-stone-200 p-12 text-center shadow-xs">
-        <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
-          <Film className="w-8 h-8 text-[#2C5F2D]" />
+      <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-stone-200 p-8 sm:p-12 text-center shadow-xs">
+        <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
+          <Film className="w-7 h-7 sm:w-8 sm:h-8 text-[#2C5F2D]" />
         </div>
-        <h3 className="font-['Poppins'] font-bold text-xl text-stone-900">
+        <h3 className="font-['Poppins'] font-bold text-lg sm:text-xl text-stone-900">
           Belum Ada Video Edukasi Eco Enzyme
         </h3>
-        <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-stone-500 mt-1 max-w-md mx-auto">
           Tambahkan video panduan manfaat atau cara pembuatan Eco Enzyme untuk ditampilkan di halaman utama Eco Enzyme.
         </p>
         <button
           onClick={onAddNew}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-6 py-2.5 text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95"
         >
           <span>Tambah Video Baru</span>
         </button>
@@ -91,8 +91,92 @@ export function EcoEnzymeVideoTable({
   }
 
   return (
-    <div className="w-full bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
+      {/* Mobile 2-Column Card Grid */}
+      <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+        {videos.map((video) => (
+          <div
+            key={video.id}
+            className="flex flex-col justify-between rounded-xl border border-stone-200 bg-[#FAFBF9] overflow-hidden"
+          >
+            {/* Thumbnail */}
+            <div
+              onClick={() => onPreview(video)}
+              className="relative h-24 w-full bg-stone-900 flex items-center justify-center cursor-pointer"
+            >
+              {video.thumbnail ? (
+                <img
+                  src={getEcoEnzymeVideoThumbnailUrl(video.thumbnail)}
+                  alt={video.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-white/70 bg-gradient-to-br from-emerald-950 to-stone-900">
+                  <Film className="w-5 h-5 text-emerald-400 mb-0.5" />
+                  <span className="text-[9px] font-mono text-emerald-200">MP4</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-white/90 text-stone-900 flex items-center justify-center shadow">
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                </div>
+              </div>
+              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-bold">
+                {video.platform === 'Local' ? 'MP4' : video.platform}
+              </span>
+              {video.duration && (
+                <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono">
+                  {video.duration}
+                </span>
+              )}
+            </div>
+
+            {/* Content & Actions */}
+            <div className="p-2.5 flex flex-col flex-1 justify-between gap-2">
+              <div className="space-y-1">
+                <h4 className="font-bold text-stone-900 text-xs leading-snug line-clamp-2">
+                  {video.title}
+                </h4>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-900 border border-emerald-200 max-w-full truncate">
+                  <Sparkles className="w-2.5 h-2.5 text-[#FC9634] shrink-0" />
+                  <span className="truncate">{video.category || 'Edukasi'}</span>
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1.5 border-t border-stone-200/80 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onPreview(video)}
+                  className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex-1"
+                  title="Lihat Video"
+                >
+                  <Play className="w-2.5 h-2.5 fill-current" />
+                  <span>Putar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEdit(video)}
+                  className="p-1.5 rounded-md text-stone-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                  title="Edit Video"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(video)}
+                  className="p-1.5 rounded-md text-stone-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                  title="Hapus Video"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-stone-50/80 border-b border-stone-200 text-xs font-bold text-stone-500 uppercase tracking-wider font-['Poppins']">

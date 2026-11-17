@@ -219,41 +219,41 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
       {/* HEADER BAR */}
-      <div className="flex-none px-12 py-6">
+      <div className="flex-none px-4 sm:px-12 py-4 sm:py-6">
         <button 
           onClick={onClose}
-          className="flex items-center text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
+          className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
         >
-          <ArrowLeft size={16} className="mr-2" />
+          <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
           Kembali ke Konten Edukasi
         </button>
-        <h1 className="text-3xl font-serif font-bold text-[#2A3426] mt-6">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#2A3426] mt-3 sm:mt-6">
           {content ? 'Edit Konten' : 'Tambah Konten Baru'}
         </h1>
       </div>
 
       {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 overflow-y-auto px-12 pb-32">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-12 pb-24 sm:pb-32">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           
           {/* LEFT COLUMN */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Judul Konten</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Judul Konten</label>
               <input
                 type="text"
                 placeholder="Masukkan judul konten..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full h-12 px-4 rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
+                className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
               />
             </div>
 
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Slug / URL</label>
-              <div className="flex rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] overflow-hidden focus-within:border-[#27532B] focus-within:ring-1 focus-within:ring-[#27532B] transition-all h-12">
-                <div className="px-4 flex items-center bg-[#F0F2EB]/50 border-r border-[#E5E7EB] text-[#72796E] text-[14px]">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Slug / URL</label>
+              <div className="flex flex-col sm:flex-row rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] overflow-hidden focus-within:border-[#27532B] focus-within:ring-1 focus-within:ring-[#27532B] transition-all sm:h-12">
+                <div className="px-3 sm:px-4 py-1.5 sm:py-0 flex items-center bg-[#F0F2EB]/50 border-b sm:border-b-0 sm:border-r border-[#E5E7EB] text-[#72796E] text-xs sm:text-[14px]">
                   temanpilah.com/edukasi/
                 </div>
                 <input
@@ -268,14 +268,14 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
                       .replace(/-+/g, '-'); // prevent consecutive hyphens
                     setSlug(formatted);
                   }}
-                  className="flex-1 px-4 bg-transparent text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] outline-none"
+                  className="flex-1 px-3.5 sm:px-4 py-2.5 sm:py-0 bg-transparent text-sm text-[#2A3426] placeholder:text-[#A1A89A] outline-none"
                 />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Deskripsi Konten</label>
-              <div className="border border-[#F0F2EB] rounded-[14px] overflow-hidden bg-[#F9FAF8] relative">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Deskripsi Konten</label>
+              <div className="border border-[#F0F2EB] rounded-xl sm:rounded-[14px] overflow-hidden bg-[#F9FAF8] relative">
                 <style>{`
                   .editor-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.5rem 0 !important; }
                   .editor-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.5rem 0 !important; }
@@ -288,7 +288,7 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
                     display: block;
                   }
                 `}</style>
-                <div className="flex items-center gap-1 border-b border-[#E5E7EB] px-3 py-2 bg-[#F3F4EF] relative">
+                <div className="flex flex-wrap items-center gap-1 border-b border-[#E5E7EB] px-2.5 sm:px-3 py-2 bg-[#F3F4EF] relative">
                   <button type="button" onClick={() => handleFormat('bold')} className={`p-1.5 rounded transition-colors ${activeFormats.bold ? 'bg-[#2D5A27] text-white' : 'text-[#42493E] hover:bg-white'}`}><Bold size={16} strokeWidth={2.5} /></button>
                   <button type="button" onClick={() => handleFormat('italic')} className={`p-1.5 rounded transition-colors ${activeFormats.italic ? 'bg-[#2D5A27] text-white' : 'text-[#42493E] hover:bg-white'}`}><Italic size={16} strokeWidth={2.5} /></button>
                   <button type="button" onClick={() => handleFormat('underline')} className={`p-1.5 rounded transition-colors ${activeFormats.underline ? 'bg-[#2D5A27] text-white' : 'text-[#42493E] hover:bg-white'}`}><Underline size={16} strokeWidth={2.5} /></button>
@@ -301,7 +301,7 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
                   <div className="relative">
                     <button type="button" onClick={handleLinkClick} className="p-1.5 text-[#42493E] hover:bg-white rounded"><Link2 size={16} strokeWidth={2.5} /></button>
                     {showLinkInput && (
-                      <div className="absolute top-full left-0 mt-2 w-96 bg-white border border-[#F0F2EB] rounded-xl shadow-lg p-3 z-50 flex gap-2">
+                      <div className="absolute top-full left-0 mt-2 w-72 sm:w-96 max-w-[85vw] bg-white border border-[#F0F2EB] rounded-xl shadow-lg p-2.5 sm:p-3 z-50 flex gap-2">
                         <input
                           type="url"
                           placeholder="https://..."
@@ -333,24 +333,24 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Ringkasan Konten</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Ringkasan Konten</label>
               <textarea
                 placeholder="Tulis ringkasan singkat konten..."
                 value={overview}
                 onChange={(e) => setOverview(e.target.value)}
-                className="w-full p-4 rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all resize-none min-h-[140px]"
+                className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all resize-none min-h-[120px] sm:min-h-[140px]"
               />
             </div>
 
           </div>
 
           {/* RIGHT COLUMN */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             
             {/* Thumbnail */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-[13px] font-bold text-[#72796E]">Thumbnail Konten</label>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Thumbnail Konten</label>
               <div 
                 onClick={() => fileInputRef.current?.click()}
                 className={`relative h-[200px] rounded-[16px] flex flex-col items-center justify-center cursor-pointer overflow-hidden group ${
@@ -389,7 +389,7 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
             </div>
 
             {/* Date & Tags */}
-            <div className="bg-white p-6 rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-6">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-4 sm:space-y-6">
               
               <div className="space-y-2">
                 <label className="text-[13px] font-bold text-[#72796E]">Tanggal Publikasi</label>
@@ -441,21 +441,21 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
       </div>
 
       {/* FIXED FOOTER */}
-      <div className="flex-none bg-white border-t border-[#F0F2EB] px-12 py-5 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+      <div className="flex-none bg-white border-t border-[#F0F2EB] px-4 sm:px-12 py-3.5 sm:py-5 flex items-center justify-between gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         <button
           type="button"
           onClick={onClose}
-          className="px-6 py-2.5 rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95"
+          className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-xs sm:text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95"
         >
           Batal
         </button>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {!content && (
             <button
               type="button"
               onClick={(e) => handlePreSubmit(e, 'DRAFT')}
-              className="px-6 py-2.5 rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
+              className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
             >
               Simpan Draft
             </button>
@@ -463,7 +463,7 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
           <button
             type="button"
             onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
-            className="px-8 py-2.5 rounded-[12px] bg-[#8C5A00] text-white font-bold text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
+            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
           >
             {content ? 'Simpan Perubahan' : 'Terbitkan'}
           </button>

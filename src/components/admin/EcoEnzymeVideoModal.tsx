@@ -153,33 +153,33 @@ export function EcoEnzymeVideoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-8 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-stone-200 overflow-hidden my-2 sm:my-8 max-h-[92vh] flex flex-col">
         {/* Header Modal */}
-        <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center">
-              <Film className="w-5 h-5 text-[#2C5F2D]" />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0">
+              <Film className="w-4 h-4 sm:w-5 sm:h-5 text-[#2C5F2D]" />
             </div>
-            <div>
-              <h2 className="text-lg font-black text-stone-900 tracking-tight">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-black text-stone-900 tracking-tight truncate">
                 {item ? 'Edit Video Edukasi Eco Enzyme' : 'Tambah Video Edukasi Eco Enzyme'}
               </h2>
-              <p className="text-xs text-stone-500">
+              <p className="text-[11px] sm:text-xs text-stone-500 truncate">
                 Kelola video panduan manfaat atau cara pembuatan Eco Enzyme.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center transition-colors"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5">
           {errorMessage && (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500"></span>

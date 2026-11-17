@@ -40,7 +40,7 @@ export default async function DetailProgramPage({ params }: Props) {
   const imageUrl = program.imageUrl ? `${BASE_URL}/${program.imageUrl}` : (program.image || `https://picsum.photos/seed/${program.id}/2000/1000`);
 
   return (
-    <div className="pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
+    <div className="pt-20 md:pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
       {/* Decorative Brand Accents (Figma Frame 48) */}
       <div className="absolute -right-24 top-24 opacity-20 pointer-events-none rotate-[20deg]">
         <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
@@ -48,50 +48,50 @@ export default async function DetailProgramPage({ params }: Props) {
       <div className="absolute -left-20 bottom-32 opacity-25 pointer-events-none">
         <ConcentricCircles size={300} color="#FC9634" />
       </div>
-      <div className="max-w-[1440px] 2xl:px-12 mx-auto px-6 lg:px-8 py-8 md:py-12">
+      <div className="max-w-[1440px] 2xl:px-12 mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 md:py-12">
         
         {/* BACK BUTTON */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8">
           <Link 
             href="/#program" 
-            className="inline-flex items-center text-[14px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
+            className="inline-flex items-center text-xs sm:text-[14px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
           >
-            <ArrowLeft size={16} className="mr-2" />
+            <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
             Kembali ke Daftar Program
           </Link>
         </div>
 
         {/* TAGS */}
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-8">
           {program.tags && program.tags.length > 0 ? (
             program.tags.map((tag: string, index: number) => (
-              <span key={index} className="flex items-center gap-2 px-3 py-1.5 bg-[#e4f0e9] text-[#166534] rounded-md text-[11px] font-bold tracking-wider uppercase">
-                <Tag size={14} /> {tag}
+              <span key={index} className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#e4f0e9] text-[#166534] rounded-md text-[10px] sm:text-[11px] font-bold tracking-wider uppercase">
+                <Tag className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {tag}
               </span>
             ))
           ) : (
-            <span className="flex items-center gap-2 px-3 py-1.5 bg-[#e4f0e9] text-[#166534] rounded-md text-[11px] font-bold tracking-wider uppercase">
-              <BookOpen size={14} /> Edukasi
+            <span className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#e4f0e9] text-[#166534] rounded-md text-[10px] sm:text-[11px] font-bold tracking-wider uppercase">
+              <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Edukasi
             </span>
           )}
         </div>
 
         {/* TITLE */}
-        <h1 className="text-[32px] md:text-[40px] font-bold text-[#1a2f1d] leading-tight mb-6">
+        <h1 className="text-2xl sm:text-[32px] md:text-[40px] font-bold text-[#1a2f1d] leading-tight mb-4 sm:mb-6">
           {program.title}
         </h1>
 
         {/* METADATA */}
-        <div className="flex flex-wrap items-center gap-4 text-[14px] text-[#616b5a] font-medium mb-10">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-[14px] text-[#616b5a] font-medium mb-6 sm:mb-10">
           <div className="flex items-center gap-2">
-            <CalendarDays size={18} />
+            <CalendarDays className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
             <span>{dateRange}</span>
           </div>
           {program.partnership && (
             <>
               <div className="hidden sm:block w-[1.5px] h-4 bg-[#d1d5db]"></div>
               <div className="flex items-center gap-2">
-                <Building size={18} />
+                <Building className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
                 <span>{program.partnership}</span>
               </div>
             </>
@@ -99,7 +99,7 @@ export default async function DetailProgramPage({ params }: Props) {
         </div>
 
         {/* HERO IMAGE */}
-        <div className="w-full aspect-[2.2/1] rounded-[24px] overflow-hidden mb-8 bg-[#e0e5db] relative shadow-sm">
+        <div className="w-full aspect-[16/9] sm:aspect-[2.2/1] rounded-2xl sm:rounded-[24px] overflow-hidden mb-5 sm:mb-8 bg-[#e0e5db] relative shadow-sm">
           <img 
             src={imageUrl} 
             alt={program.title} 
@@ -109,15 +109,15 @@ export default async function DetailProgramPage({ params }: Props) {
 
         {/* HIGHLIGHT BOX / SUMMARY */}
         {program.summary && (
-          <div className="bg-[#f4f2ea] rounded-[24px] p-6 md:p-8 mb-12 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-[#ecebe1]">
-            <p className="text-[#42493E] text-[16px] md:text-[17px] leading-relaxed font-medium">
+          <div className="bg-[#f4f2ea] rounded-2xl sm:rounded-[24px] p-4 sm:p-6 md:p-8 mb-6 sm:mb-12 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-[#ecebe1]">
+            <p className="text-[#42493E] text-sm sm:text-[16px] md:text-[17px] leading-relaxed font-medium">
               {program.summary ? program.summary.replace(/<[^>]*>/g, '') : ''}
             </p>
           </div>
         )}
 
         {/* BODY CONTENT */}
-        <div className="text-[#42493E] text-[15px] md:text-[16px] leading-[1.8] tracking-wide relative">
+        <div className="text-[#42493E] text-sm sm:text-[15px] md:text-[16px] leading-[1.75] sm:leading-[1.8] tracking-wide relative">
           <style>{`
             .program-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 1rem 0 !important; }
             .program-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 1rem 0 !important; }

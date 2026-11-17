@@ -76,18 +76,94 @@ export function ProductTable({ products, onEdit, onDelete, onShowQr }: ProductTa
   };
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-6">
+    <div className="overflow-hidden rounded-2xl sm:rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-2 sm:mt-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between px-8 py-7 border-b border-[#F0F2EB]">
-        <h2 className="text-[18px] font-bold text-[#1B361F]">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-7 border-b border-[#F0F2EB]">
+        <h2 className="text-base sm:text-[18px] font-bold text-[#1B361F]">
           Semua Produk
         </h2>
-        <p className="text-[13px] text-[#A1A89A]">
+        <p className="text-xs sm:text-[13px] text-[#A1A89A]">
           {products.length} total item
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* MOBILE 2-COLUMN CARD GRID */}
+      <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+        {currentProducts.map((product) => {
+          const catStyles = getCategoryStyles(product.category);
+
+          return (
+            <div
+              key={product.id}
+              className="flex flex-col justify-between rounded-xl border border-[#E8ECE2] bg-[#FAFBF9] p-2.5 gap-2"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-start justify-between gap-1 flex-wrap">
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold leading-tight ${catStyles.bgClass} ${catStyles.textClass}`}>
+                    {catStyles.label}
+                  </span>
+                  {product.productCode && (
+                    <span className="font-mono text-[9px] font-semibold text-[#5E6B58] bg-white border border-[#E3E8DC] px-1 py-0.5 rounded truncate max-w-[68px]">
+                      {product.productCode}
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-xs font-bold text-[#1B361F] leading-snug line-clamp-2">
+                  {product.name}
+                </h3>
+
+                <p className="text-xs font-extrabold text-[#27532B]">
+                  Rp {Number(product.price || 0).toLocaleString('id-ID')}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-1 pt-2 border-t border-[#ECEFE7]">
+                {onShowQr && (
+                  <button
+                    type="button"
+                    onClick={() => onShowQr(product)}
+                    className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-[10px] font-bold transition-colors flex-1"
+                    title="Lihat & Cetak QR Code Produk"
+                  >
+                    <QrCode className="w-3 h-3 text-emerald-700" />
+                    <span>QR</span>
+                  </button>
+                )}
+
+                <div className="flex items-center gap-0.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(product)}
+                    className="p-1.5 rounded-md text-[#72796E] hover:text-[#2A3426] hover:bg-stone-200/60 transition-colors"
+                    title="Edit Produk"
+                  >
+                    <PencilIcon />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onDelete(product.id)}
+                    className="p-1.5 rounded-md text-[#72796E] hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Hapus Produk"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {products.length === 0 && (
+          <div className="col-span-2 py-12 text-center">
+            <p className="text-xs text-[#72796e]">Produk tidak ditemukan.</p>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP TABLE */}
+      <div className="hidden md:block overflow-x-auto">
         <div className="min-w-[800px]">
           {/* TABLE HEADER */}
           <div className="flex items-center px-8 py-4 bg-[#F9FAF8] border-b border-[#F0F2EB]">
@@ -178,14 +254,14 @@ export function ProductTable({ products, onEdit, onDelete, onShowQr }: ProductTa
       </div>
 
       {/* FOOTER PAGINATION */}
-      <div className="flex flex-col gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-8 py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-[24px]">
+      <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-2xl sm:rounded-b-[24px]">
         <div className="flex items-center">
-          <p className="text-[14px] font-medium text-[#72796E]">
-            Menampilkan {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, products.length)} dari {products.length} produk
+          <p className="text-xs sm:text-[14px] font-medium text-[#72796E]">
+            Menampilkan {products.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, products.length)} dari {products.length} produk
           </p>
         </div>
 
-        <nav aria-label="Pagination" className="inline-flex items-center gap-2">
+        <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* PREV */}
           <button
             type="button"

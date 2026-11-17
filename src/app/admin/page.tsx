@@ -155,26 +155,26 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-10" data-debug="true">
+    <div className="flex flex-col gap-4 sm:gap-10" data-debug="true">
       {/* HEADER SECTION */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl sm:text-3xl lg:text-[32px] font-extrabold text-[#1B361F] tracking-tight">
+        <h1 className="text-xl sm:text-3xl lg:text-[32px] font-extrabold text-[#1B361F] tracking-tight">
           Overview Dashboard
         </h1>
-        <p className="text-sm sm:text-base text-[#42493E] font-medium">
+        <p className="text-xs sm:text-base text-[#42493E] font-medium">
           Selamat datang kembali! Berikut adalah perkembangan Teman Pilah hari ini.
         </p>
       </div>
 
       {/* METRIC CARDS */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 lg:gap-8">
         {currentCards.map((card) => (
-          <div key={card.id} className="bg-white rounded-[16px] sm:rounded-[24px] p-4 sm:p-8 border border-[#C2C9BB]/30 shadow-sm flex flex-row sm:flex-col items-center sm:items-start gap-4 sm:gap-8 transition-all hover:shadow-md">
-            <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${card.iconBg} ${card.iconColor} flex items-center justify-center flex-shrink-0`}>
-              <card.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div key={card.id} className="bg-white rounded-2xl sm:rounded-[24px] p-3.5 sm:p-8 border border-[#C2C9BB]/30 shadow-sm flex flex-col items-start gap-2 sm:gap-6 transition-all hover:shadow-md">
+            <div className={`w-9 h-9 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${card.iconBg} ${card.iconColor} flex items-center justify-center flex-shrink-0`}>
+              <card.icon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div className="space-y-0.5 sm:space-y-1">
-              <p className="text-[9px] sm:text-[11px] font-bold text-[#72796E] tracking-widest uppercase">{card.title}</p>
+            <div className="space-y-0.5 sm:space-y-1 min-w-0 w-full">
+              <p className="text-[10px] sm:text-[11px] font-bold text-[#72796E] tracking-wider sm:tracking-widest uppercase truncate">{card.title}</p>
               <h2 className="text-2xl sm:text-3xl lg:text-[44px] font-extrabold text-[#1B361F] leading-tight">{card.value}</h2>
             </div>
           </div>
@@ -182,8 +182,8 @@ export default function AdminDashboard() {
       </section>
 
       {/* RECENT ACTIVITY TABLE */}
-      <section className="bg-white rounded-[16px] sm:rounded-[24px] border border-[#C2C9BB]/30 shadow-sm overflow-hidden mb-10">
-        <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-[#C2C9BB]/20 flex items-center justify-between">
+      <section className="bg-white rounded-2xl sm:rounded-[24px] border border-[#C2C9BB]/30 shadow-sm overflow-hidden mb-6 sm:mb-10">
+        <div className="px-3 sm:px-8 py-3 sm:py-6 border-b border-[#C2C9BB]/20 flex items-center justify-between">
           <h2 className="text-base sm:text-xl font-bold text-[#1B361F]">Aktivitas Terbaru</h2>
         </div>
         
@@ -191,10 +191,10 @@ export default function AdminDashboard() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#F4F5F2] border-b border-[#C2C9BB]/20">
-                <th className="px-4 sm:px-8 py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest min-w-[240px]">Aktivitas</th>
-                <th className="px-4 sm:px-8 py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest min-w-[120px]">Tanggal</th>
-                <th className="px-4 sm:px-8 py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest min-w-[100px]">Status</th>
-                <th className="px-4 sm:px-8 py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest w-10"></th>
+                <th className="px-3 sm:px-8 py-2.5 sm:py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest min-w-[180px] sm:min-w-[240px]">Aktivitas</th>
+                <th className="px-3 sm:px-8 py-2.5 sm:py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest min-w-[90px] sm:min-w-[120px]">Tanggal</th>
+                <th className="px-3 sm:px-8 py-2.5 sm:py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Status</th>
+                <th className="px-3 sm:px-8 py-2.5 sm:py-3 text-[10px] font-bold text-[#72796E] uppercase tracking-widest w-8 sm:w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#C2C9BB]/10">
@@ -207,27 +207,27 @@ export default function AdminDashboard() {
                   const iconColor = isProgram ? 'text-[#E02424]' : isProduct ? 'text-[#D97706]' : isGallery ? 'text-[#7C3AED]' : 'text-[#059669]';
                   return (
                     <tr key={row.id} className="hover:bg-[#F9FAF5]/50 transition-colors">
-                      <td className="px-4 sm:px-8 py-3 sm:py-5">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${row.iconBg} ${iconColor} flex items-center justify-center flex-shrink-0`}>
-                            <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <td className="px-3 sm:px-8 py-2.5 sm:py-5">
+                        <div className="flex items-center gap-2.5 sm:gap-4">
+                          <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${row.iconBg} ${iconColor} flex items-center justify-center flex-shrink-0`}>
+                            <Icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           </div>
-                          <span className="font-bold text-[#1B361F] text-xs sm:text-sm">{row.title}</span>
+                          <span className="font-bold text-[#1B361F] text-xs sm:text-sm line-clamp-2">{row.title}</span>
                         </div>
                       </td>
-                      <td className="px-4 sm:px-8 py-4 sm:py-5 text-[#42493E] font-medium text-xs">
+                      <td className="px-3 sm:px-8 py-2.5 sm:py-5 text-[#42493E] font-medium text-[11px] sm:text-xs whitespace-nowrap">
                         {row.date}
                       </td>
-                      <td className="px-4 sm:px-8 py-4 sm:py-5">
-                        <span className={`px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black tracking-widest ${
+                      <td className="px-3 sm:px-8 py-2.5 sm:py-5">
+                        <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-black tracking-wider sm:tracking-widest ${
                           row.status === 'SUKSES' || row.status === 'SUCCESS' ? 'bg-[#E3F2E7] text-[#2F6F1E]' : 'bg-[#FEF3C7] text-[#92400E]'
                         }`}>
                           {row.status === 'SUCCESS' ? 'SUKSES' : row.status}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-8 py-4 sm:py-5">
+                      <td className="px-3 sm:px-8 py-2.5 sm:py-5">
                         <button className="text-[#C2C9BB] hover:text-[#42493E]">
-                          <MoreVertical size={18} />
+                          <MoreVertical size={16} className="sm:w-[18px] sm:h-[18px]" />
                         </button>
                       </td>
                     </tr>
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-6 sm:px-8 py-8 text-center text-[#72796E] text-sm">
+                  <td colSpan={4} className="px-4 sm:px-8 py-8 text-center text-[#72796E] text-xs sm:text-sm">
                     Belum ada aktivitas terbaru.
                   </td>
                 </tr>

@@ -42,7 +42,7 @@ export function Navbar() {
   return (
     <nav
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 h-[76px] w-full transition-all duration-300',
+        'fixed top-0 left-0 right-0 z-50 h-14 md:h-[76px] w-full transition-all duration-300',
         isScrolled
           ? 'bg-[#012D1D]/95 backdrop-blur-md shadow-lg border-b border-[#0B4A31]'
           : 'bg-[#012D1D]/75 backdrop-blur-sm border-b border-white/10'
@@ -50,8 +50,8 @@ export function Navbar() {
     >
       <Container className="h-full flex items-center justify-between">
         {/* LOGO & BRAND */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full overflow-hidden flex items-center justify-center bg-white/10 transition-transform group-hover:scale-105">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
+          <div className="relative h-8 w-8 md:h-12 md:w-12 rounded-full overflow-hidden flex items-center justify-center bg-white/10 transition-transform group-hover:scale-105">
             <img
               src="/IMG_8588.JPG-removebg-preview.png"
               alt="Teman Pilah"
@@ -62,7 +62,7 @@ export function Navbar() {
               }}
             />
           </div>
-          <span className="font-['Poppins'] font-bold text-lg sm:text-[20px] text-white tracking-tight">
+          <span className="font-['Poppins'] font-bold text-base sm:text-[20px] text-white tracking-tight">
             Teman Pilah
           </span>
         </Link>
@@ -97,10 +97,10 @@ export function Navbar() {
         {/* MOBILE MENU TOGGLE */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
+          className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
           aria-label={isMobileMenuOpen ? 'Tutup menu' : 'Buka menu'}
         >
-          {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </Container>
 
@@ -112,7 +112,7 @@ export function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden fixed top-[76px] left-0 right-0 bg-[#012D1D] border-b border-[#0B4A31] shadow-2xl px-6 py-5 flex flex-col gap-4"
+            className="md:hidden fixed top-14 md:top-[76px] left-0 right-0 bg-[#012D1D] border-b border-[#0B4A31] shadow-2xl px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-3 sm:gap-4"
           >
             {navLinks.map((link) => (
               <Link

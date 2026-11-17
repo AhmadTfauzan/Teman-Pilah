@@ -35,18 +35,80 @@ export function EducationTable({ contents, onEdit, onDelete }: EducationTablePro
   );
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-6">
+    <div className="overflow-hidden rounded-2xl sm:rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-2 sm:mt-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between px-8 py-7 border-b border-[#F0F2EB]">
-        <h2 className="text-[18px] font-bold text-[#1B361F]">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-7 border-b border-[#F0F2EB]">
+        <h2 className="text-base sm:text-[18px] font-bold text-[#1B361F]">
           Semua Konten
         </h2>
-        <p className="text-[13px] text-[#A1A89A]">
+        <p className="text-xs sm:text-[13px] text-[#A1A89A]">
           {contents.length} total item
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* MOBILE 2-COLUMN CARD GRID */}
+      <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
+        {currentContents.map((content) => {
+          const isPublished = content.status === 'PUBLISHED';
+
+          return (
+            <div
+              key={content.id}
+              className="flex flex-col justify-between rounded-xl border border-[#E8ECE2] bg-[#FAFBF9] p-2.5 gap-2"
+            >
+              <div className="space-y-1.5">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                  isPublished ? 'bg-[#e2f5eb] text-[#166534]' : 'bg-[#fef3c7] text-[#92400e]'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${isPublished ? 'bg-[#22C55E]' : 'bg-[#EAB308]'}`} />
+                  {isPublished ? 'Terbit' : 'Draft'}
+                </span>
+
+                <h3 className="text-xs font-bold text-[#1B361F] leading-snug line-clamp-2">
+                  {content.title}
+                </h3>
+
+                <p className="text-[10px] text-[#72796E] font-medium">
+                  {content.createdAt ? new Date(content.createdAt).toLocaleDateString('id-ID', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  }) : '-'}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-1 pt-2 border-t border-[#ECEFE7]">
+                <button
+                  type="button"
+                  onClick={() => onEdit(content)}
+                  className="p-1.5 rounded-md text-[#72796E] hover:text-[#2A3426] hover:bg-stone-200/60 transition-colors"
+                  title="Edit Konten"
+                >
+                  <PencilIcon />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onDelete(content.id)}
+                  className="p-1.5 rounded-md text-[#72796E] hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Hapus Konten"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {contents.length === 0 && (
+          <div className="col-span-2 py-12 text-center">
+            <p className="text-xs text-[#72796e]">Konten edukasi tidak ditemukan.</p>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP TABLE */}
+      <div className="hidden md:block overflow-x-auto">
         <div className="min-w-[800px]">
           {/* TABLE HEADER */}
           <div className="flex items-center px-8 py-4 bg-[#F9FAF8] border-b border-[#F0F2EB]">
@@ -121,14 +183,14 @@ export function EducationTable({ contents, onEdit, onDelete }: EducationTablePro
       </div>
 
       {/* FOOTER PAGINATION */}
-      <div className="flex flex-col gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-8 py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-[24px]">
+      <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-2xl sm:rounded-b-[24px]">
         <div className="flex items-center">
-          <p className="text-[14px] font-medium text-[#72796E]">
-            Menampilkan {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, contents.length)} dari {contents.length} konten
+          <p className="text-xs sm:text-[14px] font-medium text-[#72796E]">
+            Menampilkan {contents.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, contents.length)} dari {contents.length} konten
           </p>
         </div>
 
-        <nav aria-label="Pagination" className="inline-flex items-center gap-2">
+        <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* PREV */}
           <button
             type="button"

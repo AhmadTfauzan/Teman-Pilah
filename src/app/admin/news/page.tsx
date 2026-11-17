@@ -328,12 +328,12 @@ export default function AdminNewsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8">
 
       {/* HEADER */}
-      <header className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+      <header className="flex flex-wrap items-center justify-between gap-3 sm:gap-5">
         <div>
-          <h1 className="font-serif text-[32px] font-bold leading-[38.4px] text-[#2A3426] tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-[32px] font-bold leading-tight sm:leading-[38.4px] text-[#2A3426] tracking-tight">
             Kelola Program
           </h1>
         </div>
@@ -343,7 +343,7 @@ export default function AdminNewsPage() {
             setSelectedNews(null);
             setIsModalOpen(true);
           }}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#27532B] px-5 py-2.5 hover:brightness-110 transition-all text-white font-medium text-[13px]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#27532B] px-3.5 py-2 sm:px-5 sm:py-2.5 hover:brightness-110 transition-all text-white font-medium text-xs sm:text-[13px]"
           type="button"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -355,34 +355,34 @@ export default function AdminNewsPage() {
       </header>
 
       {/* FILTER SECTION */}
-      <div className="rounded-[20px] border border-[#F0F2EB] bg-white p-2.5 shadow-sm">
+      <div className="rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] bg-white p-2 sm:p-2.5 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           {/* SEARCH */}
           <div className="relative flex-1">
             <label className="sr-only" htmlFor="program-search">
               Cari berdasarkan judul...
             </label>
-            <div className="flex h-11 items-center rounded-[14px] bg-[#F9FAF8] pl-10 pr-4">
+            <div className="flex h-10 sm:h-11 items-center rounded-xl sm:rounded-[14px] bg-[#F9FAF8] pl-9 sm:pl-10 pr-4">
               <input
                 id="program-search"
                 placeholder="Cari berdasarkan judul..."
                 type="text"
                 autoComplete="off"
-                className="w-full border-none bg-transparent text-[13px] text-[#42493e] outline-none placeholder:text-[#A1A89A]"
+                className="w-full border-none bg-transparent text-xs sm:text-[13px] text-[#42493e] outline-none placeholder:text-[#A1A89A]"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">
+            <div className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 opacity-50">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
           </div>
 
           {/* FILTERS */}
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
             <div className="relative w-full sm:w-[150px]">
               <select
-                className="h-11 w-full appearance-none rounded-[14px] bg-[#F9FAF8] px-4 pr-10 text-[13px] font-medium text-[#2A3426] outline-none cursor-pointer"
+                className="h-9 sm:h-11 w-full appearance-none rounded-xl sm:rounded-[14px] bg-[#F9FAF8] px-3 sm:px-4 pr-8 sm:pr-10 text-xs sm:text-[13px] font-medium text-[#2A3426] outline-none cursor-pointer"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -392,32 +392,32 @@ export default function AdminNewsPage() {
                 <option value="completed">Selesai</option>
                 <option value="draft">Draft</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </div>
             </div>
 
             <div className="relative w-full sm:w-[150px]">
               <select
-                className="h-11 w-full appearance-none rounded-[14px] bg-[#F9FAF8] px-4 pr-10 text-[13px] font-medium text-[#2A3426] outline-none cursor-pointer"
+                className="h-9 sm:h-11 w-full appearance-none rounded-xl sm:rounded-[14px] bg-[#F9FAF8] px-3 sm:px-4 pr-8 sm:pr-10 text-xs sm:text-[13px] font-medium text-[#2A3426] outline-none cursor-pointer"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
               >
                 <option value="newest">Tanggal: Terbaru</option>
                 <option value="oldest">Tanggal: Terlama</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </div>
             </div>
 
             <button
               type="button"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] border border-[#F0F2EB] bg-white px-5 hover:bg-gray-50 transition-colors"
+              className="col-span-2 sm:col-auto inline-flex h-9 sm:h-11 items-center justify-center gap-2 rounded-xl sm:rounded-[14px] border border-[#F0F2EB] bg-white px-4 sm:px-5 hover:bg-gray-50 transition-colors"
               onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
-              <span className="text-[13px] font-medium text-[#2A3426]">Urutkan</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+              <span className="text-xs sm:text-[13px] font-medium text-[#2A3426]">Urutkan</span>
             </button>
           </div>
         </div>

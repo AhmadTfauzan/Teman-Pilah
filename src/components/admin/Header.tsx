@@ -35,15 +35,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const showSearch = pathname === '/admin';
 
   return (
-    <header className="fixed left-0 lg:left-[280px] right-0 top-0 z-40 h-20 border-b border-[#c2c9bb] bg-[#f9faf5] px-6 lg:px-8 py-0 shadow-sm flex items-center justify-between">
+    <header className="fixed left-0 lg:left-[280px] right-0 top-0 z-40 h-14 sm:h-16 border-b border-[#c2c9bb] bg-[#f9faf5] px-3 sm:px-6 lg:px-8 py-0 shadow-sm flex items-center justify-between">
       {/* Burger Menu for Mobile */}
       {onToggleSidebar && (
         <button
           onClick={onToggleSidebar}
-          className="mr-4 p-2 rounded-lg text-[#2D5A27] hover:bg-[#F3F4EF] lg:hidden flex-shrink-0"
+          className="mr-2 sm:mr-4 p-1.5 sm:p-2 rounded-lg text-[#2D5A27] hover:bg-[#F3F4EF] lg:hidden flex-shrink-0"
           aria-label="Toggle sidebar"
         >
-          <Menu size={24} />
+          <Menu size={22} />
         </button>
       )}
 
@@ -55,23 +55,23 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <input 
               type="text" 
               placeholder="Search resources..." 
-              className="w-full bg-transparent border border-gray-300 rounded-full py-2.5 pl-12 pr-4 focus:outline-none focus:border-[#2D5A27] text-sm text-gray-700 placeholder-gray-400"
+              className="w-full bg-transparent border border-gray-300 rounded-full py-2 pl-12 pr-4 focus:outline-none focus:border-[#2D5A27] text-sm text-gray-700 placeholder-gray-400"
             />
           </div>
         )}
       </div>
 
       {/* Right Actions */}
-      <nav aria-label="Header actions" className="inline-flex items-center gap-6 ml-auto">
-        <div className="inline-flex items-center gap-4">
-          <div className="flex items-center justify-center h-10 w-10 rounded-full border-[1.5px] border-[#9DD090] bg-transparent text-green-700 font-bold text-sm">
+      <nav aria-label="Header actions" className="inline-flex items-center gap-2 sm:gap-6 ml-auto">
+        <div className="inline-flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-full border-[1.5px] border-[#9DD090] bg-transparent text-green-700 font-bold text-xs sm:text-sm">
             {initials}
           </div>
           <span className="text-sm font-medium text-gray-700 hidden sm:block">{adminName}</span>
           
           <button 
             onClick={handleLogout}
-            className="ml-2 p-2 text-[#42493E] hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+            className="ml-1 sm:ml-2 p-1.5 sm:p-2 text-[#42493E] hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
             title="Logout"
           >
             <LogOut size={18} />

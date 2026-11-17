@@ -41,7 +41,7 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
     : '-';
 
   return (
-    <div className="pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
+    <div className="pt-20 md:pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
       {/* Decorative Brand Accents (Figma Frame 48) */}
       <div className="absolute -right-24 top-28 opacity-20 pointer-events-none rotate-[20deg]">
         <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
@@ -50,21 +50,21 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
         <ConcentricCircles size={300} color="#FC9634" />
       </div>
       {/* CONTAINED WRAPPER - Matches Navbar and Footer limits */}
-      <div className="mx-auto max-w-[1440px] 2xl:px-12 px-6 lg:px-8 py-10 flex flex-col gap-8">
+      <div className="mx-auto max-w-[1440px] 2xl:px-12 px-4 sm:px-6 lg:px-8 py-5 sm:py-10 flex flex-col gap-4 sm:gap-8">
         
         {/* BACK BUTTON */}
         <div>
           <a
             href="/#edukasi"
-            className="inline-flex items-center gap-2.5 text-[15px] font-bold text-[#616b5a] hover:text-[#1a2f1d] transition-colors group"
+            className="inline-flex items-center gap-2 text-xs sm:text-[15px] font-bold text-[#616b5a] hover:text-[#1a2f1d] transition-colors group"
           >
-            <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1 text-[#616b5a] group-hover:text-[#1a2f1d]" />
+            <ArrowLeft className="w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform group-hover:-translate-x-1 text-[#616b5a] group-hover:text-[#1a2f1d]" />
             <span>Kembali ke Pusat Edukasi</span>
           </a>
         </div>
 
         {/* HERO IMAGE / THUMBNAIL - Aligned & Contained */}
-        <div className="w-full h-[250px] md:h-[480px] relative overflow-hidden bg-[#e0e5db] rounded-[32px] border border-[#e5e7e0] shadow-sm">
+        <div className="w-full h-[190px] sm:h-[250px] md:h-[480px] relative overflow-hidden bg-[#e0e5db] rounded-2xl sm:rounded-[32px] border border-[#e5e7e0] shadow-sm">
           {content.thumbnail ? (
             <img
               src={getThumbnailUrl(content.thumbnail)}
@@ -82,13 +82,13 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
         </div>
 
         {/* ARTICLE CONTENT */}
-        <div className="w-full px-0 py-4 md:py-6">
+        <div className="w-full px-0 py-2 sm:py-4 md:py-6">
           
           {/* TAGS */}
           {content.tags && content.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
               {content.tags.map((tag: string, index: number) => (
-                <span key={index} className="px-4 py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-[13px] font-bold tracking-wide">
+                <span key={index} className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-xs sm:text-[13px] font-bold tracking-wide">
                   {tag}
                 </span>
               ))}
@@ -96,33 +96,33 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
           )}
 
           {/* TITLE */}
-          <h1 className="text-[32px] md:text-[44px] font-extrabold text-[#1a2f1d] leading-tight mb-6">
+          <h1 className="text-2xl sm:text-[32px] md:text-[44px] font-extrabold text-[#1a2f1d] leading-tight mb-4 sm:mb-6">
             {content.title}
           </h1>
 
           {/* METADATA */}
-          <div className="flex flex-wrap items-center gap-6 text-[14px] text-[#616b5a] font-medium mb-10 pb-8 border-b border-[#e5e7e0]">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-[14px] text-[#616b5a] font-medium mb-6 sm:mb-10 pb-5 sm:pb-8 border-b border-[#e5e7e0]">
             <div className="flex items-center gap-2">
-              <CalendarDays size={18} className="text-[#8c9685]" />
+              <CalendarDays size={16} className="text-[#8c9685] sm:w-[18px] sm:h-[18px]" />
               <span>Dipublikasikan pada: {formattedDate}</span>
             </div>
             <div className="flex items-center gap-2">
-              <LinkIcon size={18} className="text-[#8c9685]" />
-              <span>temanpilah.com/edukasi/{content.slug}</span>
+              <LinkIcon size={16} className="text-[#8c9685] sm:w-[18px] sm:h-[18px]" />
+              <span className="break-all">temanpilah.com/edukasi/{content.slug}</span>
             </div>
           </div>
 
           {/* OVERVIEW */}
           {content.overview && (
-            <div className="bg-[#E8F5E9] border-l-[6px] border-[#1a2f1d] p-6 md:p-8 mb-12 rounded-r-2xl">
-              <p className="text-[#1a2f1d] font-bold text-[18px] md:text-[20px] leading-relaxed italic">
+            <div className="bg-[#E8F5E9] border-l-[4px] sm:border-l-[6px] border-[#1a2f1d] p-4 sm:p-6 md:p-8 mb-8 sm:mb-12 rounded-r-2xl">
+              <p className="text-[#1a2f1d] font-bold text-[15px] sm:text-[18px] md:text-[20px] leading-relaxed italic">
                 "{content.overview}"
               </p>
             </div>
           )}
 
           {/* BODY TEXT / RICH TEXT DESCRIPTION */}
-          <div className="space-y-6 text-[#42493E] text-[16px] md:text-[17px] leading-[1.8] tracking-wide editor-content">
+          <div className="space-y-4 sm:space-y-6 text-[#42493E] text-sm sm:text-[16px] md:text-[17px] leading-[1.75] sm:leading-[1.8] tracking-wide editor-content">
             <style>{`
               .editor-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 1rem 0 !important; }
               .editor-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 1rem 0 !important; }
@@ -134,7 +134,7 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
           </div>
 
           {/* BOTTOM BUTTON */}
-          <div className="mt-14 mb-8">
+          <div className="mt-8 sm:mt-14 mb-4 sm:mb-8">
             <DownloadPdfButton content={content} />
           </div>
 

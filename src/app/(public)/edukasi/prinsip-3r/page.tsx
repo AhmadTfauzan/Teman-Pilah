@@ -5,7 +5,7 @@ import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElemen
 
 export default function Prinsip3RDetail() {
   return (
-    <div className="pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
+    <div className="pt-20 md:pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
       {/* Decorative Brand Accents (Figma Frame 48) */}
       <div className="absolute -right-24 top-40 opacity-20 pointer-events-none rotate-[20deg]">
         <OutlineLeaf size={340} color="#203220" strokeWidth={6.72} />
@@ -14,7 +14,7 @@ export default function Prinsip3RDetail() {
         <ConcentricCircles size={300} color="#FC9634" />
       </div>
       {/* HERO IMAGE */}
-      <div className="w-full h-[250px] md:h-[450px] relative overflow-hidden bg-[#e0e5db]">
+      <div className="w-full h-[190px] sm:h-[250px] md:h-[450px] relative overflow-hidden bg-[#e0e5db]">
         <img
           src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=2000"
           alt="Edukasi Lingkungan"
@@ -25,52 +25,52 @@ export default function Prinsip3RDetail() {
       </div>
 
       {/* ARTICLE CONTENT */}
-      <div className="max-w-[900px] mx-auto px-6 py-12 md:py-16">
+      <div className="max-w-[900px] mx-auto px-4 sm:px-6 py-7 sm:py-12 md:py-16">
 
         {/* TAGS */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <span className="px-4 py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-[13px] font-bold tracking-wide">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
+          <span className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-xs sm:text-[13px] font-bold tracking-wide">
             Daur Ulang
           </span>
-          <span className="px-4 py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-[13px] font-bold tracking-wide">
+          <span className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-xs sm:text-[13px] font-bold tracking-wide">
             Edukasi
           </span>
-          <span className="px-4 py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-[13px] font-bold tracking-wide">
+          <span className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-xs sm:text-[13px] font-bold tracking-wide">
             Lingkungan
           </span>
         </div>
 
         {/* TITLE */}
-        <h1 className="text-[32px] md:text-[44px] font-extrabold text-[#1a2f1d] leading-tight mb-6">
+        <h1 className="text-2xl sm:text-[32px] md:text-[44px] font-extrabold text-[#1a2f1d] leading-tight mb-4 sm:mb-6">
           Prinsip 3R: Kunci Gaya Hidup Berkelanjutan
         </h1>
 
         {/* METADATA */}
-        <div className="flex flex-wrap items-center gap-6 text-[14px] text-[#616b5a] font-medium mb-10 pb-8 border-b border-[#e5e7e0]">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-[14px] text-[#616b5a] font-medium mb-6 sm:mb-10 pb-5 sm:pb-8 border-b border-[#e5e7e0]">
           <div className="flex items-center gap-2">
-            <CalendarDays size={18} className="text-[#8c9685]" />
+            <CalendarDays size={16} className="text-[#8c9685] sm:w-[18px] sm:h-[18px]" />
             <span>Dipublikasikan pada: 12 Mei 2024</span>
           </div>
           <div className="flex items-center gap-2">
-            <LinkIcon size={18} className="text-[#8c9685]" />
+            <LinkIcon size={16} className="text-[#8c9685] sm:w-[18px] sm:h-[18px]" />
             <span>temanpilah.com/edukasi/prinsip-3r</span>
           </div>
         </div>
 
         {/* QUOTE BOX */}
-        <div className="bg-[#E8F5E9] border-l-[6px] border-[#1a2f1d] p-6 md:p-8 mb-12 rounded-r-2xl">
-          <p className="text-[#1a2f1d] font-bold text-[18px] md:text-[20px] leading-relaxed italic">
+        <div className="bg-[#E8F5E9] border-l-[4px] sm:border-l-[6px] border-[#1a2f1d] p-4 sm:p-6 md:p-8 mb-8 sm:mb-12 rounded-r-2xl">
+          <p className="text-[#1a2f1d] font-bold text-[15px] sm:text-[18px] md:text-[20px] leading-relaxed italic">
             "Prinsip 3R (Reduce, Reuse, Recycle) adalah landasan utama dalam pengelolaan sampah yang efektif dan berkelanjutan untuk menjaga kelestarian ekosistem bumi kita."
           </p>
         </div>
 
         {/* SUBTITLE */}
-        <h2 className="text-[26px] md:text-[28px] font-bold text-[#166534] mb-6">
+        <h2 className="text-xl sm:text-[26px] md:text-[28px] font-bold text-[#166534] mb-4 sm:mb-6">
           Mengurangi Jejak dari Akar Permasalahan
         </h2>
 
         {/* BODY TEXT */}
-        <div className="space-y-6 text-[#42493E] text-[16px] md:text-[17px] leading-[1.8] tracking-wide">
+        <div className="space-y-4 sm:space-y-6 text-[#42493E] text-sm sm:text-[16px] md:text-[17px] leading-[1.75] sm:leading-[1.8] tracking-wide">
           <p>
             Strategi pertama dan paling fundamental dalam menjaga kelestarian bumi adalah melalui pengurangan konsumsi atau <strong className="text-[#1a2f1d] font-bold">Reduce</strong>. Pendekatan ini dianggap sebagai pilar terpenting karena ia memotong masalah langsung dari akarnya. Overkonsumsi global saat ini telah menyebabkan eksploitasi sumber daya alam yang masif, emisi karbon tinggi dari proses produksi yang tak henti, serta penumpukan sampah yang semakin sulit dikelola. Dengan secara sadar mengurangi apa yang kita beli dan gunakan, kita secara langsung menurunkan jejak karbon individu kita sebelum sampah itu sendiri tercipta.
           </p>
@@ -97,9 +97,9 @@ export default function Prinsip3RDetail() {
         </div>
 
         {/* BOTTOM BUTTON */}
-        <div className="mt-14 mb-8">
-          <Button className="bg-[#1a2f1d] hover:bg-[#234926] text-white rounded-full px-7 py-[26px] text-[15px] font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-md">
-            <Download size={20} />
+        <div className="mt-8 sm:mt-14 mb-4 sm:mb-8">
+          <Button className="bg-[#1a2f1d] hover:bg-[#234926] text-white rounded-full px-5 py-4 sm:px-7 sm:py-[26px] text-xs sm:text-[15px] font-bold flex items-center gap-2.5 sm:gap-3 transition-all hover:scale-105 active:scale-95 shadow-md">
+            <Download className="w-4 h-4 sm:w-5 sm:h-5" />
             Download Materi Edukasi Lengkap
           </Button>
         </div>

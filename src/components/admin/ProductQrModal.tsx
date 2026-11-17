@@ -262,18 +262,18 @@ export function ProductQrModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto print:static print:bg-transparent print:p-0">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-stone-200 my-6 max-h-[94vh] overflow-y-auto print:shadow-none print:border-0 print:p-0 print:max-h-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto print:static print:bg-transparent print:p-0">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-8 shadow-2xl border border-stone-200 my-2 sm:my-6 max-h-[94vh] overflow-y-auto print:shadow-none print:border-0 print:p-0 print:max-h-none">
         {/* Header Modal */}
-        <div className="flex items-start justify-between pb-4 border-b border-stone-200 print:hidden">
-          <div className="min-w-0 pr-3">
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              <QrCode className="w-3.5 h-3.5" /> QR Code Produk Permanen
+        <div className="flex items-start justify-between pb-3 sm:pb-4 border-b border-stone-200 print:hidden">
+          <div className="min-w-0 pr-2 sm:pr-3">
+            <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-200">
+              <QrCode className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> QR Code Produk Permanen
             </div>
-            <h3 className="text-xl font-bold text-stone-900 mt-1.5 truncate">
+            <h3 className="text-lg sm:text-xl font-bold text-stone-900 mt-1 sm:mt-1.5 truncate">
               {product.name}
             </h3>
-            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-stone-500 font-mono">
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] sm:text-xs text-stone-500 font-mono">
               {product.productCode && (
                 <span>
                   Kode Produk:{' '}
@@ -299,13 +299,13 @@ export function ProductQrModal({
         </div>
 
         {/* Printable Label Preview */}
-        <div className="py-5 flex justify-center">
-          <div className="w-[320px] sm:w-[350px] bg-white rounded-2xl border-2 border-[#012D1D] p-5 shadow-md text-center flex flex-col items-center print:border-solid print:border-2 print:border-black print:m-0 print:shadow-none">
-            <div className="w-full flex items-center justify-between gap-2 mb-2.5 px-1">
+        <div className="py-3 sm:py-5 flex justify-center">
+          <div className="w-full max-w-[320px] sm:w-[350px] sm:max-w-none bg-white rounded-2xl border-2 border-[#012D1D] p-3.5 sm:p-5 shadow-md text-center flex flex-col items-center print:border-solid print:border-2 print:border-black print:m-0 print:shadow-none">
+            <div className="w-full flex items-center justify-between gap-2 mb-2 sm:mb-2.5 px-0.5 sm:px-1">
               <img
                 src="/logo-teman-pilah.png"
                 alt="Logo Teman Pilah"
-                className="h-10 w-10 object-contain shrink-0"
+                className="h-9 w-9 sm:h-10 sm:w-10 object-contain shrink-0"
               />
               <div className="text-center flex-1 min-w-0">
                 <span className="text-[10px] font-black tracking-widest text-[#2C5F2D] uppercase block truncate">
@@ -315,16 +315,16 @@ export function ProductQrModal({
                   PRODUK DAUR ULANG
                 </h4>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
                 <Tag className="w-4 h-4 text-[#012D1D]" />
               </div>
             </div>
 
-            <div className="mb-3 w-full bg-[#EBF4E9] py-1.5 px-3 rounded-lg border border-[#CFE1CC]">
-              <span className="text-[10px] uppercase font-bold text-stone-500 block">
+            <div className="mb-2 sm:mb-3 w-full bg-[#EBF4E9] py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-lg border border-[#CFE1CC]">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold text-stone-500 block">
                 KODE QR PRODUK
               </span>
-              <span className="font-mono text-sm font-black text-[#012D1D] tracking-wider">
+              <span className="font-mono text-xs sm:text-sm font-black text-[#012D1D] tracking-wider">
                 {effectiveCode}
               </span>
               {product.productCode && product.productCode !== effectiveCode && (
@@ -334,7 +334,7 @@ export function ProductQrModal({
               )}
             </div>
 
-            <div className="mb-3">
+            <div className="mb-2 sm:mb-3">
               <PersistentQrCode
                 value={qrCanonicalUrl}
                 qrCode={product.qrCode}
@@ -342,7 +342,7 @@ export function ProductQrModal({
                 entityId={product.id}
                 entityKey={product.productCode ?? null}
                 entityName={product.name}
-                size={168}
+                size={156}
                 level="Q"
                 marginSize={2}
                 canvasWrapperRef={canvasRef}
@@ -355,14 +355,14 @@ export function ProductQrModal({
               />
             </div>
 
-            <div className="w-full bg-[#FAFBF9] p-3 rounded-xl border border-[#EDF2E8] text-center space-y-1 mb-2.5">
-              <p className="text-sm font-bold text-[#012D1D] leading-snug">
+            <div className="w-full bg-[#FAFBF9] p-2.5 sm:p-3 rounded-xl border border-[#EDF2E8] text-center space-y-0.5 sm:space-y-1 mb-2">
+              <p className="text-xs sm:text-sm font-bold text-[#012D1D] leading-snug">
                 {product.name}
               </p>
               <p className="text-[11px] font-semibold text-[#2C5F2D]">
                 {getCategoryLabel(product.category)}
               </p>
-              <p className="text-sm font-black text-stone-900">
+              <p className="text-xs sm:text-sm font-black text-stone-900">
                 {formattedPrice}
               </p>
             </div>
@@ -378,15 +378,15 @@ export function ProductQrModal({
           href={detailPath}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 mb-3 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white font-bold text-xs shadow-md transition-all active:scale-[0.99] print:hidden"
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 sm:py-3 px-4 mb-2.5 sm:mb-3 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white font-bold text-xs shadow-md transition-all active:scale-[0.99] print:hidden"
         >
           <span>Buka Halaman Detail Produk</span>
           <ExternalLink className="w-3.5 h-3.5" />
         </Link>
 
         {/* Copyable URL Field */}
-        <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200 flex items-center justify-between gap-2 text-xs mb-5 print:hidden">
-          <span className="font-mono text-[11px] text-stone-600 truncate">
+        <div className="bg-stone-50 p-2 sm:p-2.5 rounded-xl border border-stone-200 flex items-center justify-between gap-2 text-xs mb-3 sm:mb-5 print:hidden">
+          <span className="font-mono text-[10px] sm:text-[11px] text-stone-600 truncate">
             {fullWebUrl}
           </span>
           <div className="flex items-center gap-1 shrink-0">
@@ -415,32 +415,35 @@ export function ProductQrModal({
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 print:hidden">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 print:hidden">
           <button
             type="button"
             onClick={handleDownloadPng}
-            className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition-colors active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold transition-colors active:scale-95"
           >
-            <Download className="w-4 h-4 text-stone-600" />
-            Unduh PNG
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-600 shrink-0" />
+            <span className="sm:hidden">PNG</span>
+            <span className="hidden sm:inline">Unduh PNG</span>
           </button>
 
           <button
             type="button"
             onClick={handleDownloadSvg}
-            className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition-colors active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold transition-colors active:scale-95"
           >
-            <Download className="w-4 h-4 text-stone-600" />
-            Unduh SVG
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-600 shrink-0" />
+            <span className="sm:hidden">SVG</span>
+            <span className="hidden sm:inline">Unduh SVG</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrint}
-            className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white text-xs font-bold shadow transition-colors active:scale-95"
+            className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white text-[11px] sm:text-xs font-bold shadow transition-colors active:scale-95"
           >
-            <Printer className="w-4 h-4" />
-            Cetak Label
+            <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="sm:hidden">Cetak</span>
+            <span className="hidden sm:inline">Cetak Label</span>
           </button>
         </div>
       </div>

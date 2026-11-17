@@ -15,8 +15,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-[280px] transition-all duration-300">
         <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-        <main className="pt-20">
-          <div className="px-4 sm:px-8 py-6 sm:py-10">
+        <main className="pt-14 sm:pt-16">
+          <div className="px-3 sm:px-8 py-4 sm:py-10">
             {children}
           </div>
         </main>

@@ -82,26 +82,26 @@ export function EcoEnzymeHarvestModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-xl w-full p-6 md:p-8 shadow-xl border border-stone-200 my-6 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-start justify-between pb-4 border-b border-stone-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-xl w-full p-4 sm:p-8 shadow-xl border border-stone-200 my-2 sm:my-6 max-h-[92vh] overflow-y-auto">
+        <div className="flex items-start justify-between pb-3 sm:pb-4 border-b border-stone-200">
           <div>
-            <h3 className="text-lg font-bold text-stone-900">
+            <h3 className="text-base sm:text-lg font-bold text-stone-900">
               Konfirmasi Panen Eco Enzyme
             </h3>
-            <p className="text-xs text-stone-500 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5">
               Pencatatan volume hasil saring dan hilirisasi stok produk katalog
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4 mt-3.5 sm:mt-4">
           {/* Ringkasan Input Awal */}
           <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 text-xs grid grid-cols-2 gap-2 text-stone-700">
             <div>

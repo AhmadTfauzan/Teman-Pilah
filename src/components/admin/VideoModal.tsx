@@ -151,27 +151,27 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 lg:p-8 flex items-center justify-center animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl rounded-2xl bg-white shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-2 sm:p-6 lg:p-8 flex items-center justify-center animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl rounded-2xl bg-white shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[94vh]">
         {/* Header Modal */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-[#012D1D] to-[#0B4A31] text-white">
-          <div className="flex items-center gap-3">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-[#012D1D] to-[#0B4A31] text-white">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <button
               onClick={onClose}
               type="button"
               className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
               title="Kembali"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
             </button>
-            <h2 className="font-['Poppins'] font-bold text-xl sm:text-2xl">
+            <h2 className="font-['Poppins'] font-bold text-base sm:text-2xl">
               {item ? 'Edit Video Bank Sampah' : 'Tambah Video Bank Sampah Baru'}
             </h2>
           </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 sm:p-8 flex-1 space-y-6">
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-4 sm:p-8 flex-1 space-y-4 sm:space-y-6">
           {errorMessage && (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
               {errorMessage}

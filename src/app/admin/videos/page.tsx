@@ -114,95 +114,95 @@ export default function AdminVideosPage() {
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-5 sm:space-y-8 pb-8 sm:pb-12">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-[#012D1D] px-4 py-3 text-sm font-semibold text-white shadow-xl animate-in slide-in-from-bottom duration-300">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 rounded-xl bg-[#012D1D] px-4 py-3 text-xs sm:text-sm font-semibold text-white shadow-xl animate-in slide-in-from-bottom duration-300">
           <CheckCircle2 size={18} className="text-[#80E478]" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-['Poppins'] text-gray-900 tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-bold font-['Poppins'] text-gray-900 tracking-tight">
             Kelola Video Bank Sampah
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
             Tambah dan kelola video Bank Sampah yang terhubung ke YouTube, Instagram, dan TikTok.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => fetchVideos()}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors shadow-sm"
+            className="p-2 sm:p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors shadow-sm"
             title="Segarkan Data"
           >
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={`${isLoading ? 'animate-spin' : ''} sm:w-[18px] sm:h-[18px]`} />
           </button>
 
           <button
             onClick={handleOpenAddModal}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-5 py-2.5 font-bold text-sm shadow-md shadow-[#012D1D]/20 transition-all hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-4 py-2 sm:px-5 sm:py-2.5 font-bold text-xs sm:text-sm shadow-md shadow-[#012D1D]/20 transition-all hover:scale-105 active:scale-95"
           >
-            <Plus size={18} />
+            <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span>Tambah Video</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block font-['Poppins']">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200 bg-white p-3 sm:p-5 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider block font-['Poppins']">
             Total Video
           </span>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#012D1D] mt-1 font-['Poppins']">
+          <p className="text-xl sm:text-3xl font-extrabold text-[#012D1D] mt-0.5 sm:mt-1 font-['Poppins']">
             {stats.all}
           </p>
-          <span className="text-[11px] text-gray-400 mt-1 block">Semua platform sosmed</span>
+          <span className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5 sm:mt-1 block">Semua platform sosmed</span>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <span className="text-xs font-bold text-red-500 uppercase tracking-wider block font-['Poppins']">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200 bg-white p-3 sm:p-5 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-red-500 uppercase tracking-wider block font-['Poppins']">
             YouTube
           </span>
-          <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1 font-['Poppins']">
+          <p className="text-xl sm:text-3xl font-extrabold text-gray-900 mt-0.5 sm:mt-1 font-['Poppins']">
             {stats.youtube}
           </p>
-          <span className="text-[11px] text-gray-400 mt-1 block">Video dokumenter & edukasi</span>
+          <span className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5 sm:mt-1 block">Video dokumenter & edukasi</span>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <span className="text-xs font-bold text-pink-600 uppercase tracking-wider block font-['Poppins']">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200 bg-white p-3 sm:p-5 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-pink-600 uppercase tracking-wider block font-['Poppins']">
             Instagram
           </span>
-          <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1 font-['Poppins']">
+          <p className="text-xl sm:text-3xl font-extrabold text-gray-900 mt-0.5 sm:mt-1 font-['Poppins']">
             {stats.instagram}
           </p>
-          <span className="text-[11px] text-gray-400 mt-1 block">Reels & dokumentasi warga</span>
+          <span className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5 sm:mt-1 block">Reels & dokumentasi warga</span>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <span className="text-xs font-bold text-gray-900 uppercase tracking-wider block font-['Poppins']">
+        <div className="rounded-xl sm:rounded-2xl border border-gray-200 bg-white p-3 sm:p-5 shadow-sm">
+          <span className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase tracking-wider block font-['Poppins']">
             TikTok
           </span>
-          <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1 font-['Poppins']">
+          <p className="text-xl sm:text-3xl font-extrabold text-gray-900 mt-0.5 sm:mt-1 font-['Poppins']">
             {stats.tiktok}
           </p>
-          <span className="text-[11px] text-gray-400 mt-1 block">Video singkat & tips pilah</span>
+          <span className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5 sm:mt-1 block">Video singkat & tips pilah</span>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm">
         {/* Platform Buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
           <button
             onClick={() => setPlatformFilter('ALL')}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'ALL'
                 ? 'bg-[#012D1D] text-white shadow-sm'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -212,7 +212,7 @@ export default function AdminVideosPage() {
           </button>
           <button
             onClick={() => setPlatformFilter('YouTube')}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'YouTube'
                 ? 'bg-red-600 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -222,7 +222,7 @@ export default function AdminVideosPage() {
           </button>
           <button
             onClick={() => setPlatformFilter('Instagram')}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'Instagram'
                 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -232,7 +232,7 @@ export default function AdminVideosPage() {
           </button>
           <button
             onClick={() => setPlatformFilter('TikTok')}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+            className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'TikTok'
                 ? 'bg-black text-white shadow-sm'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -244,13 +244,13 @@ export default function AdminVideosPage() {
 
         {/* Search */}
         <div className="relative w-full sm:w-72">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari judul atau topik..."
-            className="w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-4 py-2 text-xs sm:text-sm focus:border-[#3B9734] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-all"
+            className="w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-4 py-1.5 sm:py-2 text-xs sm:text-sm focus:border-[#3B9734] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-all"
           />
         </div>
       </div>

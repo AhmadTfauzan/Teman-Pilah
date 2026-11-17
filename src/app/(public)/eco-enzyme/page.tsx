@@ -174,7 +174,7 @@ export default function EcoEnzymePublicPage() {
     <div className="min-h-screen bg-[#FBF9F5] text-stone-900">
       
       {/* ════════════════ HERO SECTION ════════════════ */}
-      <section className="relative overflow-hidden bg-[#012D1D] text-white pt-28 pb-16 md:pt-36 md:pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden bg-[#012D1D] text-white pt-20 pb-10 md:pt-36 md:pb-20 px-3 sm:px-6 lg:px-8">
         {/* Figma Frame 48 Brand Background Ornaments */}
         <div className="absolute -right-20 -top-16 opacity-15 pointer-events-none rotate-[20deg]">
           <OutlineLeaf size={380} color="#203220" strokeWidth={6.72} />
@@ -183,17 +183,17 @@ export default function EcoEnzymePublicPage() {
           <ConcentricCircles size={320} color="#FC9634" />
         </div>
 
-        <div className="max-w-4xl mx-auto text-center relative z-10 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 text-emerald-300 text-xs font-semibold backdrop-blur-sm border border-white/10">
-            <Leaf className="w-3.5 h-3.5" />
+        <div className="max-w-4xl mx-auto text-center relative z-10 space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white/10 text-emerald-300 text-[11px] sm:text-xs font-semibold backdrop-blur-sm border border-white/10">
+            <Leaf className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
             Transparansi Fermentasi Komunitas Teman Pilah
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
             Pemantauan Fermentasi <span className="text-[#FC9634]">Eco Enzyme</span>
           </h1>
 
-          <p className="text-sm sm:text-base text-stone-200/90 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xs sm:text-base text-stone-200/90 max-w-2xl mx-auto leading-relaxed">
             Pantau langsung bahan yang difermentasi, takaran air, madu/gula, dan komposisi kulit buah pada setiap galon.
             Pindai barcode pada fisik galon atau masukkan kodenya di bawah ini.
           </p>
@@ -201,101 +201,101 @@ export default function EcoEnzymePublicPage() {
           {/* LOOKUP SEARCH BAR */}
           <form
             onSubmit={handleSearchSubmit}
-            className="pt-4 max-w-xl mx-auto flex flex-col sm:flex-row gap-2.5"
+            className="pt-2 sm:pt-4 max-w-xl mx-auto flex flex-col sm:flex-row gap-2 sm:gap-2.5"
           >
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Masukkan Kode Galon (contoh: GL-01, Galon 1, EE-2610)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white text-stone-900 pl-11 pr-4 py-3.5 rounded-2xl text-xs sm:text-sm font-medium shadow-lg placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#FC9634]"
+                className="w-full bg-white text-stone-900 pl-10 sm:pl-11 pr-3.5 sm:pr-4 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium shadow-lg placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#FC9634]"
               />
             </div>
             <button
               type="submit"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#FC9634] hover:bg-[#e88523] text-stone-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg transition-transform active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3.5 bg-[#FC9634] hover:bg-[#e88523] text-stone-950 font-black rounded-xl sm:rounded-2xl text-xs sm:text-sm shadow-lg transition-transform active:scale-95"
             >
               <QrCode className="w-4 h-4" />
               Cek Galon
             </button>
           </form>
 
-          <p className="text-[11px] text-stone-300/80 pt-1 flex items-center justify-center gap-1.5">
-            <HelpCircle className="w-3.5 h-3.5 text-stone-400" />
+          <p className="text-[10px] sm:text-[11px] text-stone-300/80 pt-0.5 sm:pt-1 flex items-center justify-center gap-1.5">
+            <HelpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-stone-400 shrink-0" />
             Setiap galon fisik memiliki stiker QR Code yang bisa discan langsung dengan kamera ponsel.
           </p>
         </div>
       </section>
 
       {/* ════════════════ FORMULA 1:3:10 RINGKAS ════════════════ */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 -mt-8 relative z-20">
-        <div className="bg-white rounded-3xl p-5 md:p-6 shadow-xl border border-stone-200/80 flex flex-col md:flex-row items-center justify-between gap-5">
+      <section className="max-w-5xl mx-auto px-3 sm:px-6 -mt-6 sm:-mt-8 relative z-20">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xl border border-stone-200/80 flex flex-col md:flex-row items-center justify-between gap-3.5 sm:gap-5">
           <div className="space-y-1 text-center md:text-left">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#3B9734] block">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[#3B9734] block">
               Standar Rumus Alami
             </span>
-            <h3 className="text-base sm:text-lg font-black text-stone-900">
+            <h3 className="text-sm sm:text-lg font-black text-stone-900">
               Formula Emas 1 : 3 : 10 (90 Hari)
             </h3>
-            <p className="text-xs text-stone-500 max-w-sm leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-stone-500 max-w-sm leading-relaxed">
               Keseimbangan takaran fermentasi alami untuk menghasilkan enzim aktif berkualitas.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
-            <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-2xl p-3 text-center min-w-[90px]">
-              <div className="text-base sm:text-lg font-black text-[#B45309]">1 Bagian</div>
-              <div className="text-[11px] font-bold text-stone-800 mt-0.5">Pemanis</div>
-              <div className="text-[10px] text-stone-500">Gula / Madu</div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto">
+            <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
+              <div className="text-xs sm:text-lg font-black text-[#B45309] whitespace-nowrap">1 Bagian</div>
+              <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Pemanis</div>
+              <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Gula / Madu</div>
             </div>
 
-            <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-2xl p-3 text-center min-w-[90px]">
-              <div className="text-base sm:text-lg font-black text-[#2C5F2D]">3 Bagian</div>
-              <div className="text-[11px] font-bold text-stone-800 mt-0.5">Bahan BO</div>
-              <div className="text-[10px] text-stone-500">Kulit Buah</div>
+            <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
+              <div className="text-xs sm:text-lg font-black text-[#2C5F2D] whitespace-nowrap">3 Bagian</div>
+              <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Bahan BO</div>
+              <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Kulit Buah</div>
             </div>
 
-            <div className="bg-[#F0F7FC] border border-[#CEE3F5] rounded-2xl p-3 text-center min-w-[90px]">
-              <div className="text-base sm:text-lg font-black text-[#0369A1]">10 Bagian</div>
-              <div className="text-[11px] font-bold text-stone-800 mt-0.5">Air Bersih</div>
-              <div className="text-[10px] text-stone-500">Air Sumur/AC</div>
+            <div className="bg-[#F0F7FC] border border-[#CEE3F5] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
+              <div className="text-xs sm:text-lg font-black text-[#0369A1] whitespace-nowrap">10 Bagian</div>
+              <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Air Bersih</div>
+              <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Air Sumur/AC</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ════════════════ VIDEO EDUKASI ECO ENZYME ════════════════ */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-14 pb-2">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-stone-200/90 shadow-sm relative overflow-hidden">
+      <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 pt-6 sm:pt-10 md:pt-14 pb-2">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-8 md:p-10 border border-stone-200/90 shadow-sm relative overflow-hidden">
           {/* Subtle Decorative Background Leaf */}
           <div className="absolute -right-20 -bottom-20 opacity-10 pointer-events-none rotate-12">
             <OutlineLeaf size={280} color="#203220" strokeWidth={6.72} />
           </div>
 
           {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 md:pb-8 border-b border-stone-100 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 pb-4 md:pb-8 border-b border-stone-100 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 mb-2">
-                <Film className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-800 text-[10px] sm:text-xs font-bold border border-emerald-200 mb-1.5 sm:mb-2">
+                <Film className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600" />
                 Video Edukasi Komunitas
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
+              <h2 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">
                 Video Edukasi <span className="text-[#2C5F2D]">Eco Enzyme</span>
               </h2>
               <p className="text-xs sm:text-sm text-stone-500 mt-1 max-w-xl leading-relaxed">
                 Tonton panduan visual mengenai manfaat luar biasa serta tata cara pembuatan Eco Enzyme alami menggunakan limbah organik dapur Anda.
               </p>
             </div>
-            <div className="text-[11px] font-semibold text-stone-500 bg-stone-50 px-3 py-1.5 rounded-xl border border-stone-200 flex items-center gap-2 self-start md:self-auto">
+            <div className="text-[10px] sm:text-[11px] font-semibold text-stone-500 bg-stone-50 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-stone-200 flex items-center gap-1.5 sm:gap-2 self-start md:self-auto">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               {educationVideos.length} Video Panduan Tersedia
             </div>
           </div>
 
           {/* Dynamic Video Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 relative z-10">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-6 md:gap-8 pt-4 sm:pt-8 relative z-10">
             {educationVideos.map((video, idx) => {
               const isLocal =
                 video.platform === 'Local' ||
@@ -306,17 +306,17 @@ export default function EcoEnzymePublicPage() {
               return (
                 <div
                   key={video.id || idx}
-                  className="bg-[#FAFBF9] rounded-3xl p-4 sm:p-5 border border-stone-200/90 hover:border-emerald-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                  className="bg-[#FAFBF9] rounded-xl sm:rounded-3xl p-2 sm:p-5 border border-stone-200/90 hover:border-emerald-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group min-w-0"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-2.5 sm:space-y-4">
                     {/* Video Player Frame */}
-                    <div className="relative aspect-[9/13] max-h-[480px] w-full rounded-2xl overflow-hidden bg-stone-950 shadow-inner flex items-center justify-center">
+                    <div className="relative aspect-[9/12] sm:aspect-[9/13] max-h-[220px] sm:max-h-[480px] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-stone-950 shadow-inner flex items-center justify-center">
                       {isLocal ? (
                         <video
                           controls
                           preload="metadata"
                           playsInline
-                          className="w-full h-full object-contain bg-black rounded-2xl"
+                          className="w-full h-full object-contain bg-black rounded-xl sm:rounded-2xl"
                           src={video.videoUrl}
                         >
                           Browser Anda tidak mendukung pemutar video HTML5.
@@ -333,8 +333,8 @@ export default function EcoEnzymePublicPage() {
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-stone-800 text-stone-400">
-                              <Film className="w-12 h-12 mb-2 text-stone-500" />
-                              <span className="text-xs font-semibold">{video.platform || 'Video'}</span>
+                              <Film className="w-8 h-8 sm:w-12 sm:h-12 mb-1 sm:mb-2 text-stone-500" />
+                              <span className="text-[10px] sm:text-xs font-semibold">{video.platform || 'Video'}</span>
                             </div>
                           )}
                           <div className="absolute inset-0 bg-black/40 group-hover/thumb:bg-black/20 transition-colors flex items-center justify-center">
@@ -350,28 +350,28 @@ export default function EcoEnzymePublicPage() {
                                   platform: video.platform,
                                 })
                               }
-                              className="h-14 w-14 rounded-full bg-[#FC9634] hover:bg-[#e8801a] hover:scale-110 flex items-center justify-center text-[#012D1D] shadow-xl transition-all"
+                              className="h-10 w-10 sm:h-14 sm:w-14 rounded-full bg-[#FC9634] hover:bg-[#e8801a] hover:scale-110 flex items-center justify-center text-[#012D1D] shadow-xl transition-all"
                             >
-                              <Play className="w-6 h-6 fill-[#012D1D] ml-0.5" />
+                              <Play className="w-4 h-4 sm:w-6 sm:h-6 fill-[#012D1D] ml-0.5" />
                             </button>
                           </div>
                         </div>
                       )}
 
                       {/* Badges Overlay */}
-                      <div className="absolute top-3 left-3 pointer-events-none">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
+                      <div className="absolute top-2 left-2 sm:top-3 sm:left-3 pointer-events-none max-w-[calc(100%-3.25rem)]">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold max-w-full truncate">
                           {idx % 2 === 0 ? (
-                            <Sparkles className="w-3 h-3 text-[#FC9634]" />
+                            <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#FC9634] shrink-0" />
                           ) : (
-                            <Scale className="w-3 h-3 text-[#FC9634]" />
+                            <Scale className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#FC9634] shrink-0" />
                           )}
-                          {video.category || 'Eco Enzyme'}
+                          <span className="truncate">{video.category || 'Eco Enzyme'}</span>
                         </span>
                       </div>
                       {video.duration && (
-                        <div className="absolute top-3 right-3 pointer-events-none">
-                          <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-stone-200 font-mono text-[10px] font-bold">
+                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 pointer-events-none">
+                          <span className="px-1.5 py-0.5 sm:px-2 rounded-md bg-black/60 backdrop-blur-md text-stone-200 font-mono text-[9px] sm:text-[10px] font-bold">
                             {video.duration}
                           </span>
                         </div>
@@ -379,35 +379,37 @@ export default function EcoEnzymePublicPage() {
                     </div>
 
                     {/* Video Meta & Details */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-800">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900">
+                    <div className="space-y-1 sm:space-y-2">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[11px] font-bold text-emerald-800">
+                        <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 truncate max-w-full">
                           {video.category || 'Panduan'}
                         </span>
                         {video.duration && (
                           <>
-                            <span className="text-stone-300">•</span>
-                            <span className="text-stone-500 font-normal">Durasi {video.duration}</span>
+                            <span className="hidden sm:inline text-stone-300">•</span>
+                            <span className="hidden sm:inline text-stone-500 font-normal">Durasi {video.duration}</span>
                           </>
                         )}
-                        <span className="text-stone-300">•</span>
-                        <span className="text-stone-400 font-normal">{video.platform}</span>
+                        <span className="hidden sm:inline text-stone-300">•</span>
+                        <span className="hidden sm:inline text-stone-400 font-normal">{video.platform}</span>
                       </div>
 
-                      <h3 className="text-lg font-black text-stone-900 group-hover:text-emerald-800 transition-colors">
+                      <h3 className="text-xs sm:text-lg font-black text-stone-900 group-hover:text-emerald-800 transition-colors line-clamp-2 leading-snug">
                         {video.title}
                       </h3>
 
-                      <p className="text-xs text-stone-600 leading-relaxed line-clamp-3">
+                      <p className="text-[11px] sm:text-xs text-stone-600 leading-relaxed line-clamp-2 sm:line-clamp-3">
                         {video.description}
                       </p>
 
                       {video.tags && video.tags.length > 0 && (
-                        <div className="pt-1 flex flex-wrap gap-1.5 text-[10px]">
+                        <div className="pt-0.5 sm:pt-1 flex flex-wrap gap-1 sm:gap-1.5 text-[9px] sm:text-[10px]">
                           {video.tags.map((tag: string, tIdx: number) => (
                             <span
                               key={tIdx}
-                              className="bg-white px-2.5 py-1 rounded-lg border border-stone-200 text-stone-700 font-medium"
+                              className={`${
+                                tIdx >= 2 ? 'hidden sm:inline-block' : 'inline-block'
+                              } bg-white px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border border-stone-200 text-stone-700 font-medium max-w-full truncate`}
                             >
                               {tag}
                             </span>
@@ -418,8 +420,8 @@ export default function EcoEnzymePublicPage() {
                   </div>
 
                   {/* Action Button */}
-                  <div className="pt-4 mt-3 border-t border-stone-200/60 flex items-center justify-between">
-                    <span className="text-[11px] text-stone-400 font-medium">
+                  <div className="pt-2.5 sm:pt-4 mt-2 sm:mt-3 border-t border-stone-200/60 flex items-center justify-between gap-2">
+                    <span className="hidden sm:inline text-[11px] text-stone-400 font-medium">
                       Komunitas Teman Pilah
                     </span>
                     <button
@@ -434,10 +436,11 @@ export default function EcoEnzymePublicPage() {
                           platform: video.platform,
                         })
                       }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-colors"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] sm:text-xs font-bold transition-colors"
                     >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      Buka di Layar Penuh
+                      <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current shrink-0" />
+                      <span className="sm:hidden">Layar Penuh</span>
+                      <span className="hidden sm:inline">Buka di Layar Penuh</span>
                     </button>
                   </div>
                 </div>
@@ -448,12 +451,12 @@ export default function EcoEnzymePublicPage() {
       </section>
 
       {/* ════════════════ DAFTAR GALON KOMUNITAS ════════════════ */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 space-y-6">
+      <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-8 md:py-16 space-y-4 sm:space-y-6">
         
         {/* Top Control Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-stone-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2 border-b border-stone-200">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">
               Manajemen <span className="text-[#2C5F2D]">Eco Enzyme</span>
             </h2>
             <p className="text-xs sm:text-sm text-stone-500 mt-1">
@@ -462,7 +465,7 @@ export default function EcoEnzymePublicPage() {
           </div>
 
           {/* Filter Status Tabs */}
-          <div className="flex items-center gap-1.5 bg-stone-200/60 p-1 rounded-2xl self-start sm:self-center">
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-stone-200/60 p-1 rounded-2xl self-start sm:self-center max-w-full overflow-x-auto no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[
               { id: 'ALL', label: 'Semua' },
               { id: 'FERMENTING', label: 'Fermentasi' },
@@ -472,7 +475,7 @@ export default function EcoEnzymePublicPage() {
               <button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                   statusFilter === tab.id
                     ? 'bg-white text-stone-900 shadow-xs'
                     : 'text-stone-600 hover:text-stone-900'
@@ -486,7 +489,7 @@ export default function EcoEnzymePublicPage() {
 
         {/* LOADING STATE */}
         {loading && (
-          <div className="text-center py-20 bg-white rounded-3xl border border-stone-200 shadow-sm space-y-3">
+          <div className="text-center py-14 sm:py-20 bg-white rounded-2xl sm:rounded-3xl border border-stone-200 shadow-sm space-y-3">
             <div className="w-8 h-8 border-3 border-emerald-700 border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-xs font-bold text-stone-600">Memuat data galon...</p>
           </div>
@@ -494,7 +497,7 @@ export default function EcoEnzymePublicPage() {
 
         {/* EMPTY STATE */}
         {!loading && filteredBatches.length === 0 && (
-          <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-stone-300 p-6 space-y-3">
+          <div className="text-center py-12 sm:py-16 bg-white rounded-2xl sm:rounded-3xl border border-dashed border-stone-300 p-5 sm:p-6 space-y-3">
             <AlertCircle className="w-10 h-10 text-stone-400 mx-auto" />
             <h3 className="text-sm font-bold text-stone-800">Tidak ada galon yang sesuai</h3>
             <p className="text-xs text-stone-500 max-w-sm mx-auto">
@@ -515,7 +518,7 @@ export default function EcoEnzymePublicPage() {
 
         {/* GALLON CARDS GRID */}
         {!loading && filteredBatches.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-5">
             {filteredBatches.map((batch) => {
               const progress = getFermentationProgress(batch.startDate, batch.harvestEstimate);
               const dayPassed = getDayPassed(batch.startDate);
@@ -541,47 +544,49 @@ export default function EcoEnzymePublicPage() {
               return (
                 <div
                   key={batch.id}
-                  className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                  className="bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 border border-stone-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group min-w-0"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-2.5 sm:space-y-4">
                     {/* Header: Kode Galon & Status */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-black px-2.5 py-1 rounded-xl bg-[#012D1D] text-white tracking-wider">
+                    <div className="flex flex-wrap items-center justify-between gap-1 sm:gap-2">
+                      <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                        <span className="font-mono text-[10px] sm:text-xs font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg sm:rounded-xl bg-[#012D1D] text-white tracking-wider truncate">
                           {batch.batchCode || batch.publicCode}
                         </span>
                       </div>
 
                       {isHarvested ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                          <CheckCircle2 className="w-3 h-3" /> Dipanen
+                        <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                          <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" /> Dipanen
                         </span>
                       ) : isReady ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <Sparkles className="w-3 h-3" /> Siap Panen
+                        <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                          <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" /> Siap Panen
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                          <Clock className="w-3 h-3" /> Hari ke-{dayPassed}/90
+                        <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                          <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" /> Hari ke-{dayPassed}/90
                         </span>
                       )}
                     </div>
 
                     {/* Nama Wadah */}
                     <div>
-                      <h3 className="text-base font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">
+                      <h3 className="text-xs sm:text-base font-bold text-stone-900 group-hover:text-emerald-800 transition-colors line-clamp-1">
                         {batch.containerName}
                       </h3>
-                      <p className="text-[11px] text-stone-400 font-mono mt-0.5">
+                      <p className="text-[9px] sm:text-[11px] text-stone-400 font-mono mt-0.5 truncate">
                         ID: {batch.publicCode}
                       </p>
                     </div>
 
                     {/* Linimasa: Buat & Panen */}
-                    <div className="bg-[#FAFBF9] rounded-2xl p-3 border border-stone-200/80 space-y-2 text-xs">
-                      <div className="flex justify-between items-center text-stone-600">
-                        <span className="text-[11px] text-stone-400 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> Tanggal Buat:
+                    <div className="bg-[#FAFBF9] rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-stone-200/80 space-y-1 sm:space-y-2 text-[10px] sm:text-xs">
+                      <div className="flex flex-wrap justify-between items-center gap-x-1 text-stone-600">
+                        <span className="text-[9px] sm:text-[11px] text-stone-400 flex items-center gap-1">
+                          <Calendar className="hidden sm:block w-3 h-3 shrink-0" />
+                          <span className="sm:hidden">Buat:</span>
+                          <span className="hidden sm:inline">Tanggal Buat:</span>
                         </span>
                         <span className="font-bold text-stone-800">
                           {new Date(batch.startDate).toLocaleDateString('id-ID', {
@@ -592,9 +597,11 @@ export default function EcoEnzymePublicPage() {
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center text-stone-600">
-                        <span className="text-[11px] text-stone-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Tanggal Panen:
+                      <div className="flex flex-wrap justify-between items-center gap-x-1 text-stone-600">
+                        <span className="text-[9px] sm:text-[11px] text-stone-400 flex items-center gap-1">
+                          <Clock className="hidden sm:block w-3 h-3 shrink-0" />
+                          <span className="sm:hidden">Panen:</span>
+                          <span className="hidden sm:inline">Tanggal Panen:</span>
                         </span>
                         <span className="font-bold text-emerald-900">
                           {new Date(batch.harvestEstimate).toLocaleDateString('id-ID', {
@@ -606,8 +613,8 @@ export default function EcoEnzymePublicPage() {
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="pt-1">
-                        <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+                      <div className="pt-0.5 sm:pt-1">
+                        <div className="w-full bg-stone-200 h-1.5 sm:h-2 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all ${
                               isHarvested
@@ -619,9 +626,11 @@ export default function EcoEnzymePublicPage() {
                             style={{ width: `${progress}%` }}
                           />
                         </div>
-                        <div className="flex justify-between text-[10px] text-stone-500 pt-1 font-medium">
-                          <span>{progress}% Selesai</span>
+                        <div className="flex justify-between gap-1 text-[9px] sm:text-[10px] text-stone-500 pt-1 font-medium">
                           <span>
+                            {progress}%<span className="hidden sm:inline"> Selesai</span>
+                          </span>
+                          <span className="truncate">
                             {isHarvested
                               ? 'Tuntas'
                               : isReady
@@ -633,61 +642,74 @@ export default function EcoEnzymePublicPage() {
                     </div>
 
                     {/* Komposisi Bahan (Persis Catatan Kertas) */}
-                    <div className="space-y-2 pt-1">
-                      <div className="text-[11px] font-bold text-stone-700 flex items-center justify-between">
-                        <span>Komposisi Bahan :</span>
-                        <span className="text-[10px] text-stone-400 font-normal">1 : 3 : 10</span>
+                    <div className="space-y-1.5 sm:space-y-2 pt-0.5 sm:pt-1">
+                      <div className="text-[10px] sm:text-[11px] font-bold text-stone-700 flex items-center justify-between gap-1">
+                        <span className="truncate">
+                          Komposisi<span className="hidden sm:inline"> Bahan</span> :
+                        </span>
+                        <span className="text-[9px] sm:text-[10px] text-stone-400 font-normal shrink-0">1 : 3 : 10</span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
-                        <div className="bg-sky-50/70 border border-sky-100 rounded-xl px-2.5 py-1.5 text-sky-950 flex items-center gap-1.5">
-                          <Droplet className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
-                          <span>Air: <strong>{Number(batch.waterLiter)} L</strong></span>
+                      <div className="grid grid-cols-2 gap-1 sm:gap-2 text-[10px] sm:text-[11px]">
+                        <div className="bg-sky-50/70 border border-sky-100 rounded-lg sm:rounded-xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-sky-950 flex items-center gap-1.5 min-w-0">
+                          <Droplet className="hidden sm:block w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
+                          <span className="leading-tight">
+                            Air: <strong className="whitespace-nowrap">{Number(batch.waterLiter)} L</strong>
+                          </span>
                         </div>
 
-                        <div className="bg-amber-50/70 border border-amber-100 rounded-xl px-2.5 py-1.5 text-amber-950 flex items-center gap-1.5">
-                          <Scale className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                          <span>Pemanis: <strong>{molassesDisplay}</strong></span>
+                        <div className="bg-amber-50/70 border border-amber-100 rounded-lg sm:rounded-xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-amber-950 flex items-center gap-1.5 min-w-0">
+                          <Scale className="hidden sm:block w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                          <span className="leading-tight">
+                            Pemanis: <strong className="whitespace-nowrap">{molassesDisplay}</strong>
+                          </span>
                         </div>
                       </div>
 
                       {/* Kulit Buah / BO Tags */}
-                      <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-2.5 space-y-1.5">
-                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block flex items-center gap-1">
-                          <Apple className="w-3 h-3 text-emerald-700" />
+                      <div className="bg-stone-50 border border-stone-200/80 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 space-y-1 sm:space-y-1.5">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
+                          <Apple className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-700 shrink-0" />
                           BO ({wasteDisplay}):
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {fruits.map((item, idx) => (
                             <span
                               key={idx}
-                              className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded-lg border border-stone-200 text-stone-800"
+                              className={`${
+                                idx >= 3 ? 'hidden sm:inline-block' : 'inline-block'
+                              } text-[9px] sm:text-[10px] font-semibold bg-white px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg border border-stone-200 text-stone-800 max-w-full truncate`}
                             >
                               {item}
                             </span>
                           ))}
+                          {fruits.length > 3 && (
+                            <span className="sm:hidden text-[9px] font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
+                              +{fruits.length - 3}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions Row */}
-                  <div className="grid grid-cols-2 gap-2 pt-5 border-t border-stone-100 mt-4">
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-2.5 sm:pt-5 border-t border-stone-100 mt-2 sm:mt-4">
                     <button
                       type="button"
                       onClick={() => setSelectedBatchForLabel(batch)}
-                      className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs transition-colors"
+                      className="inline-flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2.5 px-1.5 sm:px-3 rounded-lg sm:rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-[10px] sm:text-xs transition-colors whitespace-nowrap"
                     >
-                      <QrCode className="w-3.5 h-3.5 text-stone-600" />
+                      <QrCode className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-stone-600 shrink-0" />
                       Label QR
                     </button>
 
                     <Link
                       href={buildBatchPath(batch.publicCode)}
-                      className="inline-flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white font-bold text-xs shadow-xs transition-colors"
+                      className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2.5 px-1.5 sm:px-3 rounded-lg sm:rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white font-bold text-[10px] sm:text-xs shadow-xs transition-colors whitespace-nowrap"
                     >
                       <span>Detail</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                     </Link>
                   </div>
                 </div>
@@ -706,8 +728,8 @@ export default function EcoEnzymePublicPage() {
 
       {/* ════════════════ VIDEO MODAL POPUP ════════════════ */}
       {activeEducationVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-stone-900 rounded-3xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-stone-900 rounded-2xl sm:rounded-3xl max-w-lg w-full p-3.5 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-stone-800">
               <div>
                 <span className="text-[10px] uppercase font-bold text-[#FC9634] block">
