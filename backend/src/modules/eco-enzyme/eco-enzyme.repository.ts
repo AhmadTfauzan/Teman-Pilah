@@ -1,4 +1,4 @@
-import { PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, Product, QrCode } from "../../../generated/prisma";
+import { Prisma, PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, Product, QrCode } from "../../../generated/prisma";
 import { normalizeBatchCode } from "../../utils/code";
 
 export interface FindAllBatchesOptions {
@@ -418,7 +418,7 @@ export class EcoEnzymeRepository {
       notes?: string | null;
     }
   ): Promise<EcoEnzymeBatch> {
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const updated = await tx.ecoEnzymeBatch.update({
         where: { id },
         data: {
