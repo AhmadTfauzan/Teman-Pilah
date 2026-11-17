@@ -22,3 +22,4 @@ export function handleApiError(err: unknown) {
   const message = err instanceof Error ? err.message : "Terjadi kesalahan internal server";
   return NextResponse.json({ status: "error", message }, { status: 500 });
 }
+

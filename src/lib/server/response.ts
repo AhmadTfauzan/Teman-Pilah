@@ -11,3 +11,4 @@ export function apiPaginated<T>(data: T[], meta: unknown, message: string = "Ber
 export function apiError(message: string = "Terjadi kesalahan", status: number = 500) {
   return NextResponse.json({ status: "error", message }, { status });
 }
+

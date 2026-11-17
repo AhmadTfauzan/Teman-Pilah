@@ -480,3 +480,4 @@ export async function getStats() {
 export async function getProductsForAllocation() {
   return prisma.product.findMany({ orderBy: { name: "asc" } });
 }
+

@@ -25,3 +25,4 @@ export function isValidPublicCodePattern(code: string): boolean {
   const normalized = normalizeBatchCode(code);
   return /^[A-Z0-9\-_]{3,30}$/.test(normalized);
 }
+

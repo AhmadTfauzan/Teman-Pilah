@@ -8,3 +8,4 @@ export async function GET(req: Request) {
   }
   return apiSuccess(user);
 }
+

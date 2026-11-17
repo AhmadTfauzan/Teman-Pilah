@@ -1,0 +1,213 @@
+import { EcoEnzymeVideo } from "../../../generated/prisma";
+import fs from "fs";
+import path from "path";
+import {
+  buildPaginationMeta,
+  parsePagination,
+  PaginationMeta,
+} from "../../utils/pagination";
+import { EcoEnzymeVideoRepository } from "./eco-enzyme-video.repository";
+import {
+  CreateEcoEnzymeVideoInput,
+  EcoEnzymeVideoQueryInput,
+  UpdateEcoEnzymeVideoInput,
+} from "./eco-enzyme-video.validation";
+import { AppError } from "@/middlewares/error.middleware";
+
+interface VideoListResult {
+  data: EcoEnzymeVideo[];
+  meta: PaginationMeta;
+}
+
+export class EcoEnzymeVideoService {
+  private readonly repository: EcoEnzymeVideoRepository;
+
+  constructor(repository: EcoEnzymeVideoRepository) {
+    this.repository = repository;
+  }
+
+  /**
+   * Deteksi platform video otomatis dari URL
+   */
+  public detectPlatform(url: string): "YouTube" | "TikTok" | "Instagram" | "Local" {
+    const lower = url.toLowerCase();
+    if (lower.includes("youtube.com") || lower.includes("youtu.be")) {
+      return "YouTube";
+    }
+    if (lower.includes("tiktok.com")) {
+      return "TikTok";
+    }
+    if (lower.includes("instagram.com")) {
+      return "Instagram";
+    }
+    if (lower.startsWith("/") || lower.endsWith(".mp4") || lower.endsWith(".webm")) {
+      return "Local";
+    }
+    return "YouTube";
+  }
+
+  public extractYouTubeId(url: string): string | null {
+    const match = url.match(
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
+    );
+    return match ? match[1] : null;
+  }
+
+  private deleteThumbnailFile(thumbnailPath?: string | null): void {
+    if (!thumbnailPath || thumbnailPath.startsWith("http://") || thumbnailPath.startsWith("https://")) {
+      return;
+    }
+    const fullPath = path.join(process.cwd(), thumbnailPath);
+    if (fs.existsSync(fullPath)) {
+      try {
+        fs.unlinkSync(fullPath);
+      } catch (err) {
+        console.error("Gagal menghapus file thumbnail lama:", err);
+      }
+    }
+  }
+
+  /**
+   * Seed otomatis 2 video default jika tabel masih kosong
+   */
+  private async ensureDefaultVideos(): Promise<void> {
+    try {
+      const count = await this.repository.countAll();
+      if (count === 0) {
+        await this.repository.createMany([
+          {
+            title: "VIDIO MANFAAT ECO ENZYM",
+            videoUrl: "/videos/vidio-manfaat-eco-enzym.mp4",
+            platform: "Local",
+            duration: "01:46",
+            description:
+              "Mengenal ragam manfaat luar biasa cairan fermentasi Eco Enzyme untuk pembersih alami serbaguna, pupuk penyubur tanaman, pengusir hama ramah lingkungan, dan pembersih udara.",
+            category: "Manfaat & Khasiat",
+            aspect: "tall",
+            sortOrder: 1,
+          },
+          {
+            title: "VIDIO PEMBUATAN ECO ENZYM",
+            videoUrl: "/videos/vidio-pembuatan-eco-enzym.mp4",
+            platform: "Local",
+            duration: "01:12",
+            description:
+              "Panduan lengkap step-by-step membuat Eco Enzyme di rumah menggunakan formula emas 1 : 3 : 10 (Gula : Sampah Organik : Air) dengan hasil fermentasi optimal.",
+            category: "Panduan Pembuatan",
+            aspect: "tall",
+            sortOrder: 2,
+          },
+        ]);
+        console.log("Inisialisasi 2 video edukasi default Eco Enzyme berhasil.");
+      }
+    } catch (e) {
+      console.error("Gagal inisialisasi default video Eco Enzyme:", e);
+    }
+  }
+
+  async getAllVideos(query: EcoEnzymeVideoQueryInput): Promise<VideoListResult> {
+    await this.ensureDefaultVideos();
+
+    const { skip, take, page, limit } = parsePagination(query);
+
+    const { data, total } = await this.repository.findAll({
+      skip,
+      take,
+      search: query.search,
+      platform: query.platform,
+      category: query.category,
+    });
+
+    return {
+      data,
+      meta: buildPaginationMeta(total, page, limit),
+    };
+  }
+
+  async getVideoById(id: string): Promise<EcoEnzymeVideo> {
+    const video = await this.repository.findById(id);
+    if (!video) {
+      throw new AppError("Video edukasi Eco Enzyme tidak ditemukan", 404);
+    }
+    return video;
+  }
+
+  async createVideo(
+    data: CreateEcoEnzymeVideoInput,
+    file?: Express.Multer.File
+  ): Promise<EcoEnzymeVideo> {
+    const platform = data.platform || this.detectPlatform(data.videoUrl);
+
+    let thumbnail = data.thumbnail;
+    if (file) {
+      thumbnail = `uploads/videos/${file.filename}`;
+    } else if (!thumbnail) {
+      const ytId = this.extractYouTubeId(data.videoUrl);
+      if (ytId) {
+        thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      }
+    }
+
+    const aspect = data.aspect || (platform === "YouTube" ? "wide" : "tall");
+
+    return this.repository.create({
+      title: data.title,
+      videoUrl: data.videoUrl,
+      platform,
+      thumbnail: thumbnail || null,
+      duration: data.duration || null,
+      description: data.description || null,
+      category: data.category || null,
+      aspect,
+      sortOrder: data.sortOrder ?? 0,
+    });
+  }
+
+  async updateVideo(
+    id: string,
+    data: UpdateEcoEnzymeVideoInput,
+    file?: Express.Multer.File
+  ): Promise<EcoEnzymeVideo> {
+    const existing = await this.getVideoById(id);
+
+    const platform =
+      data.platform ||
+      (data.videoUrl ? this.detectPlatform(data.videoUrl) : (existing.platform as any));
+
+    let thumbnail = existing.thumbnail;
+    if (file) {
+      this.deleteThumbnailFile(existing.thumbnail);
+      thumbnail = `uploads/videos/${file.filename}`;
+    } else if (data.thumbnail !== undefined) {
+      thumbnail = data.thumbnail;
+    } else if (data.videoUrl && data.videoUrl !== existing.videoUrl) {
+      const ytId = this.extractYouTubeId(data.videoUrl);
+      if (ytId && (!existing.thumbnail || existing.thumbnail.includes("youtube.com"))) {
+        thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      }
+    }
+
+    const aspect =
+      data.aspect ||
+      (data.platform ? (data.platform === "YouTube" ? "wide" : "tall") : existing.aspect);
+
+    return this.repository.update(id, {
+      ...(data.title && { title: data.title }),
+      ...(data.videoUrl && { videoUrl: data.videoUrl }),
+      platform,
+      thumbnail,
+      duration: data.duration !== undefined ? data.duration : existing.duration,
+      description: data.description !== undefined ? data.description : existing.description,
+      category: data.category !== undefined ? data.category : existing.category,
+      aspect,
+      sortOrder: data.sortOrder !== undefined ? data.sortOrder : existing.sortOrder,
+    });
+  }
+
+  async deleteVideo(id: string): Promise<void> {
+    const existing = await this.getVideoById(id);
+    this.deleteThumbnailFile(existing.thumbnail);
+    await this.repository.delete(id);
+  }
+}
+

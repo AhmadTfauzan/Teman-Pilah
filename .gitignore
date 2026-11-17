@@ -1,6 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
+node_modules/
 /node_modules
 /.pnp
 .pnp.*
@@ -9,6 +10,14 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+# backend specific ignores
+backend/node_modules/
+backend/dist/
+backend/generated/
+backend/uploads/
+backend/.env*
+!backend/.env.example
 
 # testing
 /coverage
