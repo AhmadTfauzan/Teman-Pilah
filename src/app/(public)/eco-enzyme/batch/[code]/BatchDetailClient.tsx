@@ -450,7 +450,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
         <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-[#E3E8DC] shadow-sm space-y-3 sm:space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-[#2C5F2D] uppercase tracking-wider">
-              <Apple className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Variasi Bahan Organik ({ingredients.length} Jenis)
+              <Apple className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Komponen Bahan Organik ({ingredients.length} Jenis)
             </div>
             <span className="text-[10px] sm:text-[11px] text-stone-500 font-medium">Bahan Kulit Buah Segar</span>
           </div>
@@ -467,7 +467,8 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                 className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold bg-[#F0F5EE] text-[#1E3B20] border border-[#D5E3D2]"
               >
                 <span className="text-[10px] sm:text-[11px]">🍃</span>
-                {item}
+                <span className="font-bold text-[#2C5F2D]">{idx + 1}.</span>
+                <span>{item}</span>
               </span>
             ))}
           </div>

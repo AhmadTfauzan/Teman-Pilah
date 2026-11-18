@@ -1031,7 +1031,7 @@ export default function EcoEnzymePublicPage() {
                                 idx >= 3 ? 'hidden sm:inline-block' : 'inline-block'
                               } text-[9px] sm:text-[10px] font-semibold bg-white px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg border border-stone-200 text-stone-800 max-w-full truncate`}
                             >
-                              {item}
+                              {idx + 1}. {item}
                             </span>
                           ))}
                           {fruits.length > 3 && (
