@@ -532,7 +532,7 @@ export async function parseHeroCreatePayload(
   const payload = await parseRequestPayload(req);
   const imageUrl = await getImageField(payload, ["image", "imageUrl"], {
     maxBytes: 3 * 1024 * 1024,
-    required: true,
+    required: false,
     fieldLabel: "Gambar slide hero",
   });
   if (!imageUrl) {
@@ -561,7 +561,7 @@ export async function parseHeroUpdatePayload(
 
   const imageUrl = await getImageField(payload, ["image", "imageUrl"], {
     maxBytes: 3 * 1024 * 1024,
-    required: true,
+    required: false,
     fieldLabel: "Gambar slide hero",
   });
   if (imageUrl !== undefined && imageUrl !== null) {
@@ -806,7 +806,7 @@ export async function parseGalleryCreatePayload(
 ): Promise<Prisma.GalleryCreateInput> {
   const payload = await parseRequestPayload(req);
   const image = await getImageField(payload, "image", {
-    required: true,
+    required: false,
     fieldLabel: "Foto galeri",
   });
   if (!image) {
@@ -834,7 +834,7 @@ export async function parseGalleryUpdatePayload(
   if (category !== undefined) data.category = category;
 
   const image = await getImageField(payload, "image", {
-    required: true,
+    required: false,
     fieldLabel: "Foto galeri",
   });
   if (image !== undefined && image !== null) {
