@@ -559,7 +559,7 @@ function EducationModalContent({
             type="button"
             disabled={isSubmitting}
             onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
-            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50"
+            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#27532B] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50"
           >
             {isSubmitting
               ? 'Menyimpan...'

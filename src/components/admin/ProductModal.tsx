@@ -406,7 +406,7 @@ function ProductModalContent({
           <button
             type="button"
             onClick={handlePreSubmit}
-            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
+            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#27532B] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
           >
             {product ? 'Simpan Perubahan' : 'Terbitkan'}
           </button>
