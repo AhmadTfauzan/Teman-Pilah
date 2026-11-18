@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { HeroSlide } from '@/types';
 import { getHeroImageUrl } from '@/lib/api/hero';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HeroProps {
   initialSlides?: HeroSlide[];
@@ -48,34 +47,39 @@ export function Hero({ initialSlides }: HeroProps) {
   });
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
 
-  // Fallback client-side fetch if initialSlides were empty
+  // Sync latest active slides from API on client mount so admin changes appear immediately
   useEffect(() => {
-    if (!initialSlides || initialSlides.length === 0) {
-      fetch('/api/hero')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((json) => {
-          if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
-            const active = json.data.filter((s: HeroSlide) => s.isActive);
-            if (active.length > 0) {
-              setSlides(active);
-            }
+    let cancelled = false;
+    fetch('/api/hero', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (cancelled) return;
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          const active = json.data.filter((s: HeroSlide) => s.isActive);
+          if (active.length > 0) {
+            setSlides(active);
           }
-        })
-        .catch(() => {});
-    }
-  }, [initialSlides]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const totalSlides = slides.length;
+  const activeSlideIndex = totalSlides > 0 ? currentIndex % totalSlides : 0;
 
   const nextSlide = useCallback(() => {
+    if (totalSlides <= 1) return;
     setCurrentIndex((prev) => (prev + 1) % totalSlides);
   }, [totalSlides]);
 
   const prevSlide = useCallback(() => {
+    if (totalSlides <= 1) return;
     setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
   }, [totalSlides]);
 
@@ -83,20 +87,19 @@ export function Hero({ initialSlides }: HeroProps) {
     setCurrentIndex(index);
   };
 
-  // Autoplay ~6 seconds
+  // Continuous autoplay every 5 seconds (does not freeze when cursor is inside viewport)
   useEffect(() => {
-    if (isHovered || totalSlides <= 1) return;
-    const interval = setInterval(() => {
+    if (totalSlides <= 1) return;
+    const timer = setInterval(() => {
       nextSlide();
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [isHovered, totalSlides, nextSlide]);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [totalSlides, activeSlideIndex, nextSlide]);
 
   // Touch swipe support
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchEndX.current = e.touches[0].clientX;
-    setIsHovered(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -109,23 +112,20 @@ export function Hero({ initialSlides }: HeroProps) {
       if (diff > 0) nextSlide();
       else prevSlide();
     }
-    setIsHovered(false);
   };
 
   return (
     <section
       id="beranda"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="group relative w-full h-[490px] sm:h-[640px] lg:h-[820px] max-h-[100vh] min-h-[450px] flex items-center justify-center overflow-hidden bg-[#012D1D] select-none"
+      className="relative w-full h-[490px] sm:h-[640px] lg:h-[820px] max-h-[100vh] min-h-[450px] flex items-center justify-center overflow-hidden bg-[#012D1D] select-none"
     >
       {/* ─── BACKGROUND SLIDES CAROUSEL ─── */}
       <div className="absolute inset-0 z-0">
         {slides.map((slide, idx) => {
-          const isCurrent = idx === currentIndex;
+          const isCurrent = idx === activeSlideIndex;
           const imgUrl = getHeroImageUrl(slide.imageUrl);
 
           return (
@@ -198,7 +198,7 @@ export function Hero({ initialSlides }: HeroProps) {
             className="flex items-center justify-center gap-2 mt-6 sm:mt-16"
           >
             {slides.map((_, idx) => {
-              const isActive = idx === currentIndex;
+              const isActive = idx === activeSlideIndex;
               return (
                 <button
                   key={idx}
@@ -216,28 +216,6 @@ export function Hero({ initialSlides }: HeroProps) {
           </div>
         )}
       </div>
-
-      {/* ─── DESKTOP NAVIGATION ARROWS ─── */}
-      {totalSlides > 1 && (
-        <>
-          <button
-            type="button"
-            onClick={prevSlide}
-            aria-label="Slide sebelumnya"
-            className="hidden md:flex absolute left-6 lg:left-12 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:scale-110 active:scale-95"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          <button
-            type="button"
-            onClick={nextSlide}
-            aria-label="Slide selanjutnya"
-            className="hidden md:flex absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:scale-110 active:scale-95"
-          >
-            <ChevronRight size={24} />
-          </button>
-        </>
-      )}
     </section>
   );
 }
