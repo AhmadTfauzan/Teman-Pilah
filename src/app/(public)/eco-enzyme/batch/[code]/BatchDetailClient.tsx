@@ -460,16 +460,16 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
           </p>
 
           {/* CHIP LIST */}
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-0.5 sm:pt-1">
+          <div className="columns-1 sm:columns-2 md:columns-3 gap-2 sm:gap-2.5 pt-0.5 sm:pt-1 space-y-1.5 sm:space-y-2">
             {displayedIngredients.map((item, idx) => (
-              <span
+              <div
                 key={idx}
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold bg-[#F0F5EE] text-[#1E3B20] border border-[#D5E3D2]"
+                className="break-inside-avoid flex items-center gap-1.5 sm:gap-2 w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold bg-[#F0F5EE] text-[#1E3B20] border border-[#D5E3D2]"
               >
-                <span className="text-[10px] sm:text-[11px]">🍃</span>
-                <span className="font-bold text-[#2C5F2D]">{idx + 1}.</span>
-                <span>{item}</span>
-              </span>
+                <span className="text-[10px] sm:text-[11px] shrink-0">🍃</span>
+                <span className="font-bold text-[#2C5F2D] shrink-0 min-w-[18px]">{idx + 1}.</span>
+                <span className="leading-snug">{item}</span>
+              </div>
             ))}
           </div>
 

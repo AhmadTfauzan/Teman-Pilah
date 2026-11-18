@@ -1023,23 +1023,29 @@ export default function EcoEnzymePublicPage() {
                           <Apple className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-700 shrink-0" />
                           BO ({wasteDisplay}):
                         </span>
-                        <div className="flex flex-wrap gap-1">
-                          {fruits.map((item, idx) => (
-                            <span
+                        <div className="columns-1 sm:columns-2 gap-1.5 space-y-1">
+                          {fruits.slice(0, 6).map((item, idx) => (
+                            <div
                               key={idx}
                               className={`${
-                                idx >= 3 ? 'hidden sm:inline-block' : 'inline-block'
-                              } text-[9px] sm:text-[10px] font-semibold bg-white px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg border border-stone-200 text-stone-800 max-w-full truncate`}
+                                idx >= 3 ? 'hidden sm:flex' : 'flex'
+                              } break-inside-avoid items-center gap-1 text-[9px] sm:text-[10px] font-semibold bg-white px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg border border-stone-200 text-stone-800 w-full truncate`}
                             >
-                              {idx + 1}. {item}
-                            </span>
+                              <span className="font-bold text-[#2C5F2D] shrink-0">{idx + 1}.</span>
+                              <span className="truncate">{item}</span>
+                            </div>
                           ))}
-                          {fruits.length > 3 && (
-                            <span className="sm:hidden text-[9px] font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
-                              +{fruits.length - 3}
-                            </span>
-                          )}
                         </div>
+                        {fruits.length > 3 && (
+                          <span className="sm:hidden inline-block text-[9px] font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
+                            +{fruits.length - 3} jenis lainnya
+                          </span>
+                        )}
+                        {fruits.length > 6 && (
+                          <span className="hidden sm:inline-block text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-emerald-800">
+                            +{fruits.length - 6} jenis lainnya
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
