@@ -51,14 +51,26 @@ export class ProductRepository {
       [Category.ZERO_WASTE]: "ZW",
     };
 
-    const prefix: string = prefixMap[category];
+    const prefix: string = prefixMap[category] || "GN";
 
     const count: number = await this.prisma.product.count({
       where: { category } as ProductWhereClause,
     });
 
-    const sequence: string = String(count + 1).padStart(3, "0");
-    return `TP-${prefix}-${sequence}`;
+    for (let offset = 1; offset <= 100; offset++) {
+      const sequenceNum = count + offset;
+      if (sequenceNum > 999) break;
+      const sequence: string = String(sequenceNum).padStart(3, "0");
+      const candidate = `TP-${prefix}-${sequence}`;
+      const existing = await this.prisma.product.findUnique({
+        where: { productCode: candidate },
+      });
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    return `TP-${prefix}-${Date.now().toString(36).toUpperCase()}`;
   }
 
   /**
@@ -135,20 +147,43 @@ export class ProductRepository {
 
     const productCode = await this.generateProductCode(data.category);
 
-    return this.prisma.product.create({
-      data: {
-        productCode,
-        name: data.name,
-        category: data.category,
-        description: data.description ?? null,
-        price: data.price,
-        priceUnit: data.priceUnit ?? null,
-        stock: data.stock,
-        stockLabel: data.stockLabel,
-        whatsappLink: data.whatsappLink || null,
-        image: imagePath ?? null,
-      },
-    });
+    const payload = {
+      name: data.name,
+      category: data.category,
+      description: data.description ?? null,
+      price: data.price,
+      priceUnit: data.priceUnit ?? null,
+      stock: data.stock,
+      stockLabel: data.stockLabel,
+      whatsappLink: data.whatsappLink || null,
+      image: imagePath ?? null,
+    };
+
+    try {
+      return await this.prisma.product.create({
+        data: {
+          productCode,
+          ...payload,
+        },
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === "P2002") {
+        const prefixMap: Record<Category, string> = {
+          [Category.UPCYCLED_GOODS]: "UP",
+          [Category.ORGANIC]: "OR",
+          [Category.ZERO_WASTE]: "ZW",
+        };
+        const prefix = prefixMap[data.category] || "GN";
+        const fallbackCode = `TP-${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+        return this.prisma.product.create({
+          data: {
+            productCode: fallbackCode,
+            ...payload,
+          },
+        });
+      }
+      throw error;
+    }
   }
 
   /**

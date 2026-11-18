@@ -1,20 +1,126 @@
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_FERMENTATION_DAYS, formatDateInputWib } from "@/lib/eco-enzyme";
 import { AppError } from "./error";
 import { parsePagination, buildPaginationMeta } from "./pagination";
 import { normalizeBatchCode } from "./code";
 import { resolveOrCreateQrCode } from "./qr-code-service";
-import { EnzymeResidueUsage } from "@prisma/client";
+import {
+  EnzymeBatchStatus,
+  EnzymeFailureReason,
+  EnzymeResidueUsage,
+  Prisma,
+  StockLabel,
+} from "@prisma/client";
 
-export function enrichBatchDynamicStatus(batch: any): any {
-  const now = new Date();
+const MS_PER_DAY = 86_400_000;
+const VALID_BATCH_STATUSES = new Set<string>(Object.values(EnzymeBatchStatus));
+const VALID_FAILURE_REASONS = new Set<string>(Object.values(EnzymeFailureReason));
+
+const ACTIVE_NEXT_BATCHES_INCLUDE = {
+  where: { archivedAt: null },
+  select: { id: true, publicCode: true, containerName: true },
+  take: 1,
+  orderBy: { createdAt: "desc" as const },
+};
+
+function getReadyCutoffDate(now: Date): Date {
+  return new Date(now.getTime() - DEFAULT_FERMENTATION_DAYS * MS_PER_DAY);
+}
+
+function parseRequiredDate(raw: unknown, errorMessage: string): Date {
+  if (typeof raw !== "string" && !(raw instanceof Date)) {
+    throw new AppError(errorMessage, 400);
+  }
+  if (typeof raw === "string" && !raw.trim()) {
+    throw new AppError(errorMessage, 400);
+  }
+  const parsed = raw instanceof Date ? new Date(raw.getTime()) : new Date(raw);
+  if (isNaN(parsed.getTime())) {
+    throw new AppError(errorMessage, 400);
+  }
+  return parsed;
+}
+
+function parsePositiveNumber(value: unknown, label: string): number {
+  if (typeof value === "boolean" || value === null || value === undefined || value === "") {
+    throw new AppError(`${label} harus berupa angka lebih dari 0`, 400);
+  }
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) {
+    throw new AppError(`${label} harus berupa angka lebih dari 0`, 400);
+  }
+  return num;
+}
+
+async function assertBatchExists(id: string): Promise<void> {
+  const existing = await prisma.ecoEnzymeBatch.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+  }
+}
+
+async function generateUniqueRandomBatchCode(startDate: Date): Promise<string> {
+  const wibDate = formatDateInputWib(startDate);
+  const yyyymm = wibDate
+    ? wibDate.slice(0, 7).replace("-", "")
+    : `${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}`;
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = `EE-${yyyymm}-${crypto.randomInt(100, 1000)}`;
+    const existingCount = await prisma.ecoEnzymeBatch.count({
+      where: { batchCode: { equals: candidate, mode: "insensitive" } },
+    });
+    if (existingCount === 0) {
+      return candidate;
+    }
+  }
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = `EE-${yyyymm}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+    const existingCount = await prisma.ecoEnzymeBatch.count({
+      where: { batchCode: { equals: candidate, mode: "insensitive" } },
+    });
+    if (existingCount === 0) {
+      return candidate;
+    }
+  }
+
+  throw new AppError("Gagal menghasilkan kode batch unik", 500);
+}
+
+export interface BatchDynamicStatusTarget {
+  startDate: Date | string;
+  harvestEstimate: Date | string;
+  status: EnzymeBatchStatus | string;
+  archivedAt?: Date | string | null;
+}
+
+export type EcoEnzymeDisplayStatus =
+  | "FERMENTING"
+  | "READY_TO_HARVEST"
+  | "HARVESTED"
+  | "FAILED"
+  | "ARCHIVED";
+
+export function enrichBatchDynamicStatus<T extends BatchDynamicStatusTarget>(
+  batch: T,
+  now: Date = new Date()
+): T & {
+  displayStatus: EcoEnzymeDisplayStatus;
+  dayPassed: number;
+  progressPercent: number;
+} {
   const startDate = new Date(batch.startDate);
   const harvestEstimate = new Date(batch.harvestEstimate);
 
   const diffTime = Math.max(0, now.getTime() - startDate.getTime());
-  const dayPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  const progressPercent = Math.min(100, Math.round((dayPassed / 90) * 100));
+  const dayPassed = Math.floor(diffTime / MS_PER_DAY) + 1;
 
-  let displayStatus: "FERMENTING" | "READY_TO_HARVEST" | "HARVESTED" | "FAILED" | "ARCHIVED" = "FERMENTING";
+  let displayStatus: EcoEnzymeDisplayStatus = "FERMENTING";
 
   if (batch.archivedAt) {
     displayStatus = "ARCHIVED";
@@ -22,17 +128,32 @@ export function enrichBatchDynamicStatus(batch: any): any {
     displayStatus = "HARVESTED";
   } else if (batch.status === "FAILED") {
     displayStatus = "FAILED";
-  } else if (now >= harvestEstimate || dayPassed >= 90) {
+  } else if (now >= harvestEstimate || dayPassed > DEFAULT_FERMENTATION_DAYS) {
     displayStatus = "READY_TO_HARVEST";
   } else {
     displayStatus = "FERMENTING";
+  }
+
+  let progressPercent: number;
+  if (batch.status === "HARVESTED" || displayStatus === "READY_TO_HARVEST") {
+    progressPercent = 100;
+  } else if (batch.status === "FAILED") {
+    progressPercent = 0;
+  } else {
+    const totalDuration = harvestEstimate.getTime() - startDate.getTime();
+    const targetDuration =
+      totalDuration > 0 ? totalDuration : DEFAULT_FERMENTATION_DAYS * MS_PER_DAY;
+    progressPercent =
+      now.getTime() >= startDate.getTime() + targetDuration
+        ? 100
+        : Math.min(99, Math.max(0, Math.round((diffTime / targetDuration) * 100)));
   }
 
   return {
     ...batch,
     displayStatus,
     dayPassed,
-    progressPercent: displayStatus === "HARVESTED" ? 100 : progressPercent,
+    progressPercent,
   };
 }
 
@@ -44,31 +165,56 @@ export async function getAllBatches(params: {
   limit?: string | null;
 }) {
   const { skip, take, page, limit } = parsePagination(params);
-  const where: any = {};
+  const now = new Date();
+  const cutoffDate = getReadyCutoffDate(now);
+  const andConditions: Prisma.EcoEnzymeBatchWhereInput[] = [];
 
   if (params.status === "ARCHIVED") {
-    where.archivedAt = { not: null };
-  } else if (params.includeArchived) {
-    // include all
+    andConditions.push({ archivedAt: { not: null } });
+  } else if (params.status === "READY_TO_HARVEST") {
+    andConditions.push({
+      archivedAt: null,
+      status: "IN_PROGRESS",
+      OR: [
+        { harvestEstimate: { lte: now } },
+        { startDate: { lte: cutoffDate } },
+      ],
+    });
+  } else if (params.status === "FERMENTING") {
+    andConditions.push({
+      archivedAt: null,
+      status: "IN_PROGRESS",
+      harvestEstimate: { gt: now },
+      startDate: { gt: cutoffDate },
+    });
   } else {
-    where.archivedAt = null;
-  }
-
-  if (params.status && params.status !== "ALL" && params.status !== "ARCHIVED") {
-    if (params.status === "HARVESTED" || params.status === "FAILED" || params.status === "IN_PROGRESS") {
-      where.status = params.status;
+    if (!params.includeArchived) {
+      andConditions.push({ archivedAt: null });
+    }
+    if (
+      params.status === "HARVESTED" ||
+      params.status === "FAILED" ||
+      params.status === "IN_PROGRESS"
+    ) {
+      andConditions.push({ status: params.status });
     }
   }
 
-  if (params.search) {
-    where.OR = [
-      { publicCode: { contains: params.search, mode: "insensitive" } },
-      { batchCode: { contains: params.search, mode: "insensitive" } },
-      { containerName: { contains: params.search, mode: "insensitive" } },
-      { organicWasteTypes: { contains: params.search, mode: "insensitive" } },
-      { notes: { contains: params.search, mode: "insensitive" } },
-    ];
+  const trimmedSearch = params.search?.trim();
+  if (trimmedSearch) {
+    andConditions.push({
+      OR: [
+        { publicCode: { contains: trimmedSearch, mode: "insensitive" } },
+        { batchCode: { contains: trimmedSearch, mode: "insensitive" } },
+        { containerName: { contains: trimmedSearch, mode: "insensitive" } },
+        { organicWasteTypes: { contains: trimmedSearch, mode: "insensitive" } },
+        { notes: { contains: trimmedSearch, mode: "insensitive" } },
+      ],
+    });
   }
+
+  const where: Prisma.EcoEnzymeBatchWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
 
   const [data, total] = await Promise.all([
     prisma.ecoEnzymeBatch.findMany({
@@ -83,27 +229,14 @@ export async function getAllBatches(params: {
         previousBatch: {
           select: { id: true, publicCode: true, containerName: true },
         },
-        nextBatches: {
-          select: { id: true, publicCode: true, containerName: true },
-          take: 1,
-          orderBy: { createdAt: "desc" },
-        },
+        nextBatches: ACTIVE_NEXT_BATCHES_INCLUDE,
       },
     }),
     prisma.ecoEnzymeBatch.count({ where }),
   ]);
 
-  const enriched = data.map((b) => enrichBatchDynamicStatus(b));
-
-  let filtered = enriched;
-  if (params.status === "FERMENTING") {
-    filtered = enriched.filter((b) => b.displayStatus === "FERMENTING");
-  } else if (params.status === "READY_TO_HARVEST") {
-    filtered = enriched.filter((b) => b.displayStatus === "READY_TO_HARVEST");
-  }
-
   return {
-    data: filtered,
+    data: data.map((b) => enrichBatchDynamicStatus(b, now)),
     meta: buildPaginationMeta(total, page, limit),
   };
 }
@@ -118,11 +251,7 @@ export async function getBatchById(id: string) {
       previousBatch: {
         select: { id: true, publicCode: true, containerName: true },
       },
-      nextBatches: {
-        select: { id: true, publicCode: true, containerName: true },
-        take: 1,
-        orderBy: { createdAt: "desc" },
-      },
+      nextBatches: ACTIVE_NEXT_BATCHES_INCLUDE,
     },
   });
 
@@ -136,37 +265,43 @@ export async function getBatchById(id: string) {
 export async function getBatchByPublicCode(publicCode: string) {
   const rawTrimmed = (publicCode || "").trim();
   const normalized = normalizeBatchCode(rawTrimmed);
+  if (!rawTrimmed || !normalized) {
+    throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+  }
 
-  const batch = await prisma.ecoEnzymeBatch.findFirst({
-    where: {
-      OR: [
-        { publicCode: { equals: normalized, mode: "insensitive" } },
-        { batchCode: { equals: rawTrimmed, mode: "insensitive" } },
-        { batchCode: { equals: normalized, mode: "insensitive" } },
-        { containerName: { equals: rawTrimmed, mode: "insensitive" } },
-        { qrCode: { code: { equals: normalized, mode: "insensitive" } } },
-      ],
-    },
-    orderBy: [
-      { archivedAt: { sort: "asc", nulls: "first" } },
-      { createdAt: "desc" },
+  const lookupWhere: Prisma.EcoEnzymeBatchWhereInput = {
+    OR: [
+      { publicCode: { equals: normalized, mode: "insensitive" } },
+      { batchCode: { equals: rawTrimmed, mode: "insensitive" } },
+      { batchCode: { equals: normalized, mode: "insensitive" } },
+      { containerName: { equals: rawTrimmed, mode: "insensitive" } },
+      { qrCode: { code: { equals: normalized, mode: "insensitive" } } },
     ],
-    include: {
-      qrCode: true,
-      inspectionLogs: {
-        orderBy: { dayNumber: "asc" },
-      },
-      allocatedProduct: true,
-      previousBatch: {
-        select: { id: true, publicCode: true, containerName: true },
-      },
-      nextBatches: {
-        select: { id: true, publicCode: true, containerName: true },
-        take: 1,
-        orderBy: { createdAt: "desc" },
-      },
+  };
+
+  const batchInclude = {
+    qrCode: true,
+    inspectionLogs: {
+      orderBy: { dayNumber: "asc" as const },
     },
-  });
+    allocatedProduct: true,
+    previousBatch: {
+      select: { id: true, publicCode: true, containerName: true },
+    },
+    nextBatches: ACTIVE_NEXT_BATCHES_INCLUDE,
+  } satisfies Prisma.EcoEnzymeBatchInclude;
+
+  const batch =
+    (await prisma.ecoEnzymeBatch.findFirst({
+      where: { AND: [lookupWhere, { archivedAt: null }] },
+      orderBy: { createdAt: "desc" },
+      include: batchInclude,
+    })) ??
+    (await prisma.ecoEnzymeBatch.findFirst({
+      where: { AND: [lookupWhere, { archivedAt: { not: null } }] },
+      orderBy: [{ archivedAt: "desc" }, { createdAt: "desc" }],
+      include: batchInclude,
+    }));
 
   if (!batch) {
     throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
@@ -208,7 +343,7 @@ export async function getBatchByPublicCode(publicCode: string) {
       publicCode: nextBatch.publicCode,
       containerName: nextBatch.containerName,
     } : null,
-    inspectionLogs: (enriched.inspectionLogs ?? []).map((log: any) => ({
+    inspectionLogs: (enriched.inspectionLogs ?? []).map((log) => ({
       dayNumber: log.dayNumber,
       logDate: log.logDate,
       phLevel: log.phLevel,
@@ -232,20 +367,36 @@ export async function createBatch(input: {
   notes?: string | null;
   previousBatchId?: string | null;
 }) {
-  const startDate = new Date(input.startDate);
-  if (isNaN(startDate.getTime())) {
-    throw new AppError("Format tanggal mulai tidak valid", 400);
+  const containerName =
+    typeof input?.containerName === "string" ? input.containerName.trim() : "";
+  if (!containerName) {
+    throw new AppError("Nama wadah wajib diisi", 400);
   }
 
+  const molassesKg = parsePositiveNumber(input.molassesKg, "Takaran pemanis (molassesKg)");
+  const organicWasteKg = parsePositiveNumber(input.organicWasteKg, "Takaran bahan organik (organicWasteKg)");
+  const waterLiter = parsePositiveNumber(input.waterLiter, "Takaran air (waterLiter)");
+  const containerCapacityLiter =
+    input.containerCapacityLiter !== undefined && input.containerCapacityLiter !== null
+      ? parsePositiveNumber(input.containerCapacityLiter, "Kapasitas wadah")
+      : 50;
+
+  const startDate = parseRequiredDate(input.startDate, "Format tanggal mulai tidak valid");
+
   let harvestEstimate: Date;
-  if (input.harvestEstimate) {
-    harvestEstimate = new Date(input.harvestEstimate);
-    if (isNaN(harvestEstimate.getTime())) {
-      throw new AppError("Format tanggal panen tidak valid", 400);
-    }
+  if (
+    input.harvestEstimate !== undefined &&
+    input.harvestEstimate !== null &&
+    input.harvestEstimate !== ""
+  ) {
+    harvestEstimate = parseRequiredDate(
+      input.harvestEstimate,
+      "Format tanggal panen tidak valid"
+    );
   } else {
-    harvestEstimate = new Date(startDate);
-    harvestEstimate.setDate(harvestEstimate.getDate() + 89);
+    harvestEstimate = new Date(
+      startDate.getTime() + DEFAULT_FERMENTATION_DAYS * MS_PER_DAY
+    );
   }
 
   if (input.previousBatchId) {
@@ -259,14 +410,13 @@ export async function createBatch(input: {
   }
 
   const batchCode =
-    input.batchCode?.trim() ||
-    `EE-${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, "0")}-${Math.floor(100 + Math.random() * 900)}`;
+    input.batchCode?.trim() || (await generateUniqueRandomBatchCode(startDate));
 
   const { qrCode, reused } = await resolveOrCreateQrCode({
     entityType: "ECO_ENZYME_BATCH",
     previousEntityId: input.previousBatchId,
     entityKey: batchCode,
-    entityName: input.containerName,
+    entityName: containerName,
     pathPrefix: "/b",
   });
 
@@ -274,11 +424,11 @@ export async function createBatch(input: {
     data: {
       publicCode: qrCode.code,
       batchCode,
-      containerName: input.containerName,
-      containerCapacityLiter: input.containerCapacityLiter ?? 50,
-      molassesKg: input.molassesKg,
-      organicWasteKg: input.organicWasteKg,
-      waterLiter: input.waterLiter,
+      containerName,
+      containerCapacityLiter,
+      molassesKg,
+      organicWasteKg,
+      waterLiter,
       organicWasteTypes: input.organicWasteTypes ?? "Kulit Buah Campur",
       startDate,
       harvestEstimate,
@@ -294,11 +444,7 @@ export async function createBatch(input: {
       previousBatch: {
         select: { id: true, publicCode: true, containerName: true },
       },
-      nextBatches: {
-        select: { id: true, publicCode: true, containerName: true },
-        take: 1,
-        orderBy: { createdAt: "desc" },
-      },
+      nextBatches: ACTIVE_NEXT_BATCHES_INCLUDE,
     },
   });
 
@@ -308,46 +454,160 @@ export async function createBatch(input: {
   };
 }
 
-export async function updateBatch(id: string, input: any) {
+function parseNullableText(value: unknown, label: string): string | null {
+  if (value === null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new AppError(`${label} harus berupa teks`, 400);
+  }
+  return value;
+}
+
+export async function updateBatch(id: string, input: Record<string, unknown>) {
   const existing = await prisma.ecoEnzymeBatch.findUnique({ where: { id } });
   if (!existing) {
     throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
   }
 
-  const updateData: any = {};
-  if (input.containerName !== undefined) updateData.containerName = input.containerName;
-  if (input.containerCapacityLiter !== undefined) updateData.containerCapacityLiter = input.containerCapacityLiter;
-  if (input.molassesKg !== undefined) updateData.molassesKg = input.molassesKg;
-  if (input.organicWasteKg !== undefined) updateData.organicWasteKg = input.organicWasteKg;
-  if (input.waterLiter !== undefined) updateData.waterLiter = input.waterLiter;
-  if (input.organicWasteTypes !== undefined) updateData.organicWasteTypes = input.organicWasteTypes;
-  if (input.photoUrl !== undefined) updateData.photoUrl = input.photoUrl;
-  if (input.status !== undefined) updateData.status = input.status;
-  if (input.notes !== undefined) updateData.notes = input.notes;
+  if (!input || typeof input !== "object") {
+    throw new AppError("Payload pembaruan batch tidak valid", 400);
+  }
 
-  if (input.startDate) {
-    const startDate = new Date(input.startDate);
-    updateData.startDate = startDate;
-    if (!input.harvestEstimate) {
-      const harvestEstimate = new Date(startDate);
-      harvestEstimate.setDate(harvestEstimate.getDate() + 89);
-      updateData.harvestEstimate = harvestEstimate;
+  const updateData: Prisma.EcoEnzymeBatchUncheckedUpdateInput = {};
+
+  if (input.containerName !== undefined) {
+    if (typeof input.containerName !== "string" || !input.containerName.trim()) {
+      throw new AppError("Nama wadah wajib diisi", 400);
+    }
+    updateData.containerName = input.containerName.trim();
+  }
+
+  if (input.containerCapacityLiter !== undefined) {
+    updateData.containerCapacityLiter = parsePositiveNumber(
+      input.containerCapacityLiter,
+      "Kapasitas wadah"
+    );
+  }
+
+  const parsedMolassesKg =
+    input.molassesKg !== undefined
+      ? parsePositiveNumber(input.molassesKg, "Takaran pemanis (molassesKg)")
+      : undefined;
+  const parsedOrganicWasteKg =
+    input.organicWasteKg !== undefined
+      ? parsePositiveNumber(input.organicWasteKg, "Takaran bahan organik (organicWasteKg)")
+      : undefined;
+  const parsedWaterLiter =
+    input.waterLiter !== undefined
+      ? parsePositiveNumber(input.waterLiter, "Takaran air (waterLiter)")
+      : undefined;
+
+  const parsedStartDate =
+    input.startDate !== undefined
+      ? parseRequiredDate(input.startDate, "Format tanggal mulai tidak valid")
+      : undefined;
+
+  const parsedHarvestEstimate =
+    input.harvestEstimate !== undefined
+      ? parseRequiredDate(input.harvestEstimate, "Format tanggal panen tidak valid")
+      : undefined;
+
+  if (existing.status === "HARVESTED") {
+    const molassesChanged =
+      parsedMolassesKg !== undefined && parsedMolassesKg !== Number(existing.molassesKg);
+    const wasteChanged =
+      parsedOrganicWasteKg !== undefined &&
+      parsedOrganicWasteKg !== Number(existing.organicWasteKg);
+    const waterChanged =
+      parsedWaterLiter !== undefined && parsedWaterLiter !== Number(existing.waterLiter);
+    const startDateChanged =
+      parsedStartDate !== undefined &&
+      parsedStartDate.getTime() !== existing.startDate.getTime();
+
+    if (molassesChanged || wasteChanged || waterChanged || startDateChanged) {
+      throw new AppError(
+        "Formula dan tanggal mulai batch yang sudah dipanen tidak dapat diubah",
+        400
+      );
     }
   }
 
-  if (input.harvestEstimate) {
-    updateData.harvestEstimate = new Date(input.harvestEstimate);
+  if (parsedMolassesKg !== undefined) updateData.molassesKg = parsedMolassesKg;
+  if (parsedOrganicWasteKg !== undefined) updateData.organicWasteKg = parsedOrganicWasteKg;
+  if (parsedWaterLiter !== undefined) updateData.waterLiter = parsedWaterLiter;
+  if (input.organicWasteTypes !== undefined) {
+    if (typeof input.organicWasteTypes !== "string") {
+      throw new AppError("Komposisi bahan organik harus berupa teks", 400);
+    }
+    updateData.organicWasteTypes = input.organicWasteTypes;
+  }
+  if (input.photoUrl !== undefined) {
+    updateData.photoUrl = parseNullableText(input.photoUrl, "URL foto");
   }
 
+  if (input.status !== undefined) {
+    if (input.status === "ARCHIVED") {
+      throw new AppError("Gunakan endpoint arsip untuk mengarsipkan batch", 400);
+    }
+    if (typeof input.status !== "string" || !VALID_BATCH_STATUSES.has(input.status)) {
+      throw new AppError("Status batch tidak valid", 400);
+    }
+    updateData.status = input.status as EnzymeBatchStatus;
+  }
+
+  if (input.failureReason !== undefined) {
+    if (input.failureReason === null || input.failureReason === "") {
+      updateData.failureReason = null;
+    } else if (
+      typeof input.failureReason !== "string" ||
+      !VALID_FAILURE_REASONS.has(input.failureReason)
+    ) {
+      throw new AppError("Alasan kegagalan tidak valid", 400);
+    } else {
+      updateData.failureReason = input.failureReason as EnzymeFailureReason;
+    }
+  }
+
+  if (input.failureNotes !== undefined) {
+    updateData.failureNotes = parseNullableText(input.failureNotes, "Catatan kegagalan");
+  }
+  if (input.status === "IN_PROGRESS" && input.failureReason === undefined) {
+    updateData.failureReason = null;
+    updateData.failureNotes = null;
+  }
+  if (input.notes !== undefined) {
+    updateData.notes = parseNullableText(input.notes, "Catatan");
+  }
+
+  if (parsedStartDate !== undefined) {
+    updateData.startDate = parsedStartDate;
+    if (
+      parsedHarvestEstimate === undefined &&
+      parsedStartDate.getTime() !== existing.startDate.getTime()
+    ) {
+      updateData.harvestEstimate = new Date(
+        parsedStartDate.getTime() + DEFAULT_FERMENTATION_DAYS * MS_PER_DAY
+      );
+    }
+  }
+
+  if (parsedHarvestEstimate !== undefined) {
+    updateData.harvestEstimate = parsedHarvestEstimate;
+  }
+
+  // Abaikan publicCode dari input agar hanya disinkronkan dari registry QR
   if (!existing.qrCodeId) {
     const { qrCode } = await resolveOrCreateQrCode({
       entityType: "ECO_ENZYME_BATCH",
       entityId: existing.id,
       entityKey: existing.batchCode,
-      entityName: updateData.containerName ?? existing.containerName,
+      entityName:
+        typeof updateData.containerName === "string"
+          ? updateData.containerName
+          : existing.containerName,
       pathPrefix: "/b",
     });
     updateData.qrCodeId = qrCode.id;
+    updateData.publicCode = qrCode.code;
   }
 
   return prisma.ecoEnzymeBatch.update({
@@ -366,41 +626,95 @@ export async function harvestBatch(id: string, input: {
   allocatedUnitsAdded?: number;
   notes?: string | null;
 }) {
-  const existing = await prisma.ecoEnzymeBatch.findUnique({ where: { id } });
-  if (!existing) {
-    throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+  const harvestLiter = parsePositiveNumber(
+    input.harvestLiter,
+    "Volume panen (harvestLiter)"
+  );
+
+  const allocatedUnitsAdded =
+    input.allocatedUnitsAdded === undefined || input.allocatedUnitsAdded === null
+      ? 0
+      : Number(input.allocatedUnitsAdded);
+  if (!Number.isInteger(allocatedUnitsAdded) || allocatedUnitsAdded < 0) {
+    throw new AppError("Jumlah unit alokasi produk harus berupa bilangan bulat >= 0", 400);
   }
 
-  const totalInput = Number(existing.molassesKg) + Number(existing.organicWasteKg) + Number(existing.waterLiter);
-  const efficiencyRatePercent = totalInput > 0
-    ? Number(((input.harvestLiter / totalInput) * 100).toFixed(2))
-    : 0;
-
-  const actualHarvestDate = input.actualHarvestDate ? new Date(input.actualHarvestDate) : new Date();
+  const allocatedProductId = input.allocatedProductId?.trim() || null;
+  const actualHarvestDate = input.actualHarvestDate
+    ? parseRequiredDate(input.actualHarvestDate, "Format tanggal panen aktual tidak valid")
+    : new Date();
 
   return prisma.$transaction(async (tx) => {
-    const updated = await tx.ecoEnzymeBatch.update({
-      where: { id },
+    const existing = await tx.ecoEnzymeBatch.findUnique({ where: { id } });
+    if (!existing) {
+      throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+    }
+    if (existing.archivedAt !== null) {
+      throw new AppError("Batch yang sudah diarsipkan tidak dapat dipanen", 400);
+    }
+    if (existing.status === "FAILED") {
+      throw new AppError("Batch berstatus gagal tidak dapat dipanen", 400);
+    }
+    if (existing.status === "HARVESTED") {
+      throw new AppError("Batch ini sudah dipanen sebelumnya", 409);
+    }
+
+    let allocatedProduct: { id: string; stockLabel: StockLabel } | null = null;
+    if (allocatedProductId) {
+      allocatedProduct = await tx.product.findUnique({
+        where: { id: allocatedProductId },
+        select: { id: true, stockLabel: true },
+      });
+      if (!allocatedProduct) {
+        throw new AppError("Produk alokasi tidak ditemukan", 404);
+      }
+    }
+
+    const totalInput =
+      Number(existing.molassesKg) +
+      Number(existing.organicWasteKg) +
+      Number(existing.waterLiter);
+    const efficiencyRatePercent =
+      totalInput > 0
+        ? Number(((harvestLiter / totalInput) * 100).toFixed(2))
+        : 0;
+
+    const updateResult = await tx.ecoEnzymeBatch.updateMany({
+      where: {
+        id,
+        status: "IN_PROGRESS",
+        archivedAt: null,
+      },
       data: {
         status: "HARVESTED",
         actualHarvestDate,
-        harvestLiter: input.harvestLiter,
+        harvestLiter,
         efficiencyRatePercent,
-        residueUsage: input.residueUsage,
-        residueNotes: input.residueNotes,
-        allocatedProductId: input.allocatedProductId,
-        allocatedUnitsAdded: input.allocatedUnitsAdded ?? 0,
-        notes: input.notes,
+        ...(input.residueUsage !== undefined ? { residueUsage: input.residueUsage } : {}),
+        ...(input.residueNotes !== undefined ? { residueNotes: input.residueNotes } : {}),
+        allocatedProductId,
+        allocatedUnitsAdded,
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
       },
+    });
+
+    if (updateResult.count === 0) {
+      throw new AppError("Batch ini sudah dipanen sebelumnya", 409);
+    }
+
+    const updated = await tx.ecoEnzymeBatch.findUnique({
+      where: { id },
       include: { qrCode: true },
     });
 
-    if (dataAllocated(input)) {
+    if (allocatedProduct && allocatedUnitsAdded > 0) {
       await tx.product.update({
-        where: { id: input.allocatedProductId! },
+        where: { id: allocatedProduct.id },
         data: {
-          stock: { increment: input.allocatedUnitsAdded! },
-          stockLabel: "IN_STOCK",
+          stock: { increment: allocatedUnitsAdded },
+          ...(allocatedProduct.stockLabel === "OUT_OF_STOCK"
+            ? { stockLabel: "IN_STOCK" }
+            : {}),
         },
       });
     }
@@ -409,11 +723,8 @@ export async function harvestBatch(id: string, input: {
   });
 }
 
-function dataAllocated(input: any): boolean {
-  return Boolean(input.allocatedProductId && (input.allocatedUnitsAdded ?? 0) > 0);
-}
-
 export async function archiveBatch(id: string) {
+  await assertBatchExists(id);
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: { archivedAt: new Date() },
@@ -422,6 +733,7 @@ export async function archiveBatch(id: string) {
 }
 
 export async function restoreBatch(id: string) {
+  await assertBatchExists(id);
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: { archivedAt: null },
@@ -430,6 +742,7 @@ export async function restoreBatch(id: string) {
 }
 
 export async function markQrPrinted(id: string) {
+  await assertBatchExists(id);
   return prisma.ecoEnzymeBatch.update({
     where: { id },
     data: { qrPrintedAt: new Date() },
@@ -451,12 +764,37 @@ export async function addLog(batchId: string, input: {
   imageUrl?: string | null;
   notes?: string | null;
 }) {
+  await assertBatchExists(batchId);
+
+  const logDate =
+    input.logDate !== undefined && input.logDate !== null
+      ? parseRequiredDate(input.logDate, "Format tanggal log tidak valid")
+      : new Date();
+
+  let dayNumber = 7;
+  if (input.dayNumber !== undefined && input.dayNumber !== null) {
+    const parsedDay = Number(input.dayNumber);
+    if (!Number.isInteger(parsedDay) || parsedDay < 0) {
+      throw new AppError("dayNumber harus berupa bilangan bulat >= 0", 400);
+    }
+    dayNumber = parsedDay;
+  }
+
+  let phLevel: number | null = null;
+  if (input.phLevel !== undefined && input.phLevel !== null) {
+    const parsedPh = Number(input.phLevel);
+    if (!Number.isFinite(parsedPh) || parsedPh < 0 || parsedPh > 14) {
+      throw new AppError("Nilai pH harus berupa angka antara 0 dan 14", 400);
+    }
+    phLevel = parsedPh;
+  }
+
   return prisma.ecoEnzymeLog.create({
     data: {
       batchId,
-      dayNumber: input.dayNumber ?? 7,
-      logDate: input.logDate ? new Date(input.logDate) : new Date(),
-      phLevel: input.phLevel ?? null,
+      dayNumber,
+      logDate,
+      phLevel,
       aromaStatus: input.aromaStatus ?? null,
       fungusColor: input.fungusColor ?? null,
       actionTaken: input.actionTaken ?? null,
@@ -467,6 +805,13 @@ export async function addLog(batchId: string, input: {
 }
 
 export async function deleteLog(logId: string) {
+  const existing = await prisma.ecoEnzymeLog.findUnique({
+    where: { id: logId },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new AppError("Log inspeksi tidak ditemukan", 404);
+  }
   return prisma.ecoEnzymeLog.delete({ where: { id: logId } });
 }
 
@@ -476,6 +821,7 @@ export async function getStats() {
     select: {
       id: true,
       status: true,
+      startDate: true,
       harvestEstimate: true,
       organicWasteKg: true,
       harvestLiter: true,
@@ -484,7 +830,8 @@ export async function getStats() {
   });
 
   const now = new Date();
-  let totalBatches = batches.length;
+  const cutoffDate = getReadyCutoffDate(now);
+  const totalBatches = batches.length;
   let activeFermenting = 0;
   let readyToHarvest = 0;
   let harvestedBatches = 0;
@@ -499,15 +846,17 @@ export async function getStats() {
       harvestedBatches++;
       totalOrganicWasteKg += Number(b.organicWasteKg);
       totalHarvestLiter += Number(b.harvestLiter ?? 0);
-      if (b.efficiencyRatePercent) {
+      if (b.efficiencyRatePercent !== null && b.efficiencyRatePercent !== undefined) {
         sumEfficiency += Number(b.efficiencyRatePercent);
         efficiencyCount++;
       }
     } else if (b.status === "FAILED") {
       failedBatches++;
     } else if (b.status === "IN_PROGRESS") {
+      totalOrganicWasteKg += Number(b.organicWasteKg);
       const est = new Date(b.harvestEstimate);
-      if (now >= est) {
+      const start = new Date(b.startDate);
+      if (now >= est || start <= cutoffDate) {
         readyToHarvest++;
       } else {
         activeFermenting++;
@@ -515,7 +864,8 @@ export async function getStats() {
     }
   }
 
-  const averageEfficiencyRate = efficiencyCount > 0 ? Number((sumEfficiency / efficiencyCount).toFixed(2)) : 0;
+  const averageEfficiencyRate =
+    efficiencyCount > 0 ? Number((sumEfficiency / efficiencyCount).toFixed(2)) : 0;
 
   return {
     totalBatches,

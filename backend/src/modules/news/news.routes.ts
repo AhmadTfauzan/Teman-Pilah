@@ -4,7 +4,7 @@ import { NewsRepository } from "./news.repository";
 import { NewsService } from "./news.service";
 import { NewsController } from "./news.controller";
 import { createUpload } from "@/middlewares/upload.middleware";
-import { authenticate } from "@/middlewares/auth.middleware";
+import { authenticate, optionalAuthenticate } from "@/middlewares/auth.middleware";
 
 const upload = createUpload("news", "news");
 
@@ -14,11 +14,13 @@ const newsRepository = new NewsRepository(prisma);
 const newsService = new NewsService(newsRepository);
 const newsController = new NewsController(newsService);
 
-router.get("/", (req, res, next) => {
+router.get("/", optionalAuthenticate, (req, res, next) => {
   newsController.getAll(req as any, res, next);
 });
 
-router.get("/:id", newsController.getById);
+router.get("/slug/:slug", optionalAuthenticate, newsController.getBySlug);
+
+router.get("/:id", optionalAuthenticate, newsController.getById);
 
 router.post(
   "/",

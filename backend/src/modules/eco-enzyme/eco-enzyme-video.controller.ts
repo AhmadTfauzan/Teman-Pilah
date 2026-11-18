@@ -7,6 +7,7 @@ import {
   updateEcoEnzymeVideoSchema,
 } from "./eco-enzyme-video.validation";
 import { AuthRequest } from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class EcoEnzymeVideoController {
   private readonly service: EcoEnzymeVideoService;
@@ -70,6 +71,7 @@ export class EcoEnzymeVideoController {
         data: video,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
@@ -90,6 +92,7 @@ export class EcoEnzymeVideoController {
         data: video,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

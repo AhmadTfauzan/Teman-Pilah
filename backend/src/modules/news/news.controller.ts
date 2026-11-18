@@ -6,7 +6,11 @@ import {
   newsQuerySchema,
   updateNewsSchema,
 } from "./news.validation";
-import { AuthRequest } from "@/middlewares/auth.middleware";
+import {
+  AuthRequest,
+  isAuthenticatedAdminRequest,
+} from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class NewsController {
   private readonly newsService: NewsService;
@@ -21,8 +25,9 @@ export class NewsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
       const query = newsQuerySchema.parse(req.query);
-      const { data, meta } = await this.newsService.getAllNews(query);
+      const { data, meta } = await this.newsService.getAllNews(query, isAdmin);
 
       paginatedResponse({
         res,
@@ -41,8 +46,29 @@ export class NewsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
       const id = req.params["id"] as string;
-      const news = await this.newsService.getNewsById(id);
+      const news = await this.newsService.getNewsById(id, isAdmin);
+
+      successResponse({
+        res,
+        message: "Berhasil mengambil detail berita",
+        data: news,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getBySlug = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
+      const slug = req.params["slug"] as string;
+      const news = await this.newsService.getNewsBySlug(slug, isAdmin);
 
       successResponse({
         res,
@@ -70,6 +96,7 @@ export class NewsController {
         data: news,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
@@ -90,6 +117,7 @@ export class NewsController {
         data: news,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

@@ -1,5 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest } from "@/lib/server/auth";
+import { parseGalleryCreatePayload } from "@/lib/server/form-payload";
 import { parsePagination, buildPaginationMeta } from "@/lib/server/pagination";
 import { apiPaginated, apiSuccess, apiError } from "@/lib/server/response";
 import { handleApiError } from "@/lib/server/error";
@@ -7,14 +9,22 @@ import { handleApiError } from "@/lib/server/error";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
+    const category = searchParams.get("category")?.trim();
+    const search = searchParams.get("search")?.trim();
     const { skip, take, page, limit } = parsePagination({
       page: searchParams.get("page"),
       limit: searchParams.get("limit"),
     });
 
-    const where: any = {};
+    const where: Prisma.GalleryWhereInput = {};
     if (category && category !== "ALL") where.category = category;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       prisma.gallery.findMany({
@@ -37,15 +47,8 @@ export async function POST(req: Request) {
     const user = await authenticateRequest(req);
     if (!user) return apiError("Unauthorized", 401);
 
-    const body = await req.json();
-    const item = await prisma.gallery.create({
-      data: {
-        title: body.title ?? null,
-        category: body.category ?? null,
-        image: body.image,
-        description: body.description ?? null,
-      },
-    });
+    const data = await parseGalleryCreatePayload(req);
+    const item = await prisma.gallery.create({ data });
 
     return apiSuccess(item, "Foto galeri berhasil ditambahkan", 201);
   } catch (error) {

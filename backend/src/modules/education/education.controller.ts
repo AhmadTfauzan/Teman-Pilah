@@ -6,7 +6,11 @@ import {
   educationQuerySchema,
   updateEducationSchema,
 } from "./education.validation";
-import { AuthRequest } from "@/middlewares/auth.middleware";
+import {
+  AuthRequest,
+  isAuthenticatedAdminRequest,
+} from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class EducationController {
   private readonly educationService: EducationService;
@@ -21,8 +25,12 @@ export class EducationController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
       const query = educationQuerySchema.parse(req.query);
-      const { data, meta } = await this.educationService.getAllEducation(query);
+      const { data, meta } = await this.educationService.getAllEducation(
+        query,
+        isAdmin,
+      );
 
       paginatedResponse({
         res,
@@ -41,8 +49,35 @@ export class EducationController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
       const id = req.params["id"] as string;
-      const education = await this.educationService.getEducationById(id);
+      const education = await this.educationService.getEducationById(
+        id,
+        isAdmin,
+      );
+
+      successResponse({
+        res,
+        message: "Berhasil mengambil detail edukasi",
+        data: education,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getBySlug = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
+      const slug = req.params["slug"] as string;
+      const education = await this.educationService.getEducationBySlug(
+        slug,
+        isAdmin,
+      );
 
       successResponse({
         res,
@@ -73,6 +108,7 @@ export class EducationController {
         data: education,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
@@ -97,6 +133,7 @@ export class EducationController {
         data: education,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

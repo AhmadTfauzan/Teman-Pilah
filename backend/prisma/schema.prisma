@@ -123,6 +123,7 @@ model BankSampahVideo {
   description String?  @db.Text
   category    String?
   aspect      String?  @default("wide") // "wide" or "tall"
+  date        String?
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -138,6 +139,8 @@ model EcoEnzymeVideo {
   description String?  @db.Text
   category    String?
   aspect      String?  @default("tall") // "tall" or "wide"
+  tags        String[] @default([])
+  isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

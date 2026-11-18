@@ -9,7 +9,6 @@ import {
   ClipboardList,
   Package,
   GraduationCap,
-  Users2,
   ArrowLeft,
   X,
   Image as ImageIcon,
@@ -82,12 +81,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside
         aria-label="Admin sidebar"
         className={cn(
-          "fixed left-0 top-0 h-screen w-[280px] flex-col bg-[#2D5A27] py-8 z-50 transition-transform duration-300 flex",
+          "fixed left-0 top-0 h-dvh w-[280px] flex flex-col bg-[#2D5A27] py-6 sm:py-8 z-50 transition-transform duration-300",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* PROFILE SECTION */}
-        <div className="px-8 mb-12">
+        <div className="px-8 mb-8 sm:mb-12 shrink-0">
           <div className="flex items-center justify-between gap-3 w-full">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white rounded-4xl flex items-center justify-center overflow-hidden">
@@ -109,6 +108,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Close Button on Mobile */}
             {onClose && (
               <button 
+                type="button"
                 onClick={onClose}
                 className="p-1 rounded-lg text-[#9DD090] hover:text-white lg:hidden"
                 aria-label="Close menu"
@@ -122,7 +122,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* NAVIGATION */}
       <nav
         aria-label="Admin navigation"
-        className="flex flex-1 flex-col gap-2 px-6"
+        className="flex flex-1 min-h-0 flex-col gap-2 px-6 overflow-y-auto"
       >
         {navigationItems.map((item) => {
           const Icon = item.icon;
@@ -162,7 +162,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
       
       {/* BACK TO WEB */}
-      <div className="px-8 mt-auto pt-6 border-t border-white/10">
+      <div className="px-8 mt-auto pt-6 border-t border-white/10 shrink-0">
         <Link 
           href="/" 
           onClick={onClose}

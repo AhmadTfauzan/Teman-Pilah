@@ -119,6 +119,7 @@ model BankSampahVideo {
   description String?  @db.Text
   category    String?
   aspect      String?  @default("wide") // "wide" or "tall"
+  date        String?
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -134,6 +135,8 @@ model EcoEnzymeVideo {
   description String?  @db.Text
   category    String?
   aspect      String?  @default("tall") // "tall" or "wide"
+  tags        String[] @default([])
+  isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -218,7 +221,7 @@ model EcoEnzymeBatch {
 
   // Alokasi ke Katalog Produk
   allocatedProductId     String?
-  allocatedProduct       Product?             @relation(fields: [allocatedProductId], references: [id])
+  allocatedProduct       Product?             @relation(fields: [allocatedProductId], references: [id], onDelete: SetNull)
   allocatedUnitsAdded    Int?                 @default(0)
 
   // Status & Kegagalan

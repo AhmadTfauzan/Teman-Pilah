@@ -7,6 +7,7 @@ import {
   updateProductSchema,
 } from "./product.validation";
 import { AuthRequest } from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class ProductController {
   private readonly productService: ProductService;
@@ -96,13 +97,14 @@ export class ProductController {
         data: product,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
 
   /**
    * Mengupdate produk berdasarkan ID.
-   * Semua field bersifat opsional  hanya field yang dikirim yang diupdate.
+   * Semua field bersifat opsional — hanya field yang dikirim yang diupdate.
    * Mendukung upload gambar baru melalui multipart/form-data dengan field `image`.
    *
    * @param req - Express request dengan `params.id`, body data update, dan `req.file` dari multer
@@ -130,6 +132,7 @@ export class ProductController {
         data: product,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

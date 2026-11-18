@@ -1,22 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Droplet, PackageCheck, Info } from 'lucide-react';
+import { X, CheckCircle2, PackageCheck } from 'lucide-react';
 import { EcoEnzymeBatch, EnzymeResidueUsage, Product } from '@/types';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
+import { getTodayWibDateInput } from '@/lib/eco-enzyme';
+import { toast } from 'sonner';
+
+export interface EcoEnzymeHarvestSubmitData {
+  actualHarvestDate: string;
+  harvestLiter: number;
+  residueUsage?: EnzymeResidueUsage;
+  residueNotes?: string;
+  allocatedProductId?: string;
+  allocatedUnitsAdded?: number;
+  notes?: string;
+}
 
 interface EcoEnzymeHarvestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
-    actualHarvestDate: string;
-    harvestLiter: number;
-    residueUsage?: EnzymeResidueUsage;
-    residueNotes?: string;
-    allocatedProductId?: string;
-    allocatedUnitsAdded?: number;
-    notes?: string;
-  }) => Promise<void>;
+  onSubmit: (data: EcoEnzymeHarvestSubmitData) => Promise<void>;
   batch: EcoEnzymeBatch | null;
 }
 
@@ -26,14 +30,34 @@ export function EcoEnzymeHarvestModal({
   onSubmit,
   batch,
 }: EcoEnzymeHarvestModalProps) {
-  const [actualHarvestDate, setActualHarvestDate] = useState(
-    new Date().toISOString().slice(0, 10)
+  if (!isOpen || !batch) return null;
+
+  return (
+    <EcoEnzymeHarvestModalContent
+      key={batch.id}
+      batch={batch}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
   );
-  const defaultEstimate = batch ? Math.round(Number(batch.waterLiter) * 0.85 * 10) / 10 : 10;
-  const [harvestLiter, setHarvestLiter] = useState<number>(defaultEstimate);
+}
+
+function EcoEnzymeHarvestModalContent({
+  batch,
+  onClose,
+  onSubmit,
+}: {
+  batch: EcoEnzymeBatch;
+  onClose: () => void;
+  onSubmit: (data: EcoEnzymeHarvestSubmitData) => Promise<void>;
+}) {
+  const [actualHarvestDate, setActualHarvestDate] = useState(() => getTodayWibDateInput());
+  const [harvestLiter, setHarvestLiter] = useState<number>(
+    () => Math.round(Number(batch.waterLiter) * 0.85 * 10) / 10
+  );
   const [residueUsage, setResidueUsage] = useState<EnzymeResidueUsage>('KOMPOS_PADAT');
   const [residueNotes, setResidueNotes] = useState('');
-  
+
   // Alokasi ke katalog produk
   const [products, setProducts] = useState<Product[]>([]);
   const [isAllocatingProduct, setIsAllocatingProduct] = useState(false);
@@ -44,15 +68,17 @@ export function EcoEnzymeHarvestModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      ecoEnzymeApi.getProducts().then(setProducts).catch(console.error);
-      if (batch) {
-        setHarvestLiter(Math.round(Number(batch.waterLiter) * 0.85 * 10) / 10);
-      }
-    }
-  }, [isOpen, batch]);
-
-  if (!isOpen || !batch) return null;
+    let cancelled = false;
+    ecoEnzymeApi
+      .getProducts()
+      .then((data) => {
+        if (!cancelled) setProducts(data);
+      })
+      .catch(console.error);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Total input bahan untuk perhitungan rendemen
   const totalInputKg =
@@ -62,10 +88,34 @@ export function EcoEnzymeHarvestModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    const parsedDate = new Date(actualHarvestDate);
+    if (!actualHarvestDate || Number.isNaN(parsedDate.getTime())) {
+      toast.error('Tanggal panen aktual tidak valid.');
+      return;
+    }
+
+    if (!Number.isFinite(harvestLiter) || harvestLiter <= 0) {
+      toast.error('Volume panen bersih harus lebih dari 0 liter.');
+      return;
+    }
+
+    if (isAllocatingProduct) {
+      if (!selectedProductId) {
+        toast.error('Silakan pilih produk di katalog untuk alokasi hasil panen.');
+        return;
+      }
+      if (!Number.isInteger(unitsToAdd) || unitsToAdd < 1) {
+        toast.error('Jumlah unit stok yang ditambahkan minimal 1.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
-        actualHarvestDate: new Date(actualHarvestDate).toISOString(),
+        actualHarvestDate: parsedDate.toISOString(),
         harvestLiter: Number(harvestLiter),
         residueUsage,
         residueNotes: residueNotes.trim() || undefined,
@@ -188,7 +238,7 @@ export function EcoEnzymeHarvestModal({
                     name="residueUsage"
                     value={opt.id}
                     checked={residueUsage === opt.id}
-                    onChange={() => setResidueUsage(opt.id as any)}
+                    onChange={() => setResidueUsage(opt.id as EnzymeResidueUsage)}
                     className="accent-emerald-700"
                   />
                   <span>{opt.label}</span>
@@ -223,9 +273,10 @@ export function EcoEnzymeHarvestModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-stone-200">
                 <div>
                   <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                    Pilih Produk di Katalog
+                    Pilih Produk di Katalog <span className="text-rose-600">*</span>
                   </label>
                   <select
+                    required={isAllocatingProduct}
                     value={selectedProductId}
                     onChange={(e) => setSelectedProductId(e.target.value)}
                     className="w-full text-xs bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-stone-800"

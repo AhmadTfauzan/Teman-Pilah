@@ -1,5 +1,10 @@
 import { Prisma, PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, Product, QrCode } from "../../../generated/prisma";
+import { AppError } from "@/middlewares/error.middleware";
 import { normalizeBatchCode } from "../../utils/code";
+import {
+  getReadyToHarvestCutoffDate,
+  isBatchReadyToHarvest,
+} from "./eco-enzyme.utils";
 
 export interface FindAllBatchesOptions {
   skip: number;
@@ -7,6 +12,8 @@ export interface FindAllBatchesOptions {
   status?: string;
   search?: string;
   includeArchived?: boolean;
+  includeNotesSearch?: boolean;
+  now?: Date;
 }
 
 export class EcoEnzymeRepository {
@@ -16,7 +23,15 @@ export class EcoEnzymeRepository {
     this.prisma = prisma;
   }
 
-  async findAll({ skip, take, status, search, includeArchived }: FindAllBatchesOptions): Promise<{
+  async findAll({
+    skip,
+    take,
+    status,
+    search,
+    includeArchived,
+    includeNotesSearch = true,
+    now,
+  }: FindAllBatchesOptions): Promise<{
     data: (EcoEnzymeBatch & {
       _count: { inspectionLogs: number };
       allocatedProduct?: Product | null;
@@ -26,33 +41,56 @@ export class EcoEnzymeRepository {
     })[];
     total: number;
   }> {
-    const where: any = {};
+    const currentTime = now ?? new Date();
+    const readyCutoffDate = getReadyToHarvestCutoffDate(currentTime);
+    const andConditions: Prisma.EcoEnzymeBatchWhereInput[] = [];
 
-    // Penanganan Soft Delete (Archived)
+    // Penanganan Soft Delete (Archived) & status dinamis di database sebelum skip/take & count
     if (status === "ARCHIVED") {
-      where.archivedAt = { not: null };
-    } else if (includeArchived) {
-      // Tampilkan semua (baik aktif maupun arsip)
+      andConditions.push({ archivedAt: { not: null } });
+    } else if (status === "FERMENTING") {
+      andConditions.push({ archivedAt: null });
+      andConditions.push({ status: "IN_PROGRESS" });
+      andConditions.push({ harvestEstimate: { gt: currentTime } });
+      andConditions.push({ startDate: { gt: readyCutoffDate } });
+    } else if (status === "READY_TO_HARVEST") {
+      andConditions.push({ archivedAt: null });
+      andConditions.push({ status: "IN_PROGRESS" });
+      andConditions.push({
+        OR: [
+          { harvestEstimate: { lte: currentTime } },
+          { startDate: { lte: readyCutoffDate } },
+        ],
+      });
     } else {
-      // Default: Sembunyikan batch yang diarsipkan
-      where.archivedAt = null;
-    }
-
-    if (status && status !== "ALL" && status !== "ARCHIVED") {
-      if (status === "HARVESTED" || status === "FAILED" || status === "IN_PROGRESS") {
-        where.status = status;
+      if (!includeArchived) {
+        andConditions.push({ archivedAt: null });
+      }
+      if (
+        status === "HARVESTED" ||
+        status === "FAILED" ||
+        status === "IN_PROGRESS"
+      ) {
+        andConditions.push({ status });
       }
     }
 
-    if (search) {
-      where.OR = [
-        { publicCode: { contains: search, mode: "insensitive" } },
-        { batchCode: { contains: search, mode: "insensitive" } },
-        { containerName: { contains: search, mode: "insensitive" } },
-        { organicWasteTypes: { contains: search, mode: "insensitive" } },
-        { notes: { contains: search, mode: "insensitive" } },
+    if (search && search.trim()) {
+      const term = search.trim();
+      const searchOr: Prisma.EcoEnzymeBatchWhereInput[] = [
+        { publicCode: { contains: term, mode: "insensitive" } },
+        { batchCode: { contains: term, mode: "insensitive" } },
+        { containerName: { contains: term, mode: "insensitive" } },
+        { organicWasteTypes: { contains: term, mode: "insensitive" } },
       ];
+      if (includeNotesSearch) {
+        searchOr.push({ notes: { contains: term, mode: "insensitive" } });
+      }
+      andConditions.push({ OR: searchOr });
     }
+
+    const where: Prisma.EcoEnzymeBatchWhereInput =
+      andConditions.length > 0 ? { AND: andConditions } : {};
 
     const [data, total] = await Promise.all([
       this.prisma.ecoEnzymeBatch.findMany({
@@ -121,6 +159,14 @@ export class EcoEnzymeRepository {
           take: 1,
           orderBy: { createdAt: "desc" },
         },
+      },
+    });
+  }
+
+  async countByBatchCode(batchCode: string): Promise<number> {
+    return this.prisma.ecoEnzymeBatch.count({
+      where: {
+        batchCode: { equals: batchCode.trim(), mode: "insensitive" },
       },
     });
   }
@@ -418,38 +464,85 @@ export class EcoEnzymeRepository {
       notes?: string | null;
     }
   ): Promise<EcoEnzymeBatch> {
+    const unitsToAdd = data.allocatedUnitsAdded ?? 0;
+    if (!Number.isInteger(unitsToAdd) || unitsToAdd < 0) {
+      throw new AppError("Jumlah unit alokasi tidak boleh negatif", 400);
+    }
+
+    const allocatedProductId = data.allocatedProductId?.trim() || null;
+
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const updated = await tx.ecoEnzymeBatch.update({
-        where: { id },
+      const lockResult = await tx.ecoEnzymeBatch.updateMany({
+        where: {
+          id,
+          status: "IN_PROGRESS",
+          archivedAt: null,
+        },
         data: {
           status: "HARVESTED",
           actualHarvestDate: data.actualHarvestDate,
           harvestLiter: data.harvestLiter,
           efficiencyRatePercent: data.efficiencyRatePercent,
-          residueUsage: data.residueUsage,
-          residueNotes: data.residueNotes,
-          allocatedProductId: data.allocatedProductId,
-          allocatedUnitsAdded: data.allocatedUnitsAdded ?? 0,
-          notes: data.notes,
+          ...(data.residueUsage !== undefined && { residueUsage: data.residueUsage }),
+          ...(data.residueNotes !== undefined && { residueNotes: data.residueNotes }),
+          allocatedProductId,
+          allocatedUnitsAdded: unitsToAdd,
+          ...(data.notes !== undefined && { notes: data.notes }),
         },
+      });
+
+      if (lockResult.count === 0) {
+        const current = await tx.ecoEnzymeBatch.findUnique({
+          where: { id },
+          select: { status: true, archivedAt: true },
+        });
+
+        if (!current) {
+          throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+        }
+        if (current.archivedAt !== null) {
+          throw new AppError("Batch yang sudah diarsipkan tidak dapat dipanen", 400);
+        }
+        if (current.status === "FAILED") {
+          throw new AppError("Batch yang sudah berstatus GAGAL tidak dapat dipanen", 400);
+        }
+        if (current.status === "HARVESTED") {
+          throw new AppError("Batch ini sudah dipanen sebelumnya", 400);
+        }
+        throw new AppError("Batch tidak dapat dipanen pada status saat ini", 400);
+      }
+
+      if (allocatedProductId) {
+        const product = await tx.product.findUnique({
+          where: { id: allocatedProductId },
+          select: { id: true, stockLabel: true },
+        });
+
+        if (!product) {
+          throw new AppError("Produk alokasi tidak ditemukan", 404);
+        }
+
+        if (unitsToAdd > 0) {
+          await tx.product.update({
+            where: { id: allocatedProductId },
+            data: {
+              stock: {
+                increment: unitsToAdd,
+              },
+              ...(product.stockLabel === "OUT_OF_STOCK"
+                ? { stockLabel: "IN_STOCK" }
+                : {}),
+            },
+          });
+        }
+      }
+
+      return tx.ecoEnzymeBatch.findUniqueOrThrow({
+        where: { id },
         include: {
           qrCode: true,
         },
       });
-
-      if (data.allocatedProductId && (data.allocatedUnitsAdded ?? 0) > 0) {
-        await tx.product.update({
-          where: { id: data.allocatedProductId },
-          data: {
-            stock: {
-              increment: data.allocatedUnitsAdded,
-            },
-            stockLabel: "IN_STOCK",
-          },
-        });
-      }
-
-      return updated;
     });
   }
 
@@ -481,6 +574,12 @@ export class EcoEnzymeRepository {
         imageUrl: data.imageUrl ?? null,
         notes: data.notes ?? null,
       },
+    });
+  }
+
+  async findLogById(logId: string): Promise<EcoEnzymeLog | null> {
+    return this.prisma.ecoEnzymeLog.findUnique({
+      where: { id: logId },
     });
   }
 
@@ -539,15 +638,15 @@ export class EcoEnzymeRepository {
         harvestedBatches++;
         totalOrganicWasteKg += Number(b.organicWasteKg);
         totalHarvestLiter += Number(b.harvestLiter ?? 0);
-        if (b.efficiencyRatePercent) {
+        if (b.efficiencyRatePercent != null) {
           sumEfficiency += Number(b.efficiencyRatePercent);
           efficiencyCount++;
         }
       } else if (b.status === "FAILED") {
         failedBatches++;
       } else if (b.status === "IN_PROGRESS") {
-        const est = new Date(b.harvestEstimate);
-        if (now >= est) {
+        totalOrganicWasteKg += Number(b.organicWasteKg);
+        if (isBatchReadyToHarvest(b.startDate, b.harvestEstimate, now)) {
           readyToHarvest++;
         } else {
           activeFermenting++;

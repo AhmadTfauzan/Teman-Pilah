@@ -1,5 +1,5 @@
 import { enrichBatchDynamicStatus } from "@/lib/server/eco-enzyme-service";
-import { handleApiError } from "@/lib/server/error";
+import { handleApiError, safeDecodeURIComponent } from "@/lib/server/error";
 import { getQrCodeDetailsByCode } from "@/lib/server/qr-code-service";
 import { apiSuccess } from "@/lib/server/response";
 
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { code } = await params;
-    const decodedCode = decodeURIComponent(code).trim();
+    const decodedCode = safeDecodeURIComponent(code).trim();
     const details = await getQrCodeDetailsByCode(decodedCode);
 
     return apiSuccess({

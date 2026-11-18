@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { EcoEnzymeBatch, EcoEnzymeLog, QrCode } from "../../../generated/prisma";
 import { AppError } from "@/middlewares/error.middleware";
 import {
@@ -14,6 +15,12 @@ import {
   UpdateBatchInput,
 } from "./eco-enzyme.validation";
 import { generatePublicBatchCode, normalizeBatchCode } from "../../utils/code";
+import {
+  computeBatchDayPassed,
+  FERMENTATION_DAYS,
+  isBatchReadyToHarvest,
+  redactPublicEcoEnzymeBatch,
+} from "./eco-enzyme.utils";
 
 export interface BatchListResult {
   data: any[];
@@ -36,12 +43,43 @@ export class EcoEnzymeService {
     return baseUrl.replace(/\/+$/, "");
   }
 
-  private generateBatchCode(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const rand = Math.floor(100 + Math.random() * 900);
-    return `EE-${year}${month}-${rand}`;
+  /**
+   * Menghasilkan kode batch unik dengan 5 digit acak dan pengecekan keunikan ke DB,
+   * disertai fallback alfanumerik jika slot numerik padat.
+   */
+  private async generateBatchCode(date: Date = new Date()): Promise<string> {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(date);
+    const year =
+      parts.find((p) => p.type === "year")?.value ?? String(date.getFullYear());
+    const month =
+      parts.find((p) => p.type === "month")?.value ??
+      String(date.getMonth() + 1).padStart(2, "0");
+    const yyyymm = `${year}${month}`;
+
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = `EE-${yyyymm}-${crypto.randomInt(10000, 100000)}`;
+      const existingCount = await this.ecoEnzymeRepository.countByBatchCode(candidate);
+      if (existingCount === 0) {
+        return candidate;
+      }
+    }
+
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = `EE-${yyyymm}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+      const existingCount = await this.ecoEnzymeRepository.countByBatchCode(candidate);
+      if (existingCount === 0) {
+        return candidate;
+      }
+    }
+
+    throw new AppError(
+      "Gagal menghasilkan kode batch unik. Silakan coba lagi.",
+      500,
+    );
   }
 
   /**
@@ -53,15 +91,12 @@ export class EcoEnzymeService {
    *   - Jika hari berjalan < 90 => FERMENTING
    *   - Jika hari berjalan >= 90 => READY_TO_HARVEST
    */
-  private enrichBatchDynamicStatus(batch: any): any {
-    const now = new Date();
-    const startDate = new Date(batch.startDate);
-    const harvestEstimate = new Date(batch.harvestEstimate);
-
-    // Perhitungan hari berjalan (start date dianggap hari ke-1)
-    const diffTime = Math.max(0, now.getTime() - startDate.getTime());
-    const dayPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    const progressPercent = Math.min(100, Math.round((dayPassed / 90) * 100));
+  private enrichBatchDynamicStatus(batch: any, now: Date = new Date()): any {
+    const dayPassed = computeBatchDayPassed(batch.startDate, now);
+    const progressPercent = Math.min(
+      100,
+      Math.round((dayPassed / FERMENTATION_DAYS) * 100),
+    );
 
     let displayStatus: "FERMENTING" | "READY_TO_HARVEST" | "HARVESTED" | "FAILED" | "ARCHIVED" = "FERMENTING";
 
@@ -71,7 +106,9 @@ export class EcoEnzymeService {
       displayStatus = "HARVESTED";
     } else if (batch.status === "FAILED") {
       displayStatus = "FAILED";
-    } else if (now >= harvestEstimate || dayPassed >= 90) {
+    } else if (
+      isBatchReadyToHarvest(batch.startDate, batch.harvestEstimate, now)
+    ) {
       displayStatus = "READY_TO_HARVEST";
     } else {
       displayStatus = "FERMENTING";
@@ -85,31 +122,37 @@ export class EcoEnzymeService {
     };
   }
 
-  async getAllBatches(query: BatchQueryInput): Promise<BatchListResult> {
+  async getAllBatches(
+    query: BatchQueryInput,
+    isAdmin: boolean = false,
+  ): Promise<BatchListResult> {
     const { skip, take, page, limit } = parsePagination(query);
 
+    if (!isAdmin && query.status === "ARCHIVED") {
+      return {
+        data: [],
+        meta: buildPaginationMeta(0, page, limit),
+      };
+    }
+
+    const now = new Date();
     const { data, total } = await this.ecoEnzymeRepository.findAll({
       skip,
       take,
       status: query.status,
       search: query.search,
-      includeArchived: query.includeArchived,
+      includeArchived: isAdmin ? query.includeArchived : false,
+      includeNotesSearch: isAdmin,
+      now,
     });
 
-    const enriched = data.map((b) => this.enrichBatchDynamicStatus(b));
-
-    // Filter status jika yang diminta adalah displayStatus khusus
-    let filteredData = enriched;
-    if (query.status === "FERMENTING") {
-      filteredData = enriched.filter((b) => b.displayStatus === "FERMENTING");
-    } else if (query.status === "READY_TO_HARVEST") {
-      filteredData = enriched.filter((b) => b.displayStatus === "READY_TO_HARVEST");
-    } else if (query.status === "ARCHIVED") {
-      filteredData = enriched.filter((b) => b.displayStatus === "ARCHIVED");
-    }
+    const enriched = data.map((b) => this.enrichBatchDynamicStatus(b, now));
+    const finalData = isAdmin
+      ? enriched
+      : enriched.map((b) => redactPublicEcoEnzymeBatch(b));
 
     return {
-      data: filteredData,
+      data: finalData,
       meta: buildPaginationMeta(total, page, limit),
     };
   }
@@ -130,13 +173,18 @@ export class EcoEnzymeService {
     );
   }
 
-  async getBatchById(id: string): Promise<any> {
+  async getBatchById(id: string, isAdmin: boolean = false): Promise<any> {
     const batch = await this.ecoEnzymeRepository.findById(id);
     if (!batch) {
       throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
     }
 
-    return this.enrichBatchDynamicStatus(batch);
+    if (!isAdmin && batch.archivedAt) {
+      throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+    }
+
+    const enriched = this.enrichBatchDynamicStatus(batch);
+    return isAdmin ? enriched : redactPublicEcoEnzymeBatch(enriched);
   }
 
   async getBatchByPublicCode(publicCode: string): Promise<any> {
@@ -305,7 +353,8 @@ export class EcoEnzymeService {
       harvestEstimate.setDate(harvestEstimate.getDate() + 89);
     }
 
-    const batchCode = input.batchCode?.trim() || this.generateBatchCode();
+    const batchCode =
+      input.batchCode?.trim() || (await this.generateBatchCode(startDate));
 
     const { qrCode, reused } = await this.resolveOrCreateBatchQrCode({
       previousBatchId: input.previousBatchId,
@@ -348,9 +397,25 @@ export class EcoEnzymeService {
       throw new AppError("Kode batch publik (publicCode) bersifat permanen dan tidak dapat diubah", 400);
     }
 
+    const ALLOWED_BATCH_STATUSES = ["IN_PROGRESS", "HARVESTED", "FAILED"] as const;
+    if (
+      input.status !== undefined &&
+      !ALLOWED_BATCH_STATUSES.includes(input.status)
+    ) {
+      throw new AppError(
+        "Status batch tidak valid. Gunakan endpoint arsip untuk mengarsipkan batch",
+        400,
+      );
+    }
+
     // Aturan bisnis: batch yang sudah HARVESTED terkunci dari perubahan formula dan tanggal mulai
     if (existing.status === "HARVESTED") {
-      if (input.startDate || input.molassesKg || input.organicWasteKg || input.waterLiter) {
+      if (
+        input.startDate !== undefined ||
+        input.molassesKg !== undefined ||
+        input.organicWasteKg !== undefined ||
+        input.waterLiter !== undefined
+      ) {
         throw new AppError("Batch yang sudah dipanen terkunci dari perubahan formula dan tanggal mulai", 400);
       }
     }
@@ -369,20 +434,23 @@ export class EcoEnzymeService {
     if (input.failureNotes !== undefined) updateData.failureNotes = input.failureNotes;
     if (input.notes !== undefined) updateData.notes = input.notes;
 
-    if (input.startDate) {
+    if (input.startDate !== undefined) {
+      if (!input.startDate || input.startDate.trim() === "") {
+        throw new AppError("Format tanggal mulai tidak valid", 400);
+      }
       const startDate = new Date(input.startDate);
       if (isNaN(startDate.getTime())) {
         throw new AppError("Format tanggal mulai tidak valid", 400);
       }
       updateData.startDate = startDate;
-      if (!input.harvestEstimate) {
+      if (input.harvestEstimate === undefined || input.harvestEstimate === "") {
         const harvestEstimate = new Date(startDate);
         harvestEstimate.setDate(harvestEstimate.getDate() + 89);
         updateData.harvestEstimate = harvestEstimate;
       }
     }
 
-    if (input.harvestEstimate) {
+    if (input.harvestEstimate !== undefined && input.harvestEstimate !== "") {
       const harvestEstimate = new Date(input.harvestEstimate);
       if (isNaN(harvestEstimate.getTime())) {
         throw new AppError("Format tanggal panen tidak valid", 400);
@@ -399,17 +467,41 @@ export class EcoEnzymeService {
       throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
     }
 
+    if (existing.archivedAt !== null) {
+      throw new AppError("Batch yang sudah diarsipkan tidak dapat dipanen", 400);
+    }
+
     if (existing.status === "FAILED") {
       throw new AppError("Batch yang sudah berstatus GAGAL tidak dapat dipanen", 400);
     }
 
-    // Hitung Rendemen (%): (harvestLiter / total input bahan) * 100%
-    const totalInput = Number(existing.molassesKg) + Number(existing.organicWasteKg) + Number(existing.waterLiter);
-    const efficiencyRatePercent = totalInput > 0
-      ? Number(((input.harvestLiter / totalInput) * 100).toFixed(2))
-      : 0;
+    if (existing.status === "HARVESTED") {
+      throw new AppError("Batch ini sudah dipanen sebelumnya", 400);
+    }
 
-    const actualHarvestDate = input.actualHarvestDate ? new Date(input.actualHarvestDate) : new Date();
+    const allocatedUnitsAdded = input.allocatedUnitsAdded ?? 0;
+    if (!Number.isInteger(allocatedUnitsAdded) || allocatedUnitsAdded < 0) {
+      throw new AppError("Jumlah unit alokasi tidak boleh negatif", 400);
+    }
+
+    const actualHarvestDate = input.actualHarvestDate
+      ? new Date(input.actualHarvestDate)
+      : new Date();
+    if (isNaN(actualHarvestDate.getTime())) {
+      throw new AppError("Format tanggal panen tidak valid", 400);
+    }
+
+    const allocatedProductId = input.allocatedProductId?.trim() || null;
+
+    // Hitung Rendemen (%): (harvestLiter / total input bahan) * 100%
+    const totalInput =
+      Number(existing.molassesKg) +
+      Number(existing.organicWasteKg) +
+      Number(existing.waterLiter);
+    const efficiencyRatePercent =
+      totalInput > 0
+        ? Number(((input.harvestLiter / totalInput) * 100).toFixed(2))
+        : 0;
 
     return this.ecoEnzymeRepository.harvest(id, {
       actualHarvestDate,
@@ -417,8 +509,8 @@ export class EcoEnzymeService {
       efficiencyRatePercent,
       residueUsage: input.residueUsage,
       residueNotes: input.residueNotes,
-      allocatedProductId: input.allocatedProductId,
-      allocatedUnitsAdded: input.allocatedUnitsAdded,
+      allocatedProductId,
+      allocatedUnitsAdded,
       notes: input.notes,
     });
   }
@@ -470,9 +562,17 @@ export class EcoEnzymeService {
       throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
     }
 
+    const logDate =
+      input.logDate !== undefined && input.logDate.trim() !== ""
+        ? new Date(input.logDate)
+        : new Date();
+    if (isNaN(logDate.getTime())) {
+      throw new AppError("Format tanggal log tidak valid", 400);
+    }
+
     return this.ecoEnzymeRepository.createLog(batchId, {
       dayNumber: input.dayNumber,
-      logDate: input.logDate ? new Date(input.logDate) : new Date(),
+      logDate,
       phLevel: input.phLevel,
       aromaStatus: input.aromaStatus,
       fungusColor: input.fungusColor,
@@ -483,6 +583,10 @@ export class EcoEnzymeService {
   }
 
   async deleteLog(logId: string): Promise<void> {
+    const existingLog = await this.ecoEnzymeRepository.findLogById(logId);
+    if (!existingLog) {
+      throw new AppError("Catatan log tidak ditemukan", 404);
+    }
     await this.ecoEnzymeRepository.deleteLog(logId);
   }
 

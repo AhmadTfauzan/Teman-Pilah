@@ -10,6 +10,7 @@
 //                 → gunakan getImageUrl() untuk menampilkan di <img>
 
 import { getBaseUrl } from '../api-config';
+import { getAuthHeader } from './auth-session';
 import { Product } from '@/types';
 import { logAdminActivity } from '@/lib/utils';
 
@@ -56,11 +57,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Ambil JWT dari localStorage (disimpan setelah login admin) */
+/** Ambil JWT dari localStorage atau sessionStorage (disimpan setelah login admin) */
 function authHeader(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('token') ?? '';
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return getAuthHeader();
 }
 
 // ─── Product API ──────────────────────────────────────────────────────────────

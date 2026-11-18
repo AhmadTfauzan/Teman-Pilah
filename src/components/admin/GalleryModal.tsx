@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Gallery } from '@/types';
 import { getGalleryImageUrl } from '@/lib/api/gallery';
 import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
@@ -10,14 +10,34 @@ interface GalleryModalProps {
   item: Gallery | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: FormData) => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
 }
 
 export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  if (!isOpen) return null;
+
+  return (
+    <GalleryModalContent
+      key={item?.id ?? 'new'}
+      item={item}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function GalleryModalContent({
+  item,
+  onClose,
+  onSubmit,
+}: Omit<GalleryModalProps, 'isOpen'>) {
+  const [title, setTitle] = useState(item?.title || '');
+  const [description, setDescription] = useState(item?.description || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreview, setImagePreview] = useState<string>(() =>
+    item ? getGalleryImageUrl(item.image) : ''
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -25,22 +45,6 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
   }>({ isOpen: false, status: null });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (item) {
-      setTitle(item.title || '');
-      setDescription(item.description || '');
-      setImagePreview(getGalleryImageUrl(item.image));
-      setImageFile(null);
-    } else {
-      setTitle('');
-      setDescription('');
-      setImagePreview('');
-      setImageFile(null);
-    }
-  }, [item, isOpen]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,7 +65,8 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
 
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (isSubmitting) return;
+
     // Check if new item has an image
     if (!item && !imageFile) {
       setConfirmModal({ isOpen: true, status: 'ERROR' });
@@ -71,29 +76,35 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
     setConfirmModal({ isOpen: true, status: 'PUBLISHED' });
   };
 
-  const executeSubmit = () => {
+  const executeSubmit = async () => {
+    if (isSubmitting) return;
     setConfirmModal({ isOpen: false, status: null });
+    setIsSubmitting(true);
 
-    const data = new FormData();
-    data.append('title', title);
-    data.append('description', description);
-    
-    if (imageFile) {
-      data.append('image', imageFile);
+    try {
+      const data = new FormData();
+      data.append('title', title);
+      data.append('description', description);
+
+      if (imageFile) {
+        data.append('image', imageFile);
+      }
+
+      await onSubmit(data);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onSubmit(data);
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
       {/* HEADER BAR */}
       <div className="flex-none px-4 sm:px-12 py-4 sm:py-6">
-        <button 
+        <button
+          type="button"
           onClick={onClose}
-          className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
+          disabled={isSubmitting}
+          className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors disabled:opacity-50"
         >
           <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
           Kembali ke Kelola Galeri
@@ -148,22 +159,24 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
             <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-3 sm:space-y-4">
               <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Foto Galeri</label>
               
-              <div 
-                onClick={() => fileInputRef.current?.click()}
+              <div
+                onClick={() => {
+                  if (!isSubmitting) fileInputRef.current?.click();
+                }}
                 className={`border-2 border-dashed rounded-[20px] aspect-square flex flex-col items-center justify-center p-4 cursor-pointer transition-all duration-300 ${
-                  imagePreview 
-                    ? 'border-[#27532B]/30 bg-[#27532B]/5' 
+                  imagePreview
+                    ? 'border-[#27532B]/30 bg-[#27532B]/5'
                     : 'border-[#D6D9D2] hover:border-[#27532B]/50 hover:bg-gray-50'
                 }`}
               >
                 {imagePreview ? (
                   <div className="relative w-full h-full rounded-lg overflow-hidden">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center transition-opacity">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                       <span className="text-white text-[12px] font-semibold bg-[#27532B] px-3 py-1.5 rounded-full">
                         Ubah Gambar
                       </span>
@@ -182,7 +195,7 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
                 )}
               </div>
 
-              <input 
+              <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -201,16 +214,22 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
         <button
           onClick={onClose}
           type="button"
-          className="rounded-xl border border-[#D6D9D2] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-[13px] font-bold text-[#72796E] hover:bg-gray-50 transition-colors active:scale-95"
+          disabled={isSubmitting}
+          className="rounded-xl border border-[#D6D9D2] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-[13px] font-bold text-[#72796E] hover:bg-gray-50 transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Batal
         </button>
         <button
           onClick={handlePreSubmit}
           type="button"
-          className="rounded-xl bg-[#27532B] px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-[13px] font-bold text-white hover:brightness-110 transition-all active:scale-95"
+          disabled={isSubmitting}
+          className="rounded-xl bg-[#27532B] px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-[13px] font-bold text-white hover:brightness-110 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {item ? 'Simpan Perubahan' : 'Unggah Item Galeri'}
+          {isSubmitting
+            ? 'Menyimpan...'
+            : item
+            ? 'Simpan Perubahan'
+            : 'Unggah Item Galeri'}
         </button>
       </div>
 
@@ -236,9 +255,11 @@ export function GalleryModal({ item, isOpen, onClose, onSubmit }: GalleryModalPr
       />
 
       <ConfirmModal
-        isOpen={confirmModal.isOpen && (confirmModal.status === 'PUBLISHED')}
+        isOpen={confirmModal.isOpen && confirmModal.status === 'PUBLISHED'}
         onClose={() => setConfirmModal({ isOpen: false, status: null })}
-        onConfirm={executeSubmit}
+        onConfirm={() => {
+          void executeSubmit();
+        }}
         title={item ? 'Perbarui Item Galeri?' : 'Upload Item Galeri?'}
         message={
           item

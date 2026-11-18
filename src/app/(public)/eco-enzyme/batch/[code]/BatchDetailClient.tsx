@@ -22,7 +22,6 @@ import {
   BookOpen,
   ShoppingBag,
   Archive,
-  Info,
 } from 'lucide-react';
 import { EcoEnzymeBatch } from '@/types';
 import { toast } from 'sonner';
@@ -33,9 +32,14 @@ import {
   getFermentationProgress,
   parseOrganicWasteTypes,
 } from '@/lib/eco-enzyme';
-import { buildBatchPath, buildBatchUrl } from '@/lib/batch-url';
+import { buildBatchPath, buildBatchUrl, isTemporaryBaseUrl } from '@/lib/batch-url';
+import { getSiteUrl } from '@/lib/api-config';
 
 const COMMUNITY_WHATSAPP = '6281234567890';
+
+type NextBatchRef = NonNullable<EcoEnzymeBatch['nextBatch']> & {
+  batchCode?: string | null;
+};
 
 interface BatchDetailClientProps {
   batch: EcoEnzymeBatch;
@@ -79,8 +83,18 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
     return timestamps.length > 0 ? new Date(Math.max(...timestamps)) : new Date();
   }, [batch]);
 
+  const nextBatch = batch.nextBatch as NextBatchRef | null | undefined;
+  const nextBatchTargetCode = nextBatch?.batchCode || nextBatch?.publicCode || '';
+
   const handleShare = async () => {
-    const url = buildBatchUrl(batch.publicCode, { short: false });
+    const publicBaseUrl =
+      typeof window !== 'undefined' && !isTemporaryBaseUrl(window.location.origin)
+        ? window.location.origin
+        : getSiteUrl();
+    const url = buildBatchUrl(batch.publicCode, {
+      short: true,
+      baseUrl: publicBaseUrl,
+    });
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
@@ -143,7 +157,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
         </div>
 
         {/* SUKSESI GALON / BATCH BARU DETECTED (Spesifikasi 6) */}
-        {batch.nextBatch && (
+        {nextBatch && (
           <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-3 sm:p-5 shadow-sm text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
             <div className="flex items-start gap-2.5 sm:gap-3">
               <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-800 flex-shrink-0">
@@ -159,13 +173,13 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                 <p className="text-[11px] text-emerald-800 mt-0.5 sm:mt-1 leading-relaxed">
                   Wadah <strong>{batch.containerName}</strong> telah dipakai ulang untuk batch penerus{' '}
                   <span className="font-mono font-bold bg-white/70 px-1.5 py-0.5 rounded border border-emerald-200">
-                    {batch.nextBatch.publicCode}
+                    {nextBatchTargetCode}
                   </span>.
                 </p>
               </div>
             </div>
             <Link
-              href={buildBatchPath(batch.nextBatch.publicCode)}
+              href={buildBatchPath(nextBatchTargetCode)}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-[#2C5F2D] hover:bg-[#234d24] text-white font-bold rounded-xl text-xs transition-colors flex-shrink-0 shadow-sm"
             >
               <span>Buka Batch Terbaru</span>
@@ -260,6 +274,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'Asia/Jakarta',
                     })}
                   </strong>
                 </span>
@@ -314,7 +329,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                 ) : displayStatus === 'HARVESTED' ? (
                   <span className="text-blue-800 font-bold flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-                    Tuntas dipanen pada {new Date(batch.actualHarvestDate || batch.harvestEstimate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    Tuntas dipanen pada {new Date(batch.actualHarvestDate || batch.harvestEstimate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })}
                   </span>
                 ) : displayStatus === 'ARCHIVED' ? (
                   <span className="text-stone-700 font-medium flex items-center gap-1.5">
@@ -375,6 +390,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',
+                    timeZone: 'Asia/Jakarta',
                   })}
                 </span>
               </div>
@@ -387,6 +403,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',
+                    timeZone: 'Asia/Jakarta',
                   })}
                 </span>
               </div>
@@ -513,6 +530,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
+                          timeZone: 'Asia/Jakarta',
                         })}
                       </span>
                     </div>

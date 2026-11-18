@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Product } from '@/types';
 import { getImageUrl } from '@/lib/api/Products';
 import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
@@ -13,55 +13,69 @@ interface ProductModalProps {
   onSubmit: (data: FormData) => void;
 }
 
+function resolveProductImagePreview(imagePath?: string | null): string {
+  const trimmed = imagePath?.trim();
+  if (!trimmed) return '';
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('/')
+  ) {
+    return trimmed;
+  }
+  return getImageUrl(trimmed);
+}
+
 export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModalProps) {
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<Product['category']>('ORGANIC');
-  const [price, setPrice] = useState('');
-  const [whatsappLink, setWhatsappLink] = useState('');
+  if (!isOpen) return null;
+
+  return (
+    <ProductModalContent
+      key={product?.id ?? 'new'}
+      product={product}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function ProductModalContent({
+  product,
+  onClose,
+  onSubmit,
+}: Omit<ProductModalProps, 'isOpen'>) {
+  const initialNumericPrice = product ? Number(product.price) : NaN;
+
+  const [name, setName] = useState(product?.name || '');
+  const [productCode, setProductCode] = useState(product?.productCode || '');
+  const [description, setDescription] = useState(product?.description || '');
+  const [category, setCategory] = useState<Product['category']>(product?.category || 'ORGANIC');
+  const [price, setPrice] = useState(
+    product && product.price !== undefined && product.price !== null && Number.isFinite(initialNumericPrice)
+      ? String(initialNumericPrice)
+      : ''
+  );
+  const [priceUnit, setPriceUnit] = useState(product?.priceUnit || '/pcs');
+  const [stock, setStock] = useState(product ? String(product.stock ?? 0) : '100');
+  const [stockLabel, setStockLabel] = useState<Product['stockLabel']>(
+    product?.stockLabel || 'IN_STOCK'
+  );
+  const [whatsappLink, setWhatsappLink] = useState(product?.whatsappLink || '');
   
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreview, setImagePreview] = useState<string>(() =>
+    product ? resolveProductImagePreview(product.image || product.imageUrl) : ''
+  );
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    status: 'PUBLISHED' | 'DRAFT' | 'ERROR' | 'ERROR_FILE_SIZE' | null;
+    status: 'CONFIRM' | 'ERROR' | 'ERROR_FILE_SIZE' | null;
+    errorMessage?: string;
   }>({ isOpen: false, status: null });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (product) {
-      setName(product.name || '');
-      setSlug(product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-      setDescription(product.description || '');
-      setCategory(product.category || 'ORGANIC');
-      setPrice(product.price?.toString() || '');
-      setWhatsappLink(product.whatsappLink || '');
-      
-      setImagePreview(getImageUrl(product.image));
-      setImageFile(null);
-    } else {
-      setName('');
-      setSlug('');
-      setDescription('');
-      setCategory('ORGANIC');
-      setPrice('');
-      setWhatsappLink('');
-      setImagePreview('');
-      setImageFile(null);
-    }
-  }, [product, isOpen]);
-
-  // Sync Slug automatically from Name for new products
-  useEffect(() => {
-    if (name && !product) {
-      setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-    }
-  }, [name, product]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,16 +94,46 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
     }
   };
 
-  const handlePreSubmit = (e: React.FormEvent, submitStatus?: 'PUBLISHED' | 'DRAFT') => {
+  const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!name.trim() || !description.trim() || !price.trim() || !whatsappLink.trim()) {
-      setConfirmModal({ isOpen: true, status: 'ERROR' });
+
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+    const trimmedPrice = price.trim();
+    const trimmedStock = stock.trim();
+    const trimmedWa = whatsappLink.trim();
+
+    if (!trimmedName || !trimmedDescription || !trimmedPrice || !trimmedStock || !trimmedWa) {
+      setConfirmModal({
+        isOpen: true,
+        status: 'ERROR',
+        errorMessage:
+          'Silakan lengkapi semua bidang yang wajib diisi (Nama, Deskripsi, Harga, Stok, dan Nomor WhatsApp) sebelum menyimpan.',
+      });
       return;
     }
 
-    setConfirmModal({ isOpen: true, status: submitStatus || 'PUBLISHED' });
+    const parsedPrice = Number(trimmedPrice);
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setConfirmModal({
+        isOpen: true,
+        status: 'ERROR',
+        errorMessage: 'Harga produk harus berupa angka valid (>= 0).',
+      });
+      return;
+    }
+
+    const parsedStock = Number(trimmedStock);
+    if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+      setConfirmModal({
+        isOpen: true,
+        status: 'ERROR',
+        errorMessage: 'Stok produk harus berupa bilangan bulat (>= 0).',
+      });
+      return;
+    }
+
+    setConfirmModal({ isOpen: true, status: 'CONFIRM' });
   };
 
   const executeSubmit = () => {
@@ -112,15 +156,17 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
     }
 
     const data = new FormData();
-    data.append('name', name);
+    if (!product && productCode.trim()) {
+      data.append('productCode', productCode.trim().toUpperCase());
+    }
+    data.append('name', name.trim());
     data.append('category', category);
-    data.append('price', price);
+    data.append('price', price.trim());
+    data.append('priceUnit', priceUnit.trim() || '/pcs');
+    data.append('stock', String(parseInt(stock.trim(), 10)));
+    data.append('stockLabel', stockLabel);
     data.append('whatsappLink', formattedWa);
-    // Add required hidden fields to pass backend validation seamlessly
-    data.append('priceUnit', '/pcs');
-    data.append('stock', '100');
-    data.append('stockLabel', 'IN_STOCK');
-    data.append('description', description);
+    data.append('description', description.trim());
     
     if (imageFile) {
       data.append('image', imageFile);
@@ -128,8 +174,6 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
 
     onSubmit(data);
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
@@ -154,43 +198,47 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
           {/* LEFT COLUMN (Forms) */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
-            {/* Title */}
-            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Nama Produk</label>
-              <input
-                type="text"
-                placeholder="Masukkan nama produk..."
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
-              />
-            </div>
-
-            {/* Slug */}
-            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Slug / URL</label>
-              <div className="flex flex-col sm:flex-row rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] overflow-hidden focus-within:border-[#27532B] focus-within:ring-1 focus-within:ring-[#27532B] transition-all sm:h-12">
-                <div className="px-3 sm:px-4 py-1.5 sm:py-0 flex items-center bg-[#F0F2EB]/50 border-b sm:border-b-0 sm:border-r border-[#E5E7EB] text-[#72796E] text-xs sm:text-[14px]">
-                  temanpilah.com/product/
-                </div>
+            {/* Title & Product Code */}
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-4 sm:space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">
+                  Nama Produk <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
-                  placeholder="new-product-slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  className="flex-1 px-3.5 sm:px-4 py-2.5 sm:py-0 bg-transparent text-sm text-[#2A3426] placeholder:text-[#A1A89A] outline-none"
+                  placeholder="Masukkan nama produk..."
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">
+                  Kode Produk {product ? '(Read-only)' : '(Opsional)'}
+                </label>
+                <input
+                  type="text"
+                  placeholder={product ? '-' : 'Kosongkan untuk generate otomatis (misal TP-OR-001)'}
+                  value={productCode}
+                  onChange={(e) => setProductCode(e.target.value.toUpperCase())}
+                  readOnly={Boolean(product)}
+                  disabled={Boolean(product)}
+                  className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] font-mono text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all disabled:bg-[#F3F4EF] disabled:text-[#72796E] disabled:cursor-not-allowed"
                 />
               </div>
             </div>
 
             {/* Description */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-2">
-              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Ringkasan Produk</label>
+              <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">
+                Ringkasan Produk <span className="text-red-500">*</span>
+              </label>
               <textarea
                 placeholder="Tulis ringkasan singkat produk..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all resize-none min-h-[120px] sm:min-h-[140px]"
+                className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all resize-none min-h-[160px] sm:min-h-[180px]"
               />
             </div>
 
@@ -247,7 +295,7 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
                 <div className="relative">
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
+                    onChange={(e) => setCategory(e.target.value as Product['category'])}
                     className="w-full h-12 px-4 pr-10 appearance-none rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-[14px] text-[#2A3426] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all cursor-pointer"
                   >
                     <option value="ORGANIC">Produk Organik</option>
@@ -260,19 +308,70 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[13px] font-bold text-[#72796E]">Harga Produk</label>
-                <div className="flex rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] overflow-hidden focus-within:border-[#27532B] focus-within:ring-1 focus-within:ring-[#27532B] transition-all h-12">
-                  <div className="px-4 flex items-center bg-[#F0F2EB]/50 border-r border-[#E5E7EB] text-[#72796E] text-[14px] font-medium">
-                    Rp
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[13px] font-bold text-[#72796E]">
+                    Harga Produk <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] overflow-hidden focus-within:border-[#27532B] focus-within:ring-1 focus-within:ring-[#27532B] transition-all h-12">
+                    <div className="px-3.5 flex items-center bg-[#F0F2EB]/50 border-r border-[#E5E7EB] text-[#72796E] text-[14px] font-medium">
+                      Rp
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="45000"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="w-full px-3 bg-transparent text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] outline-none"
+                    />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[13px] font-bold text-[#72796E]">Satuan Harga</label>
+                  <input
+                    type="text"
+                    placeholder="/pcs"
+                    value={priceUnit}
+                    onChange={(e) => setPriceUnit(e.target.value)}
+                    className="w-full h-12 px-4 rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[13px] font-bold text-[#72796E]">
+                    Stok Produk <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
-                    placeholder="45000"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="flex-1 px-4 bg-transparent text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] outline-none"
+                    min="0"
+                    step="1"
+                    placeholder="100"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    className="w-full h-12 px-4 rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-[14px] text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[13px] font-bold text-[#72796E]">Status Stok</label>
+                  <div className="relative">
+                    <select
+                      value={stockLabel}
+                      onChange={(e) => setStockLabel(e.target.value as Product['stockLabel'])}
+                      className="w-full h-12 px-4 pr-10 appearance-none rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-[14px] text-[#2A3426] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all cursor-pointer"
+                    >
+                      <option value="IN_STOCK">Tersedia</option>
+                      <option value="BULK_AVAILABLE">Tersedia Grosir</option>
+                      <option value="OUT_OF_STOCK">Stok Habis</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-[#A1A89A]">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -304,18 +403,9 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
         </button>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {!product && (
-            <button
-              type="button"
-              onClick={(e) => handlePreSubmit(e, 'DRAFT')}
-              className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
-            >
-              Simpan Draft
-            </button>
-          )}
           <button
             type="button"
-            onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
+            onClick={handlePreSubmit}
             className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
           >
             {product ? 'Simpan Perubahan' : 'Terbitkan'}
@@ -343,7 +433,7 @@ export function ProductModal({ product, isOpen, onClose, onSubmit }: ProductModa
         }
         message={
           confirmModal.status === 'ERROR'
-            ? "Silakan lengkapi semua bidang yang wajib diisi (Nama, Deskripsi, Harga, dan Nomor WhatsApp) sebelum menyimpan."
+            ? (confirmModal.errorMessage || "Silakan lengkapi semua bidang yang wajib diisi (Nama, Deskripsi, Harga, Stok, dan Nomor WhatsApp) sebelum menyimpan.")
             : confirmModal.status === 'ERROR_FILE_SIZE'
             ? "File yang diunggah melebihi batas ukuran 2MB. Silakan unggah gambar yang lebih kecil dari 2MB."
             : product 

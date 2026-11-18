@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --font-poppins: var(--font-poppins), 'Poppins', ui-sans-serif, system-ui, sans-serif;
-  --font-plus-jakarta-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-poppins: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-plus-jakarta-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
   --color-primary: #012D1D;
+  --color-primary-light: #0B4A31;
   --color-forest: #0B4A31;
   --color-leaf: #3B9734;
   --color-orange-brand: #FC9634;
@@ -13,7 +14,7 @@
   --color-neutral: #3D3D3D;
   --color-neutral-light: #C9D6CF;
   --color-bg-light: #F1F4F9;
-  --color-bg: #FFFFFF;
+  --color-bg: #FBF9F5;
   --color-border: #E5E2DC;
 }
 
@@ -52,6 +53,19 @@
 
   .animate-slide-up {
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out forwards;
   }
 }
 

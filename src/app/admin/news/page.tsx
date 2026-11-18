@@ -5,12 +5,35 @@ import { useEffect, useState, useMemo } from 'react';
 import { News } from '@/types';
 import { newsApi } from '@/lib/api/news';
 import { NewsTable } from '@/components/admin/NewsTable';
-import { NewsModal } from '@/components/admin/NewsModal';
+import { NewsModal, NewsModalSubmitData } from '@/components/admin/NewsModal';
 import { DeleteModal } from '@/components/admin/DeleteModal';
 import { SuccessModal } from '@/components/admin/SuccessModal';
 import { toast } from 'sonner';
 
 const BASE_URL = getBaseUrl();
+
+function resolveNewsImageUrl(imagePath?: string | null): string {
+  const path = imagePath?.trim();
+  if (!path) return '';
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('data:') ||
+    (path.startsWith('/') && !path.startsWith('//'))
+  ) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, '');
+  const cleanBase = BASE_URL.replace(/\/+$/, '');
+  return cleanBase ? `${cleanBase}/${cleanPath}` : `/${cleanPath}`;
+}
+
+function normalizeNews(item: News): News {
+  return {
+    ...item,
+    image: resolveNewsImageUrl(item.imageUrl || item.image),
+  };
+}
 
 export default function AdminNewsPage() {
 
@@ -28,6 +51,7 @@ export default function AdminNewsPage() {
 
   const [deletingNews, setDeletingNews] =
     useState<News | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [successModal, setSuccessModal] = useState<{
     isOpen: boolean;
@@ -86,206 +110,92 @@ export default function AdminNewsPage() {
   }, [newsList, searchTerm, filterStatus, sortOrder]);
 
   // =========================
-  // NORMALIZE IMAGE URL
-  // =========================
-
-  function normalizeNews(
-    item: News
-  ): News {
-
-    return {
-
-      ...item,
-
-      image:
-        item.imageUrl
-          ? `${BASE_URL}/${item.imageUrl}`
-          : '',
-
-    };
-  }
-
-  // =========================
   // FETCH NEWS
   // =========================
 
-  async function fetchNews() {
-
-    try {
-
-      setLoading(true);
-
-      const data =
-        await newsApi.getAll();
-
-      setNewsList(
-        data.map(normalizeNews)
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Fetch News Error:',
-        error
-      );
-
-    } finally {
-
-      setLoading(false);
-
-    }
-  }
-
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await newsApi.getAll();
+        if (!cancelled) {
+          setNewsList(data.map(normalizeNews));
+        }
+      } catch (error) {
+        console.error('Fetch News Error:', error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
 
-    fetchNews();
-
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // =========================
   // CREATE / UPDATE
   // =========================
 
-  async function handleSubmit(
-    data: any
-  ) {
-
+  async function handleSubmit(data: NewsModalSubmitData) {
     try {
-
       const payload = {
-
-        title:
-          data.title,
-
-        content:
-          data.content,
-
-        category:
-          data.category ||
-          'Edukasi',
-
-        status:
-          data.status ||
-          'PUBLISHED',
-
+        title: data.title,
+        content: data.content,
+        category: data.category || 'Edukasi',
+        status: data.status || 'PUBLISHED',
         slug:
           data.slug ||
           data.title
             ?.toLowerCase()
             .replace(/\s+/g, '-'),
-
         summary:
           data.summary ||
-          data.content?.slice(
-            0,
-            120
-          ),
-
-        authors:
-          Array.isArray(
-            data.authors
-          )
-            ? data.authors
-            : ['Admin'],
-
-        tags:
-          Array.isArray(
-            data.tags
-          )
-            ? data.tags
-            : [],
-
-        visibility:
-          'PUBLIC',
-
-        publishDate:
-          data.publishDate || null,
-
-        endDate:
-          data.endDate || null,
-          
-        partnership:
-          data.partnership || null,
-
-        // =========================
-        // IMPORTANT
-        // =========================
-
-        imageFile:
-          data.imageFile ||
-          null,
+          data.content?.slice(0, 120),
+        authors: ['Admin'],
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        visibility: 'PUBLIC' as const,
+        publishDate: data.publishDate || null,
+        endDate: data.endDate || null,
+        partnership: data.partnership || null,
+        imageFile: data.imageFile || null,
       };
 
-      // =========================
-      // UPDATE
-      // =========================
+      const isEditing = Boolean(selectedNews);
 
       if (selectedNews) {
-
-        const updated =
-          await newsApi.update(
-            selectedNews.id,
-            payload
-          );
+        const updated = await newsApi.update(selectedNews.id, payload);
 
         setNewsList((prev) =>
           prev.map((item) =>
-            item.id === updated.id
-              ? normalizeNews(
-                  updated
-                )
-              : item
+            item.id === updated.id ? normalizeNews(updated) : item
           )
         );
-
       } else {
+        const created = await newsApi.create(payload);
 
-        // =========================
-        // CREATE
-        // =========================
-
-        const created =
-          await newsApi.create(
-            payload
-          );
-
-        setNewsList((prev) => [
-
-          normalizeNews(
-            created
-          ),
-
-          ...prev,
-
-        ]);
+        setNewsList((prev) => [normalizeNews(created), ...prev]);
       }
 
-      // =========================
-      // CLOSE MODAL
-      // =========================
-
       setIsModalOpen(false);
-
       setSelectedNews(null);
 
       setSuccessModal({
         isOpen: true,
-        title: "Berhasil!",
-        message: selectedNews ? "Program berhasil diperbarui. Kerja Bagus!" : "Program berhasil ditambahkan. Kerja Bagus!"
+        title: 'Berhasil!',
+        message: isEditing
+          ? 'Program berhasil diperbarui. Kerja Bagus!'
+          : 'Program berhasil ditambahkan. Kerja Bagus!',
       });
-
     } catch (error) {
-
-      console.error(
-        'Submit News Error:',
-        error
-      );
+      console.error('Submit News Error:', error);
 
       toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Gagal menyimpan program'
+        error instanceof Error ? error.message : 'Gagal menyimpan program'
       );
+      throw error;
     }
   }
 
@@ -298,19 +208,23 @@ export default function AdminNewsPage() {
   }
 
   async function confirmDelete() {
-    if (!deletingNews) return;
+    if (!deletingNews || isDeleting) return;
+    const target = deletingNews;
+    setIsDeleting(true);
     try {
-      await newsApi.delete(deletingNews.id, deletingNews.title);
-      setNewsList((prev) => prev.filter((item) => item.id !== deletingNews.id));
+      await newsApi.delete(target.id, target.title);
+      setNewsList((prev) => prev.filter((item) => item.id !== target.id));
       setDeletingNews(null);
       setSuccessModal({
         isOpen: true,
-        title: "Berhasil!",
-        message: "Program berhasil dihapus. Kerja Bagus!"
+        title: 'Berhasil!',
+        message: 'Program berhasil dihapus. Kerja Bagus!',
       });
     } catch (error) {
       console.error('Delete News Error:', error);
       toast.error(error instanceof Error ? error.message : 'Gagal menghapus program');
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -471,9 +385,12 @@ export default function AdminNewsPage() {
       {/* DELETE CONFIRMATION MODAL */}
       <DeleteModal
         isOpen={deletingNews !== null}
-        onClose={() => setDeletingNews(null)}
+        onClose={() => {
+          if (!isDeleting) setDeletingNews(null);
+        }}
         onConfirm={confirmDelete}
         itemName={deletingNews?.title}
+        isDeleting={isDeleting}
       />
 
       {/* SUCCESS MODAL */}
@@ -482,6 +399,7 @@ export default function AdminNewsPage() {
         onClose={() => setSuccessModal({ ...successModal, isOpen: false })}
         title={successModal.title}
         message={successModal.message}
+        buttonText="Tutup"
       />
 
     </div>

@@ -1,15 +1,19 @@
 import { News } from "../../../generated/prisma";
-import fs from "fs";
-import path from "path";
 import {
   buildPaginationMeta,
   parsePagination,
   PaginationMeta,
 } from "../../utils/pagination";
+import {
+  cleanupFailedUpload,
+  deleteStoredUploadFile,
+} from "../../utils/file";
 import { NewsRepository } from "./news.repository";
 import {
   CreateNewsInput,
   NewsQueryInput,
+  NewsStatus,
+  NewsVisibility,
   UpdateNewsInput,
 } from "./news.validation";
 import { AppError } from "@/middlewares/error.middleware";
@@ -27,13 +31,13 @@ export class NewsService {
   }
 
   private deleteImageFile(imagePath: string): void {
-    const fullPath: string = path.join(process.cwd(), imagePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    deleteStoredUploadFile(imagePath);
   }
 
-  async getAllNews(query: NewsQueryInput): Promise<NewsListResult> {
+  async getAllNews(
+    query: NewsQueryInput,
+    isAdmin: boolean = false,
+  ): Promise<NewsListResult> {
     const { skip, take, page, limit } = parsePagination(query);
 
     const { data, total } = await this.newsRepository.findAll({
@@ -43,6 +47,7 @@ export class NewsService {
       status: query.status,
       visibility: query.visibility,
       search: query.search,
+      isAdmin,
     });
 
     return {
@@ -51,24 +56,27 @@ export class NewsService {
     };
   }
 
-  async getNewsById(id: string): Promise<News> {
-    const news: News | null = await this.newsRepository.findById(id);
-
-    if (!news) {
+  private ensureNewsAccessible(news: News | null, isAdmin: boolean): News {
+    if (
+      !news ||
+      (!isAdmin &&
+        (news.status !== NewsStatus.PUBLISHED ||
+          news.visibility === NewsVisibility.PRIVATE))
+    ) {
       throw new AppError("Berita tidak ditemukan", 404);
     }
 
     return news;
   }
 
-  async getNewsBySlug(slug: string): Promise<News> {
+  async getNewsById(id: string, isAdmin: boolean = false): Promise<News> {
+    const news: News | null = await this.newsRepository.findById(id);
+    return this.ensureNewsAccessible(news, isAdmin);
+  }
+
+  async getNewsBySlug(slug: string, isAdmin: boolean = false): Promise<News> {
     const news: News | null = await this.newsRepository.findBySlug(slug);
-
-    if (!news) {
-      throw new AppError("Berita tidak ditemukan", 404);
-    }
-
-    return news;
+    return this.ensureNewsAccessible(news, isAdmin);
   }
 
   async createNews(
@@ -79,7 +87,12 @@ export class NewsService {
       ? `uploads/news/${file.filename}`
       : undefined;
 
-    return this.newsRepository.create(data, imageUrl);
+    try {
+      return await this.newsRepository.create(data, imageUrl);
+    } catch (error) {
+      cleanupFailedUpload(file, "news");
+      throw error;
+    }
   }
 
   async updateNews(
@@ -87,27 +100,33 @@ export class NewsService {
     data: UpdateNewsInput,
     file?: Express.Multer.File,
   ): Promise<News> {
-    const existingNews: News = await this.getNewsById(id);
+    try {
+      const existingNews: News = await this.getNewsById(id, true);
 
-    let imageUrl: string | undefined;
+      const imageUrl: string | undefined = file
+        ? `uploads/news/${file.filename}`
+        : undefined;
 
-    if (file) {
-      if (existingNews.imageUrl) {
+      const updatedNews = await this.newsRepository.update(id, data, imageUrl);
+
+      if (file && existingNews.imageUrl && existingNews.imageUrl !== imageUrl) {
         this.deleteImageFile(existingNews.imageUrl);
       }
-      imageUrl = `uploads/news/${file.filename}`;
-    }
 
-    return this.newsRepository.update(id, data, imageUrl);
+      return updatedNews;
+    } catch (error) {
+      cleanupFailedUpload(file, "news");
+      throw error;
+    }
   }
 
   async deleteNews(id: string): Promise<void> {
-    const existingNews: News = await this.getNewsById(id);
+    const existingNews: News = await this.getNewsById(id, true);
+
+    await this.newsRepository.delete(id);
 
     if (existingNews.imageUrl) {
       this.deleteImageFile(existingNews.imageUrl);
     }
-
-    await this.newsRepository.delete(id);
   }
 }

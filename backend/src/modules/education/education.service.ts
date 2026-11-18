@@ -1,13 +1,16 @@
 import { EducationContent } from "../../../generated/prisma";
-import fs from "fs";
-import path from "path";
 import {
   buildPaginationMeta,
   parsePagination,
   PaginationMeta,
 } from "../../utils/pagination";
+import {
+  cleanupFailedUpload,
+  deleteStoredUploadFile,
+} from "../../utils/file";
 import { EducationRepository } from "./education.repository";
 import {
+  ContentStatus,
   CreateEducationInput,
   EducationQueryInput,
   UpdateEducationInput,
@@ -27,14 +30,12 @@ export class EducationService {
   }
 
   private deleteThumbnailFile(thumbnailPath: string): void {
-    const fullPath: string = path.join(process.cwd(), thumbnailPath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    deleteStoredUploadFile(thumbnailPath);
   }
 
   async getAllEducation(
     query: EducationQueryInput,
+    isAdmin: boolean = false,
   ): Promise<EducationListResult> {
     const { skip, take, page, limit } = parsePagination(query);
 
@@ -43,6 +44,7 @@ export class EducationService {
       take,
       status: query.status,
       search: query.search,
+      isAdmin,
     });
 
     return {
@@ -51,26 +53,38 @@ export class EducationService {
     };
   }
 
-  async getEducationById(id: string): Promise<EducationContent> {
-    const education: EducationContent | null =
-      await this.educationRepository.findById(id);
-
-    if (!education) {
+  private ensureEducationAccessible(
+    education: EducationContent | null,
+    isAdmin: boolean,
+  ): EducationContent {
+    if (
+      !education ||
+      (!isAdmin && education.status !== ContentStatus.PUBLISHED)
+    ) {
       throw new AppError("Konten edukasi tidak ditemukan", 404);
     }
 
     return education;
   }
 
-  async getEducationBySlug(slug: string): Promise<EducationContent> {
+  async getEducationById(
+    id: string,
+    isAdmin: boolean = false,
+  ): Promise<EducationContent> {
+    const education: EducationContent | null =
+      await this.educationRepository.findById(id);
+
+    return this.ensureEducationAccessible(education, isAdmin);
+  }
+
+  async getEducationBySlug(
+    slug: string,
+    isAdmin: boolean = false,
+  ): Promise<EducationContent> {
     const education: EducationContent | null =
       await this.educationRepository.findBySlug(slug);
 
-    if (!education) {
-      throw new AppError("Konten edukasi tidak ditemukan", 404);
-    }
-
-    return education;
+    return this.ensureEducationAccessible(education, isAdmin);
   }
 
   async createEducation(
@@ -81,7 +95,12 @@ export class EducationService {
       ? `uploads/education/${file.filename}`
       : undefined;
 
-    return this.educationRepository.create(data, thumbnail);
+    try {
+      return await this.educationRepository.create(data, thumbnail);
+    } catch (error) {
+      cleanupFailedUpload(file, "education");
+      throw error;
+    }
   }
 
   async updateEducation(
@@ -89,29 +108,43 @@ export class EducationService {
     data: UpdateEducationInput,
     file?: Express.Multer.File,
   ): Promise<EducationContent> {
-    const existingEducation: EducationContent =
-      await this.getEducationById(id);
+    try {
+      const existingEducation: EducationContent =
+        await this.getEducationById(id, true);
 
-    let thumbnail: string | undefined;
+      const thumbnail: string | undefined = file
+        ? `uploads/education/${file.filename}`
+        : undefined;
 
-    if (file) {
-      if (existingEducation.thumbnail) {
+      const updatedEducation = await this.educationRepository.update(
+        id,
+        data,
+        thumbnail,
+      );
+
+      if (
+        file &&
+        existingEducation.thumbnail &&
+        existingEducation.thumbnail !== thumbnail
+      ) {
         this.deleteThumbnailFile(existingEducation.thumbnail);
       }
-      thumbnail = `uploads/education/${file.filename}`;
-    }
 
-    return this.educationRepository.update(id, data, thumbnail);
+      return updatedEducation;
+    } catch (error) {
+      cleanupFailedUpload(file, "education");
+      throw error;
+    }
   }
 
   async deleteEducation(id: string): Promise<void> {
     const existingEducation: EducationContent =
-      await this.getEducationById(id);
+      await this.getEducationById(id, true);
+
+    await this.educationRepository.delete(id);
 
     if (existingEducation.thumbnail) {
       this.deleteThumbnailFile(existingEducation.thumbnail);
     }
-
-    await this.educationRepository.delete(id);
   }
 }

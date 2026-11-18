@@ -1,12 +1,15 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest } from "@/lib/server/auth";
-import { AppError, handleApiError } from "@/lib/server/error";
+import { AppError, handleApiError, safeDecodeURIComponent } from "@/lib/server/error";
 import { buildProductUpdateData, parseProductPayload } from "@/lib/server/product-payload";
 import { resolveOrCreateQrCode } from "@/lib/server/qr-code-service";
 import { apiError, apiSuccess } from "@/lib/server/response";
 
+type ProductWithQr = Prisma.ProductGetPayload<{ include: { qrCode: true } }>;
+
 async function findProductByIdentifier(identifier: string) {
-  const raw = decodeURIComponent(identifier).trim();
+  const raw = safeDecodeURIComponent(identifier).trim();
   if (!raw) return null;
 
   return prisma.product.findFirst({
@@ -19,6 +22,74 @@ async function findProductByIdentifier(identifier: string) {
     },
     include: { qrCode: true },
   });
+}
+
+/** Checks whether a QrCode record is referenced by any batch or product (optionally excluding one product). */
+async function isQrCodeShared(
+  tx: Prisma.TransactionClient,
+  qrCodeId: string,
+  excludeProductId?: string
+): Promise<boolean> {
+  const [productCount, batchCount] = await Promise.all([
+    tx.product.count({
+      where: {
+        qrCodeId,
+        ...(excludeProductId ? { id: { not: excludeProductId } } : {}),
+      },
+    }),
+    tx.ecoEnzymeBatch.count({
+      where: { qrCodeId },
+    }),
+  ]);
+  return productCount > 0 || batchCount > 0;
+}
+
+/** Keeps exclusive product QrCode metadata aligned when name or productCode changes without colliding on primaryKey. */
+async function syncProductQrMetadata(
+  tx: Prisma.TransactionClient,
+  existing: ProductWithQr,
+  nextName: string | undefined,
+  nextProductCode: string | undefined
+): Promise<void> {
+  if (!existing.qrCodeId || existing.qrCode?.entityType !== "PRODUCT") return;
+
+  const nameChanged = typeof nextName === "string" && nextName !== existing.name;
+  const codeChanged =
+    typeof nextProductCode === "string" && nextProductCode !== existing.productCode;
+  if (!nameChanged && !codeChanged) return;
+
+  if (await isQrCodeShared(tx, existing.qrCodeId, existing.id)) return;
+
+  const qrUpdateData: Prisma.QrCodeUpdateInput = {};
+
+  if (nameChanged) {
+    const primaryName = nextName.trim().toLowerCase();
+    if (primaryName) qrUpdateData.primaryName = primaryName;
+  }
+
+  if (codeChanged) {
+    const primaryKey = nextProductCode.trim().toUpperCase();
+    if (primaryKey) {
+      const keyCollision = await tx.qrCode.findFirst({
+        where: {
+          id: { not: existing.qrCodeId },
+          entityType: "PRODUCT",
+          primaryKey: { equals: primaryKey, mode: "insensitive" },
+        },
+        select: { id: true },
+      });
+      if (!keyCollision) {
+        qrUpdateData.primaryKey = primaryKey;
+      }
+    }
+  }
+
+  if (Object.keys(qrUpdateData).length > 0) {
+    await tx.qrCode.update({
+      where: { id: existing.qrCodeId },
+      data: qrUpdateData,
+    });
+  }
 }
 
 export async function GET(
@@ -74,10 +145,18 @@ export async function PATCH(
       updateData.qrCodeId = qrCode.id;
     }
 
-    const updated = await prisma.product.update({
-      where: { id: existing.id },
-      data: updateData,
-      include: { qrCode: true },
+    const nextName = typeof updateData.name === "string" ? updateData.name : undefined;
+    const nextProductCode =
+      typeof updateData.productCode === "string" ? updateData.productCode : undefined;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await syncProductQrMetadata(tx, existing, nextName, nextProductCode);
+
+      return tx.product.update({
+        where: { id: existing.id },
+        data: updateData,
+        include: { qrCode: true },
+      });
     });
 
     return apiSuccess(updated, "Produk berhasil diupdate");
@@ -98,7 +177,20 @@ export async function DELETE(
     const existing = await findProductByIdentifier(id);
     if (!existing) throw new AppError("Produk tidak ditemukan", 404);
 
-    await prisma.product.delete({ where: { id: existing.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.product.delete({ where: { id: existing.id } });
+
+      if (existing.qrCodeId && !(await isQrCodeShared(tx, existing.qrCodeId))) {
+        await tx.qrCode.deleteMany({
+          where: {
+            id: existing.qrCodeId,
+            products: { none: {} },
+            batches: { none: {} },
+          },
+        });
+      }
+    });
+
     return apiSuccess(null, "Produk berhasil dihapus");
   } catch (error) {
     return handleApiError(error);

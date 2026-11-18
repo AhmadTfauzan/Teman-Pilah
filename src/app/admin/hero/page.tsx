@@ -51,9 +51,12 @@ export default function AdminHeroPage() {
     id: string;
     name: string;
   }>({ isOpen: false, id: '', name: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchSlides = async () => {
-    setIsLoading(true);
+  const fetchSlides = async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       // Pass all=true to get active and inactive slides
       const data = await heroApi.getAll(true);
@@ -62,13 +65,50 @@ export default function AdminHeroPage() {
       console.error('Failed to fetch hero slides:', error);
       toast.error('Gagal mengambil data slide hero dari server');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchSlides();
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await heroApi.getAll(true);
+        if (!cancelled) {
+          setSlides(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch hero slides:', error);
+        if (!cancelled) {
+          toast.error('Gagal mengambil data slide hero dari server');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedFile(null);
+    setPreviewUrl('');
+  };
 
   const filteredSlides = useMemo(() => {
     let result = [...slides];
@@ -112,6 +152,7 @@ export default function AdminHeroPage() {
     if (file) {
       if (file.size > 3 * 1024 * 1024) {
         toast.error('Ukuran file maksimal 3MB');
+        e.target.value = '';
         return;
       }
       setSelectedFile(file);
@@ -155,8 +196,8 @@ export default function AdminHeroPage() {
         });
       }
 
-      setIsModalOpen(false);
-      fetchSlides();
+      handleCloseModal();
+      await fetchSlides(true);
     } catch (error: unknown) {
       const err = error as Error;
       toast.error(err.message || 'Gagal menyimpan slide');
@@ -168,7 +209,7 @@ export default function AdminHeroPage() {
   const handleToggleActive = async (id: string) => {
     try {
       await heroApi.toggleActive(id);
-      fetchSlides();
+      await fetchSlides(true);
       toast.success('Status tampilan slide berhasil diubah');
     } catch (error: unknown) {
       const err = error as Error;
@@ -185,19 +226,23 @@ export default function AdminHeroPage() {
   };
 
   const confirmDelete = async () => {
+    if (!deleteModal.id || isDeleting) return;
+    const targetId = deleteModal.id;
+    setIsDeleting(true);
     try {
-      await heroApi.delete(deleteModal.id);
+      await heroApi.delete(targetId);
+      setDeleteModal({ isOpen: false, id: '', name: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Berhasil Menghapus',
         message: 'Foto background slide hero berhasil dihapus.',
       });
-      fetchSlides();
+      await fetchSlides(true);
     } catch (error: unknown) {
       const err = error as Error;
       toast.error(err.message || 'Gagal menghapus slide');
     } finally {
-      setDeleteModal({ isOpen: false, id: '', name: '' });
+      setIsDeleting(false);
     }
   };
 
@@ -280,6 +325,7 @@ export default function AdminHeroPage() {
             Tambahkan foto untuk carousel background hero di halaman beranda.
           </p>
           <button
+            type="button"
             onClick={handleOpenAddModal}
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#2D5A27] px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:brightness-110"
           >
@@ -288,7 +334,7 @@ export default function AdminHeroPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
-          {filteredSlides.map((slide, index) => {
+          {filteredSlides.map((slide) => {
             const imgUrl = getHeroImageUrl(slide.imageUrl);
             return (
               <div
@@ -317,6 +363,7 @@ export default function AdminHeroPage() {
 
                   {/* Top Right: Status Badge */}
                   <button
+                    type="button"
                     onClick={() => handleToggleActive(slide.id)}
                     title={slide.isActive ? 'Klik untuk nonaktifkan' : 'Klik untuk aktifkan'}
                     className={`absolute top-1.5 right-1.5 sm:top-3 sm:right-3 flex items-center gap-1 rounded-full px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-semibold backdrop-blur-md transition-all shadow-sm ${
@@ -368,6 +415,7 @@ export default function AdminHeroPage() {
 
                     <div className="flex items-center gap-1 sm:gap-2">
                       <button
+                        type="button"
                         onClick={() => handleOpenEditModal(slide)}
                         className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-[#F1F5EF] text-[#2D5A27] hover:bg-[#2D5A27] hover:text-white transition-colors"
                         title="Edit Slide"
@@ -375,6 +423,7 @@ export default function AdminHeroPage() {
                         <Edit2 size={12} className="sm:w-[14px] sm:h-[14px]" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDeleteClick(slide)}
                         className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors"
                         title="Hapus Slide"
@@ -399,8 +448,10 @@ export default function AdminHeroPage() {
                 {editingSlide ? 'Edit Foto Slide Hero' : 'Tambah Foto Slide Hero'}
               </h2>
               <button
-                onClick={() => setIsModalOpen(false)}
+                type="button"
+                onClick={handleCloseModal}
                 className="rounded-full p-1 text-[#7E917D] hover:bg-gray-100"
+                aria-label="Tutup modal"
               >
                 ✕
               </button>
@@ -479,6 +530,24 @@ export default function AdminHeroPage() {
                 />
               </div>
 
+              {/* Link URL (Opsional) */}
+              <div>
+                <label
+                  htmlFor="hero-link-url"
+                  className="block text-xs font-bold text-[#1B361F] uppercase tracking-wider mb-1.5"
+                >
+                  Tautan / Link Tujuan (Opsional)
+                </label>
+                <input
+                  id="hero-link-url"
+                  type="text"
+                  placeholder="Contoh: /eco-enzyme atau https://..."
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  className="w-full rounded-xl border border-[#D7E0D4] bg-[#F9FAF8] px-4 py-2.5 text-sm text-[#1B361F] focus:border-[#2D5A27] focus:bg-white focus:outline-none"
+                />
+              </div>
+
               {/* Urutan & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -518,7 +587,7 @@ export default function AdminHeroPage() {
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#EEF2EC]">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-100"
                 >
                   Batal
@@ -548,11 +617,14 @@ export default function AdminHeroPage() {
       {/* ─── DELETE MODAL ─── */}
       <DeleteModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        onClose={() => {
+          if (!isDeleting) setDeleteModal({ ...deleteModal, isOpen: false });
+        }}
         onConfirm={confirmDelete}
         title="Hapus Foto Slide Hero?"
         itemName={deleteModal.name}
         confirmText="Hapus Slide"
+        isDeleting={isDeleting}
       />
     </div>
   );

@@ -1,11 +1,13 @@
 import { Gallery } from "../../../generated/prisma";
-import fs from "fs";
-import path from "path";
 import {
   buildPaginationMeta,
   parsePagination,
   PaginationMeta,
 } from "../../utils/pagination";
+import {
+  cleanupFailedUpload,
+  deleteStoredUploadFile,
+} from "../../utils/file";
 import { GalleryRepository } from "./gallery.repository";
 import {
   CreateGalleryInput,
@@ -27,10 +29,7 @@ export class GalleryService {
   }
 
   private deleteImageFile(imagePath: string): void {
-    const fullPath: string = path.join(process.cwd(), imagePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    deleteStoredUploadFile(imagePath);
   }
 
   async getAllGallery(query: GalleryQueryInput): Promise<GalleryListResult> {
@@ -68,12 +67,17 @@ export class GalleryService {
 
     const image: string = `uploads/gallery/${file.filename}`;
 
-    return this.galleryRepository.create({
-      title: data.title,
-      category: data.category,
-      image,
-      description: data.description,
-    });
+    try {
+      return await this.galleryRepository.create({
+        title: data.title,
+        category: data.category,
+        image,
+        description: data.description,
+      });
+    } catch (error) {
+      cleanupFailedUpload(file, "gallery");
+      throw error;
+    }
   }
 
   async updateGallery(
@@ -81,32 +85,38 @@ export class GalleryService {
     data: UpdateGalleryInput,
     file?: Express.Multer.File,
   ): Promise<Gallery> {
-    const existing: Gallery = await this.getGalleryById(id);
+    try {
+      const existing: Gallery = await this.getGalleryById(id);
 
-    let image: string | undefined;
+      const image: string | undefined = file
+        ? `uploads/gallery/${file.filename}`
+        : undefined;
 
-    if (file) {
-      if (existing.image) {
+      const updated = await this.galleryRepository.update(id, {
+        title: data.title,
+        category: data.category,
+        image,
+        description: data.description,
+      });
+
+      if (file && existing.image && existing.image !== image) {
         this.deleteImageFile(existing.image);
       }
-      image = `uploads/gallery/${file.filename}`;
-    }
 
-    return this.galleryRepository.update(id, {
-      title: data.title,
-      category: data.category,
-      image,
-      description: data.description,
-    });
+      return updated;
+    } catch (error) {
+      cleanupFailedUpload(file, "gallery");
+      throw error;
+    }
   }
 
   async deleteGallery(id: string): Promise<void> {
     const existing: Gallery = await this.getGalleryById(id);
 
+    await this.galleryRepository.delete(id);
+
     if (existing.image) {
       this.deleteImageFile(existing.image);
     }
-
-    await this.galleryRepository.delete(id);
   }
 }

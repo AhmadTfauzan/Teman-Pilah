@@ -1,41 +1,79 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Clock, 
-  Sparkles, 
-  CheckCircle2, 
-  AlertCircle, 
-  Edit2, 
-  Trash2, 
-  QrCode, 
-  Calendar,
+import {
+  Plus,
+  Search,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Edit2,
+  Trash2,
+  QrCode,
+  ClipboardList,
   X,
   Droplet,
   RotateCcw,
   Film,
-  Play,
   RefreshCw,
-  Video
+  ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 import { EcoEnzymeBatch, EcoEnzymeVideoItem, EcoEnzymeVideoPlatform } from '@/types';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
 import { ecoEnzymeVideoApi, getEcoEnzymeVideoThumbnailUrl } from '@/lib/api/eco-enzyme-video';
-import { 
-  getDaysRemaining, 
-  getFermentationProgress, 
-  getDayPassed, 
-  parseOrganicWasteTypes 
+import {
+  getDaysRemaining,
+  getFermentationProgress,
+  getDayPassed,
+  parseOrganicWasteTypes,
 } from '@/lib/eco-enzyme';
-import { EcoEnzymeModal } from '@/components/admin/EcoEnzymeModal';
-import { EcoEnzymeHarvestModal } from '@/components/admin/EcoEnzymeHarvestModal';
+import { EcoEnzymeModal, EcoEnzymeModalSubmitData } from '@/components/admin/EcoEnzymeModal';
+import {
+  EcoEnzymeHarvestModal,
+  EcoEnzymeHarvestSubmitData,
+} from '@/components/admin/EcoEnzymeHarvestModal';
+import { EcoEnzymeLogModal } from '@/components/admin/EcoEnzymeLogModal';
 import { EcoEnzymeQrModal } from '@/components/admin/EcoEnzymeQrModal';
 import { EcoEnzymeVideoModal } from '@/components/admin/EcoEnzymeVideoModal';
 import { EcoEnzymeVideoTable } from '@/components/admin/EcoEnzymeVideoTable';
 import { DeleteModal } from '@/components/admin/DeleteModal';
 import { toast } from 'sonner';
+
+function extractYouTubeVideoId(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i
+  );
+  return match ? match[1] : null;
+}
+
+function isDirectVideoSource(video: EcoEnzymeVideoItem): boolean {
+  const url = video.videoUrl.trim();
+  const lower = url.toLowerCase();
+  if (video.platform === 'Local') return true;
+  if (url.startsWith('/') && !url.startsWith('//')) return true;
+  return /\.(mp4|webm|ogg|mov)(?:[?#].*)?$/.test(lower);
+}
+
+function getSafeExternalUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url.trim());
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const VIDEO_PLATFORM_TABS: { id: 'ALL' | EcoEnzymeVideoPlatform; label: string }[] = [
+  { id: 'ALL', label: 'Semua Platform' },
+  { id: 'Local', label: 'Video MP4 Lokal' },
+  { id: 'YouTube', label: 'YouTube' },
+  { id: 'TikTok', label: 'TikTok' },
+  { id: 'Instagram', label: 'Instagram' },
+];
 
 // Format satuan agar mudah dibaca manusia (misal 150 gr, 3 L, 1 kg)
 function formatWeight(kgValue: number | string | undefined | null): string {
@@ -45,6 +83,34 @@ function formatWeight(kgValue: number | string | undefined | null): string {
     return `${Math.round(num * 1000)} gr`;
   }
   return `${num % 1 === 0 ? num : num.toFixed(2)} kg`;
+}
+
+function getBatchDisplayState(batch: EcoEnzymeBatch) {
+  const displayStatus = batch.displayStatus || batch.status;
+  const dayPassed = batch.dayPassed || getDayPassed(batch.startDate);
+  const progress =
+    batch.progressPercent ??
+    getFermentationProgress(batch.startDate, batch.harvestEstimate);
+  const daysLeft = getDaysRemaining(batch.harvestEstimate);
+  const isArchived = Boolean(batch.archivedAt || batch.status === 'ARCHIVED');
+  const isHarvested = batch.status === 'HARVESTED';
+  const isFailed = batch.status === 'FAILED' || displayStatus === 'FAILED';
+  const isReady =
+    !isFailed &&
+    !isHarvested &&
+    !isArchived &&
+    (displayStatus === 'READY_TO_HARVEST' || progress >= 100);
+
+  return {
+    displayStatus,
+    dayPassed,
+    progress,
+    daysLeft,
+    isArchived,
+    isHarvested,
+    isFailed,
+    isReady,
+  };
 }
 
 export default function AdminEcoEnzymePage() {
@@ -62,6 +128,9 @@ export default function AdminEcoEnzymePage() {
   const [isHarvestModalOpen, setIsHarvestModalOpen] = useState(false);
   const [activeHarvestBatch, setActiveHarvestBatch] = useState<EcoEnzymeBatch | null>(null);
 
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [activeLogBatch, setActiveLogBatch] = useState<EcoEnzymeBatch | null>(null);
+
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [activeQrBatch, setActiveQrBatch] = useState<EcoEnzymeBatch | null>(null);
 
@@ -70,6 +139,7 @@ export default function AdminEcoEnzymePage() {
     id: string;
     name: string;
   }>({ isOpen: false, id: '', name: '' });
+  const [isArchivingBatch, setIsArchivingBatch] = useState(false);
 
   // ════════════════ STATE VIDEO EDUKASI ════════════════
   const [videos, setVideos] = useState<EcoEnzymeVideoItem[]>([]);
@@ -89,36 +159,83 @@ export default function AdminEcoEnzymePage() {
     isOpen: false,
     video: null,
   });
+  const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
   // ════════════════ LOAD DATA ════════════════
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const data = await ecoEnzymeApi.getAll({ includeArchived: true });
       setBatches(data);
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal memuat data Eco Enzyme');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal memuat data Eco Enzyme');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
-  const loadVideos = async () => {
-    setIsVideoLoading(true);
+  const loadVideos = async (silent = false) => {
+    if (!silent) {
+      setIsVideoLoading(true);
+    }
     try {
       const data = await ecoEnzymeVideoApi.getAll({ limit: 100 });
       setVideos(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load eco enzyme videos:', err);
-      toast.error(err.message || 'Gagal memuat video edukasi Eco Enzyme');
+      toast.error(err instanceof Error ? err.message : 'Gagal memuat video edukasi Eco Enzyme');
     } finally {
-      setIsVideoLoading(false);
+      if (!silent) {
+        setIsVideoLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadData();
-    loadVideos();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await ecoEnzymeApi.getAll({ includeArchived: true });
+        if (!cancelled) {
+          setBatches(data);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : 'Gagal memuat data Eco Enzyme');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    (async () => {
+      try {
+        const data = await ecoEnzymeVideoApi.getAll({ limit: 100 });
+        if (!cancelled) {
+          setVideos(data);
+        }
+      } catch (err: unknown) {
+        console.error('Failed to load eco enzyme videos:', err);
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : 'Gagal memuat video edukasi Eco Enzyme');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsVideoLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Filter pencarian & status galon
@@ -171,7 +288,7 @@ export default function AdminEcoEnzymePage() {
   }, [videos]);
 
   // ════════════════ HANDLER GALON FERMENTASI ════════════════
-  const handleCreateOrUpdateBatch = async (data: any) => {
+  const handleCreateOrUpdateBatch = async (data: EcoEnzymeModalSubmitData) => {
     try {
       if (editingBatch) {
         await ecoEnzymeApi.update(editingBatch.id, data);
@@ -191,33 +308,40 @@ export default function AdminEcoEnzymePage() {
       }
       setIsBatchModalOpen(false);
       setEditingBatch(null);
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan data galon');
+      await loadData(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan data galon');
+      throw err;
     }
   };
 
-  const handleHarvestSubmit = async (data: any) => {
+  const handleHarvestSubmit = async (data: EcoEnzymeHarvestSubmitData) => {
     if (!activeHarvestBatch) return;
     try {
       await ecoEnzymeApi.harvest(activeHarvestBatch.id, data);
       setIsHarvestModalOpen(false);
       setActiveHarvestBatch(null);
       toast.success('Panen berhasil dicatat!');
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal mencatat panen');
+      await loadData(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mencatat panen');
+      throw err;
     }
   };
 
   const confirmArchive = async () => {
+    if (!deleteModal.id || isArchivingBatch) return;
+    const targetId = deleteModal.id;
+    setIsArchivingBatch(true);
     try {
-      await ecoEnzymeApi.archive(deleteModal.id);
+      await ecoEnzymeApi.archive(targetId);
       toast.success('Galon berhasil diarsipkan');
       setDeleteModal({ isOpen: false, id: '', name: '' });
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal mengarsipkan galon');
+      await loadData(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mengarsipkan galon');
+    } finally {
+      setIsArchivingBatch(false);
     }
   };
 
@@ -225,9 +349,9 @@ export default function AdminEcoEnzymePage() {
     try {
       await ecoEnzymeApi.restore(batch.id);
       toast.success(`Galon ${batch.containerName} berhasil dipulihkan`);
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal memulihkan galon');
+      await loadData(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal memulihkan galon');
     }
   };
 
@@ -252,21 +376,27 @@ export default function AdminEcoEnzymePage() {
         toast.success('Video edukasi Eco Enzyme baru berhasil ditambahkan!');
       }
       setIsVideoModalOpen(false);
-      loadVideos();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan video edukasi');
+      setSelectedVideo(null);
+      await loadVideos(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan video edukasi');
+      throw err;
     }
   };
 
   const handleDeleteVideoConfirm = async () => {
-    if (!videoDeleteModal.video) return;
+    if (!videoDeleteModal.video || isDeletingVideo) return;
+    const targetId = videoDeleteModal.video.id;
+    setIsDeletingVideo(true);
     try {
-      await ecoEnzymeVideoApi.delete(videoDeleteModal.video.id);
+      await ecoEnzymeVideoApi.delete(targetId);
       toast.success('Video edukasi Eco Enzyme berhasil dihapus!');
       setVideoDeleteModal({ isOpen: false, video: null });
-      loadVideos();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal menghapus video edukasi');
+      await loadVideos(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus video edukasi');
+    } finally {
+      setIsDeletingVideo(false);
     }
   };
 
@@ -362,18 +492,23 @@ export default function AdminEcoEnzymePage() {
                 )}
               </div>
 
-              <div className="w-full sm:w-[180px]">
+              <div className="relative w-full sm:w-[185px]">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full h-9 sm:h-10 appearance-none bg-[#FAFBF9] border border-stone-200 rounded-xl px-3 sm:px-3.5 text-xs font-semibold text-stone-700 focus:outline-none focus:border-[#012D1D] cursor-pointer"
+                  className="w-full h-9 sm:h-10 appearance-none bg-[#FAFBF9] border border-stone-200 rounded-xl pl-3 sm:pl-3.5 pr-9 text-xs font-semibold text-stone-700 focus:outline-none focus:border-[#012D1D] cursor-pointer"
                 >
                   <option value="ALL">Semua Galon</option>
                   <option value="FERMENTING">Sedang Fermentasi</option>
                   <option value="READY_TO_HARVEST">Siap Panen</option>
                   <option value="HARVESTED">Sudah Dipanen</option>
+                  <option value="FAILED">Gagal Fermentasi</option>
                   <option value="ARCHIVED">Arsip Galon</option>
                 </select>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="pointer-events-none w-4 h-4 text-stone-500 absolute right-3 top-1/2 -translate-y-1/2"
+                />
               </div>
             </div>
           </div>
@@ -405,13 +540,15 @@ export default function AdminEcoEnzymePage() {
                 {/* Mobile 2-Column Card Grid */}
                 <div className="grid grid-cols-2 gap-2.5 p-3 md:hidden">
                   {filteredBatches.map((batch) => {
-                    const displayStatus = batch.displayStatus || batch.status;
-                    const dayPassed = batch.dayPassed || getDayPassed(batch.startDate);
-                    const progress = batch.progressPercent ?? getFermentationProgress(batch.startDate, batch.harvestEstimate);
-                    const daysLeft = getDaysRemaining(batch.harvestEstimate);
-                    const isArchived = Boolean(batch.archivedAt || batch.status === 'ARCHIVED');
-                    const isHarvested = batch.status === 'HARVESTED';
-                    const isReady = displayStatus === 'READY_TO_HARVEST' || progress >= 100;
+                    const {
+                      dayPassed,
+                      progress,
+                      daysLeft,
+                      isArchived,
+                      isHarvested,
+                      isFailed,
+                      isReady,
+                    } = getBatchDisplayState(batch);
 
                     return (
                       <div
@@ -431,6 +568,10 @@ export default function AdminEcoEnzymePage() {
                               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">
                                 <CheckCircle2 className="w-2.5 h-2.5" /> Dipanen
                               </span>
+                            ) : isFailed ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-200">
+                                <AlertCircle className="w-2.5 h-2.5" /> Gagal
+                              </span>
                             ) : isReady ? (
                               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-300">
                                 <Sparkles className="w-2.5 h-2.5 text-emerald-600" /> Siap
@@ -447,7 +588,7 @@ export default function AdminEcoEnzymePage() {
                           </h3>
                         </div>
 
-                        {!isArchived && !isHarvested && !isReady ? (
+                        {!isArchived && !isHarvested && !isFailed && !isReady ? (
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-[9px] font-bold text-stone-600">
                               <span>{progress}%</span>
@@ -462,54 +603,67 @@ export default function AdminEcoEnzymePage() {
                           </div>
                         ) : (
                           <div className="text-[10px] text-stone-500 font-medium">
-                            {Number(batch.waterLiter)}L • {new Date(batch.harvestEstimate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                            {Number(batch.waterLiter)}L •{' '}
+                            {isFailed
+                              ? 'Fermentasi gagal'
+                              : new Date(batch.harvestEstimate).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
                           </div>
                         )}
 
-                        <div className="flex flex-wrap items-center gap-1 pt-1.5 border-t border-stone-200/80">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveQrBatch(batch);
-                              setIsQrModalOpen(true);
-                            }}
-                            className="inline-flex items-center justify-center gap-1 px-1.5 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-[10px] transition-colors flex-1"
-                            title="Cetak atau unduh label barcode galon"
-                          >
-                            <QrCode className="w-3 h-3 text-emerald-700" />
-                            <span>QR</span>
-                          </button>
-
-                          {!isArchived && !isHarvested && (
+                        <div className="flex flex-col gap-1.5 pt-2 border-t border-stone-200/80">
+                          <div className="grid grid-cols-2 gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
-                                setActiveHarvestBatch(batch);
-                                setIsHarvestModalOpen(true);
+                                setActiveQrBatch(batch);
+                                setIsQrModalOpen(true);
                               }}
-                              className={`px-1.5 py-1 rounded-md font-bold text-[10px] transition-all flex-1 text-center ${
-                                isReady
-                                  ? 'bg-[#012D1D] text-white'
-                                  : 'bg-stone-200/70 hover:bg-stone-200 text-stone-700'
-                              }`}
-                              title="Catat hasil panen"
+                              className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-[10px] transition-colors"
+                              title="Cetak atau unduh label barcode galon"
                             >
-                              Panen
+                              <QrCode className="w-3 h-3 text-emerald-700 shrink-0" />
+                              <span>QR</span>
                             </button>
-                          )}
 
-                          <div className="flex items-center gap-0.5 ml-auto">
-                            {!isArchived && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveLogBatch(batch);
+                                setIsLogModalOpen(true);
+                              }}
+                              className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 font-bold text-[10px] transition-colors"
+                              title="Catat atau lihat log inspeksi galon"
+                            >
+                              <ClipboardList className="w-3 h-3 text-[#2C5F2D] shrink-0" />
+                              <span>Log</span>
+                              {typeof batch._count?.inspectionLogs === 'number' &&
+                                batch._count.inspectionLogs > 0 && (
+                                  <span className="px-1 rounded-full bg-[#2C5F2D] text-white text-[9px] leading-tight">
+                                    {batch._count.inspectionLogs}
+                                  </span>
+                                )}
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            {!isArchived && !isHarvested && !isFailed && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setEditingBatch(batch);
-                                  setIsBatchModalOpen(true);
+                                  setActiveHarvestBatch(batch);
+                                  setIsHarvestModalOpen(true);
                                 }}
-                                className="p-1 rounded-md text-stone-500 hover:text-stone-800 hover:bg-stone-200/60 transition-colors"
-                                title="Edit data"
+                                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[10px] transition-all text-center ${
+                                  isReady
+                                    ? 'bg-[#012D1D] text-white'
+                                    : 'bg-stone-200/70 hover:bg-stone-200 text-stone-700'
+                                }`}
+                                title="Catat hasil panen"
                               >
-                                <Edit2 className="w-3 h-3" />
+                                Panen
                               </button>
                             )}
 
@@ -517,27 +671,42 @@ export default function AdminEcoEnzymePage() {
                               <button
                                 type="button"
                                 onClick={() => handleRestore(batch)}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded-md text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-[10px] font-bold transition-colors"
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold transition-colors"
                                 title="Pulihkan dari arsip"
                               >
                                 <RotateCcw className="w-3 h-3" />
                                 <span>Pulihkan</span>
                               </button>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDeleteModal({
-                                    isOpen: true,
-                                    id: batch.id,
-                                    name: `${batch.containerName} (${batch.batchCode || batch.publicCode})`,
-                                  });
-                                }}
-                                className="p-1 rounded-md text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                title="Arsipkan galon"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              <div className="flex items-center gap-1 ml-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingBatch(batch);
+                                    setIsBatchModalOpen(true);
+                                  }}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-500 hover:text-stone-800 hover:bg-stone-100 transition-colors"
+                                  title="Edit data"
+                                  aria-label={`Edit ${batch.containerName}`}
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDeleteModal({
+                                      isOpen: true,
+                                      id: batch.id,
+                                      name: `${batch.containerName} (${batch.batchCode || batch.publicCode})`,
+                                    });
+                                  }}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors"
+                                  title="Arsipkan galon"
+                                  aria-label={`Arsipkan ${batch.containerName}`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -560,13 +729,15 @@ export default function AdminEcoEnzymePage() {
                   </thead>
                   <tbody className="divide-y divide-stone-100">
                     {filteredBatches.map((batch) => {
-                      const displayStatus = batch.displayStatus || batch.status;
-                      const dayPassed = batch.dayPassed || getDayPassed(batch.startDate);
-                      const progress = batch.progressPercent ?? getFermentationProgress(batch.startDate, batch.harvestEstimate);
-                      const daysLeft = getDaysRemaining(batch.harvestEstimate);
-                      const isArchived = Boolean(batch.archivedAt || batch.status === 'ARCHIVED');
-                      const isHarvested = batch.status === 'HARVESTED';
-                      const isReady = displayStatus === 'READY_TO_HARVEST' || progress >= 100;
+                      const {
+                        dayPassed,
+                        progress,
+                        daysLeft,
+                        isArchived,
+                        isHarvested,
+                        isFailed,
+                        isReady,
+                      } = getBatchDisplayState(batch);
                       const fruits = parseOrganicWasteTypes(batch.organicWasteTypes);
 
                       return (
@@ -614,6 +785,10 @@ export default function AdminEcoEnzymePage() {
                               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                                 <CheckCircle2 className="w-3 h-3" /> Dipanen
                               </span>
+                            ) : isFailed ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                                <AlertCircle className="w-3 h-3" /> Gagal Fermentasi
+                              </span>
                             ) : isReady ? (
                               <div className="space-y-1">
                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-300">
@@ -651,7 +826,26 @@ export default function AdminEcoEnzymePage() {
                                 <span>Label QR</span>
                               </button>
 
-                              {!isArchived && !isHarvested && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveLogBatch(batch);
+                                  setIsLogModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 font-bold text-xs transition-colors"
+                                title="Catat atau lihat log inspeksi galon"
+                              >
+                                <ClipboardList className="w-3.5 h-3.5 text-[#2C5F2D]" />
+                                <span>Log</span>
+                                {typeof batch._count?.inspectionLogs === 'number' &&
+                                  batch._count.inspectionLogs > 0 && (
+                                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-[#2C5F2D] text-white text-[10px] leading-none">
+                                      {batch._count.inspectionLogs}
+                                    </span>
+                                  )}
+                              </button>
+
+                              {!isArchived && !isHarvested && !isFailed && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -803,17 +997,11 @@ export default function AdminEcoEnzymePage() {
 
             {/* Filter Platform Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-              {[
-                { id: 'ALL', label: 'Semua Platform' },
-                { id: 'Local', label: 'Video MP4 Lokal' },
-                { id: 'YouTube', label: 'YouTube' },
-                { id: 'TikTok', label: 'TikTok' },
-                { id: 'Instagram', label: 'Instagram' },
-              ].map((tab) => (
+              {VIDEO_PLATFORM_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setVideoPlatformFilter(tab.id as any)}
+                  onClick={() => setVideoPlatformFilter(tab.id)}
                   className={`px-3 py-1.5 rounded-lg font-bold transition-all whitespace-nowrap ${
                     videoPlatformFilter === tab.id
                       ? 'bg-[#012D1D] text-white'
@@ -830,6 +1018,11 @@ export default function AdminEcoEnzymePage() {
           <EcoEnzymeVideoTable
             videos={filteredVideos}
             isLoading={isVideoLoading}
+            hasActiveFilter={Boolean(videoSearchTerm.trim() || videoPlatformFilter !== 'ALL')}
+            onResetFilter={() => {
+              setVideoSearchTerm('');
+              setVideoPlatformFilter('ALL');
+            }}
             onAddNew={handleOpenAddVideo}
             onEdit={handleOpenEditVideo}
             onPreview={(video) => setPreviewVideo(video)}
@@ -863,7 +1056,9 @@ export default function AdminEcoEnzymePage() {
           setActiveQrBatch(null);
         }}
         batch={activeQrBatch}
-        onQrPrinted={loadData}
+        onQrPrinted={() => {
+          void loadData(true);
+        }}
         onQrSaved={(savedQr) => {
           setActiveQrBatch((prev) =>
             prev
@@ -901,15 +1096,31 @@ export default function AdminEcoEnzymePage() {
         batch={activeHarvestBatch}
       />
 
+      {/* 3b. Modal Log Inspeksi Galon */}
+      <EcoEnzymeLogModal
+        isOpen={isLogModalOpen}
+        onClose={() => {
+          setIsLogModalOpen(false);
+          setActiveLogBatch(null);
+        }}
+        batch={activeLogBatch}
+        onRefreshBatch={() => {
+          void loadData(true);
+        }}
+      />
+
       {/* 4. Modal Konfirmasi Arsip Galon */}
       <DeleteModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, id: '', name: '' })}
+        onClose={() => {
+          if (!isArchivingBatch) setDeleteModal({ isOpen: false, id: '', name: '' });
+        }}
         onConfirm={confirmArchive}
         title="Arsipkan Galon Eco Enzyme"
         itemName={deleteModal.name}
         confirmText="Arsipkan Galon"
         description="Galon ini akan dipindahkan ke arsip. QR Code pada fisik galon tetap dapat dipindai oleh warga."
+        isDeleting={isArchivingBatch}
       />
 
       {/* 5. Modal Tambah / Edit Video Edukasi */}
@@ -926,76 +1137,120 @@ export default function AdminEcoEnzymePage() {
       {/* 6. Modal Konfirmasi Hapus Video Edukasi */}
       <DeleteModal
         isOpen={videoDeleteModal.isOpen}
-        onClose={() => setVideoDeleteModal({ isOpen: false, video: null })}
+        onClose={() => {
+          if (!isDeletingVideo) setVideoDeleteModal({ isOpen: false, video: null });
+        }}
         onConfirm={handleDeleteVideoConfirm}
         title="Hapus Video Edukasi Eco Enzyme"
         itemName={videoDeleteModal.video?.title || ''}
         confirmText="Hapus Video"
         description="Video edukasi ini akan dihapus permanen dari daftar dan tidak akan tampil lagi di halaman Eco Enzyme."
+        isDeleting={isDeletingVideo}
       />
 
       {/* 7. Modal Preview Video Player */}
-      {previewVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2.5 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-stone-900 rounded-2xl sm:rounded-3xl max-w-lg w-full p-3.5 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-2.5 sm:space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-stone-800">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#FC9634] block">
-                  {previewVideo.category || 'Video Edukasi'}
-                </span>
-                <h3 className="text-sm sm:text-base font-bold text-white">
-                  {previewVideo.title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setPreviewVideo(null)}
-                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {previewVideo && (() => {
+        const isWide = previewVideo.aspect === 'wide';
+        const ytId = extractYouTubeVideoId(previewVideo.videoUrl);
+        const directVideo = isDirectVideoSource(previewVideo);
+        const safeExternalUrl = getSafeExternalUrl(previewVideo.videoUrl);
+        const thumbUrl = previewVideo.thumbnail
+          ? getEcoEnzymeVideoThumbnailUrl(previewVideo.thumbnail)
+          : '';
 
-            <div className="relative aspect-[9/13] max-h-[70vh] w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center">
-              {previewVideo.videoUrl.startsWith('http://') || previewVideo.videoUrl.startsWith('https://') ? (
-                previewVideo.videoUrl.includes('youtube.com') || previewVideo.videoUrl.includes('youtu.be') ? (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${
-                      previewVideo.videoUrl.match(/(?:youtu\.be\/|watch\?v=)([^"&?\/\s]{11})/)?.[1] || ''
-                    }?autoplay=1`}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2.5 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
+            <div
+              className={`bg-stone-900 rounded-2xl sm:rounded-3xl ${
+                isWide ? 'max-w-2xl' : 'max-w-lg'
+              } w-full p-3.5 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-2.5 sm:space-y-3`}
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-stone-800">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-[#FC9634] block">
+                    {previewVideo.category || 'Video Edukasi'}
+                  </span>
+                  <h3 className="text-sm sm:text-base font-bold text-white">
+                    {previewVideo.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewVideo(null)}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div
+                className={`relative ${
+                  isWide ? 'aspect-video' : 'aspect-[9/13] max-h-[70vh]'
+                } w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center`}
+              >
+                {directVideo ? (
                   <video
                     controls
                     autoPlay
                     playsInline
                     className="w-full h-full object-contain"
                     src={previewVideo.videoUrl}
+                  >
+                    Browser tidak mendukung video HTML5.
+                  </video>
+                ) : ytId ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
+                    title={previewVideo.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
                   />
-                )
-              ) : (
-                <video
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                  src={previewVideo.videoUrl}
-                >
-                  Browser tidak mendukung video HTML5.
-                </video>
+                ) : (
+                  <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center bg-stone-950">
+                    {thumbUrl && (
+                      <img
+                        src={thumbUrl}
+                        alt={previewVideo.title}
+                        className="absolute inset-0 w-full h-full object-cover opacity-25"
+                      />
+                    )}
+                    <div className="relative z-10 flex flex-col items-center gap-3 max-w-xs">
+                      <span className="px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider text-[#FC9634]">
+                        {previewVideo.platform}
+                      </span>
+                      <p className="text-xs sm:text-sm text-stone-200 leading-relaxed">
+                        Pratinjau langsung tidak tersedia di modal untuk tautan eksternal {previewVideo.platform}.
+                      </p>
+                      {safeExternalUrl ? (
+                        <a
+                          href={safeExternalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FC9634] hover:bg-[#e58425] text-[#012D1D] text-xs font-bold shadow-md transition-colors"
+                        >
+                          <span>Buka Video di {previewVideo.platform}</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      ) : (
+                        <span className="text-xs text-rose-400">
+                          Tautan video tidak valid.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {previewVideo.description && (
+                <p className="text-xs text-stone-300 leading-relaxed pt-1">
+                  {previewVideo.description}
+                </p>
               )}
             </div>
-
-            {previewVideo.description && (
-              <p className="text-xs text-stone-300 leading-relaxed pt-1">
-                {previewVideo.description}
-              </p>
-            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

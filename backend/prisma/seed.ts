@@ -1,6 +1,28 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
+import { Prisma } from "../generated/prisma";
 import { prisma } from "../src/lib/prisma";
+
+async function upsertEcoEnzymeBatchByCode(
+  batchCode: string,
+  createData: Prisma.EcoEnzymeBatchUncheckedCreateInput,
+  updateData: Prisma.EcoEnzymeBatchUncheckedUpdateInput = {},
+) {
+  const existing = await prisma.ecoEnzymeBatch.findFirst({
+    where: { batchCode },
+  });
+
+  if (existing) {
+    return prisma.ecoEnzymeBatch.update({
+      where: { id: existing.id },
+      data: updateData,
+    });
+  }
+
+  return prisma.ecoEnzymeBatch.create({
+    data: createData,
+  });
+}
 
 async function main() {
   const adminEmail = "admin@temanpilah.com";
@@ -104,44 +126,40 @@ async function main() {
   const estimate1 = new Date(date30DaysAgo);
   estimate1.setDate(estimate1.getDate() + 89);
 
-  const batch1 = await prisma.ecoEnzymeBatch.upsert({
-    where: { batchCode: "EE-202609-001" },
-    update: {},
-    create: {
-      publicCode: "EE-2609-X7K9P2",
-      batchCode: "EE-202609-001",
-      containerName: "Drum Biru A1 (60L)",
-      containerCapacityLiter: 60.0,
-      molassesKg: 3.0,
-      organicWasteKg: 9.0,
-      waterLiter: 30.0,
-      organicWasteTypes: "Kulit Nanas, Kulit Jeruk, Kulit Pepaya, Kulit Pisang",
-      startDate: date30DaysAgo,
-      harvestEstimate: estimate1,
-      status: "IN_PROGRESS",
-      notes: "Menggunakan molase tebu murni kualitas grade A dari produsen lokal.",
-      inspectionLogs: {
-        create: [
-          {
-            dayNumber: 7,
-            logDate: new Date(date30DaysAgo.getTime() + 7 * 24 * 60 * 60 * 1000),
-            phLevel: 4.2,
-            aromaStatus: "Asam Segar Khas Buah",
-            fungusColor: "Lapisan jamur putih tipis (mama enzim)",
-            actionTaken: "Buka tutup wadah sebentar untuk membuang akumulasi gas CO2",
-            notes: "Fermentasi berjalan optimal, aroma buah harum tidak ada bau busuk",
-          },
-          {
-            dayNumber: 25,
-            logDate: new Date(date30DaysAgo.getTime() + 25 * 24 * 60 * 60 * 1000),
-            phLevel: 3.8,
-            aromaStatus: "Aroma Alkohol/Fermentasi",
-            fungusColor: "Mama enzim semakin menebal dan bersih",
-            actionTaken: "Aduk perlahan permukaan bahan dan rapatkan kembali tutup wadah",
-            notes: "Kondisi sangat baik, tidak ditemukan jamur hitam atau belatung",
-          },
-        ],
-      },
+  const batch1 = await upsertEcoEnzymeBatchByCode("EE-202609-001", {
+    publicCode: "EE-2609-X7K9P2",
+    batchCode: "EE-202609-001",
+    containerName: "Drum Biru A1 (60L)",
+    containerCapacityLiter: 60.0,
+    molassesKg: 3.0,
+    organicWasteKg: 9.0,
+    waterLiter: 30.0,
+    organicWasteTypes: "Kulit Nanas, Kulit Jeruk, Kulit Pepaya, Kulit Pisang",
+    startDate: date30DaysAgo,
+    harvestEstimate: estimate1,
+    status: "IN_PROGRESS",
+    notes: "Menggunakan molase tebu murni kualitas grade A dari produsen lokal.",
+    inspectionLogs: {
+      create: [
+        {
+          dayNumber: 7,
+          logDate: new Date(date30DaysAgo.getTime() + 7 * 24 * 60 * 60 * 1000),
+          phLevel: 4.2,
+          aromaStatus: "Asam Segar Khas Buah",
+          fungusColor: "Lapisan jamur putih tipis (mama enzim)",
+          actionTaken: "Buka tutup wadah sebentar untuk membuang akumulasi gas CO2",
+          notes: "Fermentasi berjalan optimal, aroma buah harum tidak ada bau busuk",
+        },
+        {
+          dayNumber: 25,
+          logDate: new Date(date30DaysAgo.getTime() + 25 * 24 * 60 * 60 * 1000),
+          phLevel: 3.8,
+          aromaStatus: "Aroma Alkohol/Fermentasi",
+          fungusColor: "Mama enzim semakin menebal dan bersih",
+          actionTaken: "Aduk perlahan permukaan bahan dan rapatkan kembali tutup wadah",
+          notes: "Kondisi sangat baik, tidak ditemukan jamur hitam atau belatung",
+        },
+      ],
     },
   });
   console.log(`  Created batch: ${batch1.batchCode}`);
@@ -152,23 +170,19 @@ async function main() {
   const estimate2 = new Date(date95DaysAgo);
   estimate2.setDate(estimate2.getDate() + 89);
 
-  const batch2 = await prisma.ecoEnzymeBatch.upsert({
-    where: { batchCode: "EE-202607-002" },
-    update: {},
-    create: {
-      publicCode: "EE-2607-M3N8R5",
-      batchCode: "EE-202607-002",
-      containerName: "Drum Kuning B2 (100L)",
-      containerCapacityLiter: 100.0,
-      molassesKg: 5.0,
-      organicWasteKg: 15.0,
-      waterLiter: 50.0,
-      organicWasteTypes: "Kulit Jeruk Nipis, Semangka, Kulit Apel",
-      startDate: date95DaysAgo,
-      harvestEstimate: estimate2,
-      status: "IN_PROGRESS",
-      notes: "Target panen disiapkan untuk workshop edukasi pengmas.",
-    },
+  const batch2 = await upsertEcoEnzymeBatchByCode("EE-202607-002", {
+    publicCode: "EE-2607-M3N8R5",
+    batchCode: "EE-202607-002",
+    containerName: "Drum Kuning B2 (100L)",
+    containerCapacityLiter: 100.0,
+    molassesKg: 5.0,
+    organicWasteKg: 15.0,
+    waterLiter: 50.0,
+    organicWasteTypes: "Kulit Jeruk Nipis, Semangka, Kulit Apel",
+    startDate: date95DaysAgo,
+    harvestEstimate: estimate2,
+    status: "IN_PROGRESS",
+    notes: "Target panen disiapkan untuk workshop edukasi pengmas.",
   });
   console.log(`  Created batch: ${batch2.batchCode}`);
 
@@ -178,30 +192,26 @@ async function main() {
   const estimate3 = new Date(date120DaysAgo);
   estimate3.setDate(estimate3.getDate() + 89);
 
-  const batch3 = await prisma.ecoEnzymeBatch.upsert({
-    where: { batchCode: "EE-202606-003" },
-    update: {},
-    create: {
-      publicCode: "EE-2606-B4T6W9",
-      batchCode: "EE-202606-003",
-      containerName: "Jerigen Hijau C1 (40L)",
-      containerCapacityLiter: 40.0,
-      molassesKg: 2.5,
-      organicWasteKg: 7.5,
-      waterLiter: 25.0,
-      organicWasteTypes: "Kulit Jeruk, Nanas, Mangga",
-      startDate: date120DaysAgo,
-      harvestEstimate: estimate3,
-      actualHarvestDate: estimate3,
-      harvestLiter: 22.0,
-      efficiencyRatePercent: 62.86,
-      residueUsage: "KOMPOS_PADAT",
-      residueNotes: "5 kg ampas dikeringkan dan diolah menjadi kompos padat untuk kebun toga.",
-      allocatedProductId: soapProduct ? soapProduct.id : null,
-      allocatedUnitsAdded: soapProduct ? 15 : 0,
-      status: "HARVESTED",
-      notes: "Panen sukses. Cairan bening cokelat pekat pH 3.4. Dialokasikan untuk produksi sabun.",
-    },
+  const batch3 = await upsertEcoEnzymeBatchByCode("EE-202606-003", {
+    publicCode: "EE-2606-B4T6W9",
+    batchCode: "EE-202606-003",
+    containerName: "Jerigen Hijau C1 (40L)",
+    containerCapacityLiter: 40.0,
+    molassesKg: 2.5,
+    organicWasteKg: 7.5,
+    waterLiter: 25.0,
+    organicWasteTypes: "Kulit Jeruk, Nanas, Mangga",
+    startDate: date120DaysAgo,
+    harvestEstimate: estimate3,
+    actualHarvestDate: estimate3,
+    harvestLiter: 22.0,
+    efficiencyRatePercent: 62.86,
+    residueUsage: "KOMPOS_PADAT",
+    residueNotes: "5 kg ampas dikeringkan dan diolah menjadi kompos padat untuk kebun toga.",
+    allocatedProductId: soapProduct ? soapProduct.id : null,
+    allocatedUnitsAdded: soapProduct ? 15 : 0,
+    status: "HARVESTED",
+    notes: "Panen sukses. Cairan bening cokelat pekat pH 3.4. Dialokasikan untuk produksi sabun.",
   });
   console.log(`  Created batch: ${batch3.batchCode}`);
 

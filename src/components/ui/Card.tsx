@@ -5,7 +5,6 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   children: ReactNode;
   className?: string;
-  key?: React.Key;
 }
 
 export function Card({ className, padding = 'md', children, ...props }: CardProps) {

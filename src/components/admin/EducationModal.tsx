@@ -3,28 +3,93 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Education } from '@/types';
 import { getThumbnailUrl } from '@/lib/api/education';
-import { ArrowLeft, Image as ImageIcon, Bold, Italic, Underline, List, ListOrdered, Quote, Link2, Code, X, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Bold, Italic, Underline, List, ListOrdered, Quote, Link2, X, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
+import { toast } from 'sonner';
+
+export interface EducationModalSubmitData {
+  title: string;
+  slug: string;
+  description: string;
+  overview: string;
+  publishDate: string;
+  tags: string[];
+  imageFile: File | null;
+  status: 'PUBLISHED' | 'DRAFT';
+}
 
 interface EducationModalProps {
   content: Education | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: EducationModalSubmitData) => void | Promise<void>;
+}
+
+function validateSafeEditorLink(rawUrl: string): string | null {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:' ||
+      parsed.protocol === 'mailto:' ||
+      parsed.protocol === 'tel:'
+    ) {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function EducationModal({ content, isOpen, onClose, onSubmit }: EducationModalProps) {
-  const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [description, setDescription] = useState('');
-  const [overview, setOverview] = useState('');
-  const [publishDate, setPublishDate] = useState('');
-  
-  const [tags, setTags] = useState<string[]>([]);
+  if (!isOpen) return null;
+
+  return (
+    <EducationModalContent
+      key={content?.id ?? 'new'}
+      content={content}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function EducationModalContent({
+  content,
+  onClose,
+  onSubmit,
+}: Omit<EducationModalProps, 'isOpen'>) {
+  const [title, setTitle] = useState(content?.title || '');
+  const [slug, setSlug] = useState(content?.slug || '');
+  const [description, setDescription] = useState(content?.description || '');
+  const [overview, setOverview] = useState(content?.overview || '');
+  const [publishDate, setPublishDate] = useState(
+    content?.publishDate ? content.publishDate.substring(0, 10) : ''
+  );
+
+  const [tags, setTags] = useState<string[]>(content?.tags || []);
   const [tagInput, setTagInput] = useState('');
 
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreview, setImagePreview] = useState<string>(() =>
+    content?.thumbnail ? getThumbnailUrl(content.thumbnail) : ''
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -40,43 +105,12 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Sync contentEditable DOM on mount / content switch
   useEffect(() => {
-    if (!isOpen) return;
-
-    if (content) {
-      setTitle(content.title || '');
-      setSlug(content.slug || '');
-      setDescription(content.description || '');
-      setOverview(content.overview || '');
-      setTags(content.tags || []);
-      setPublishDate(content.publishDate ? new Date(content.publishDate).toISOString().split('T')[0] : '');
-      setImagePreview(content.thumbnail ? getThumbnailUrl(content.thumbnail) : '');
-      setImageFile(null);
-      
-      if (editorRef.current) {
-        editorRef.current.innerHTML = content.description || '';
-      }
-    } else {
-      setTitle('');
-      setSlug('');
-      setDescription('');
-      setOverview('');
-      setTags([]);
-      setPublishDate('');
-      setImagePreview('');
-      setImageFile(null);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = '';
-      }
+    if (editorRef.current) {
+      editorRef.current.innerHTML = content?.description || '';
     }
-  }, [content, isOpen]);
-
-  // Auto-generate slug from title if empty
-  useEffect(() => {
-    if (title && !content) {
-      setSlug(title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-    }
-  }, [title, content]);
+  }, [content]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -134,25 +168,42 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
   };
 
   const handleLinkSubmit = () => {
-    if (linkUrl) {
+    if (linkUrl.trim()) {
+      const safeHref = validateSafeEditorLink(linkUrl);
+      if (!safeHref) {
+        toast.error('URL tautan tidak valid atau tidak aman. Gunakan awalan https://, http://, atau /.');
+        return;
+      }
+
       editorRef.current?.focus();
+      const escapedHref = escapeHtml(safeHref);
+      const escapedLabel = escapeHtml(linkUrl.trim());
       if (savedRange) {
         const selection = window.getSelection();
         selection?.removeAllRanges();
         selection?.addRange(savedRange);
-        
+
         if (savedRange.collapsed) {
-          document.execCommand('insertHTML', false, `<a href="${linkUrl}" target="_blank">${linkUrl}</a>`);
+          document.execCommand(
+            'insertHTML',
+            false,
+            `<a href="${escapedHref}" target="_blank" rel="noopener noreferrer">${escapedLabel}</a>`
+          );
         } else {
-          document.execCommand('createLink', false, linkUrl);
+          document.execCommand('createLink', false, safeHref);
         }
       } else {
-        document.execCommand('insertHTML', false, `<a href="${linkUrl}" target="_blank">${linkUrl}</a>`);
+        document.execCommand(
+          'insertHTML',
+          false,
+          `<a href="${escapedHref}" target="_blank" rel="noopener noreferrer">${escapedLabel}</a>`
+        );
       }
       if (editorRef.current) setDescription(editorRef.current.innerHTML);
       updateActiveFormats();
     }
     setShowLinkInput(false);
+    setLinkUrl('');
     setSavedRange(null);
   };
 
@@ -177,19 +228,41 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const handleClose = () => {
+    setShowLinkInput(false);
+    setLinkUrl('');
+    setSavedRange(null);
+    setTagInput('');
+    setConfirmModal({ isOpen: false, status: null });
+    onClose();
+  };
+
   const handlePreSubmit = (e: React.FormEvent, submitStatus?: 'PUBLISHED' | 'DRAFT') => {
     e.preventDefault();
-    
+    if (isSubmitting) return;
+
+    const latestDescription = editorRef.current ? editorRef.current.innerHTML : description;
+    if (latestDescription !== description) {
+      setDescription(latestDescription);
+    }
+
     // Validation
-    if (!title.trim() || !overview.trim() || !description.trim() || description.trim() === '<p><br></p>') {
+    if (
+      !title.trim() ||
+      !overview.trim() ||
+      !latestDescription.trim() ||
+      latestDescription.trim() === '<p><br></p>' ||
+      latestDescription.trim() === '<br>'
+    ) {
       setConfirmModal({ isOpen: true, status: 'ERROR' });
       return;
     }
 
-    setConfirmModal({ isOpen: true, status: submitStatus || 'PUBLISHED' });
+    setConfirmModal({ isOpen: true, status: submitStatus || content?.status || 'PUBLISHED' });
   };
 
-  const executeSubmit = () => {
+  const executeSubmit = async (submitStatus: 'PUBLISHED' | 'DRAFT') => {
+    if (isSubmitting) return;
     const finalTags = [...tags];
     if (tagInput.trim()) {
       const newTags = tagInput.split(' ').map(t => t.trim()).filter(Boolean);
@@ -199,29 +272,35 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
       setTagInput('');
     }
 
-    const submitStatus = confirmModal.status;
+    const latestDescription = editorRef.current ? editorRef.current.innerHTML : description;
     setConfirmModal({ isOpen: false, status: null });
+    setIsSubmitting(true);
 
-    onSubmit({
-      title,
-      slug,
-      description,
-      overview,
-      publishDate,
-      tags: finalTags,
-      imageFile,
-      status: submitStatus === 'DRAFT' ? 'DRAFT' : 'PUBLISHED',
-    });
+    try {
+      await onSubmit({
+        title,
+        slug,
+        description: latestDescription,
+        overview,
+        publishDate,
+        tags: finalTags,
+        imageFile,
+        status: submitStatus,
+      });
+    } catch {
+      // Parent handles error toast and keeps modal open
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
       {/* HEADER BAR */}
       <div className="flex-none px-4 sm:px-12 py-4 sm:py-6">
         <button 
-          onClick={onClose}
+          type="button"
+          onClick={handleClose}
           className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
         >
           <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
@@ -245,7 +324,18 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
                 type="text"
                 placeholder="Masukkan judul konten..."
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  const nextTitle = e.target.value;
+                  setTitle(nextTitle);
+                  if (!content) {
+                    setSlug(
+                      nextTitle
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)+/g, '')
+                    );
+                  }
+                }}
                 className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl sm:rounded-[12px] bg-[#F9FAF8] border border-[#E5E7EB] text-sm text-[#2A3426] placeholder:text-[#A1A89A] focus:outline-none focus:border-[#27532B] focus:ring-1 focus:ring-[#27532B] transition-all"
               />
             </div>
@@ -309,7 +399,12 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
                           value={linkUrl}
                           onChange={(e) => setLinkUrl(e.target.value)}
                           autoFocus
-                          onKeyDown={(e) => e.key === 'Enter' && handleLinkSubmit()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleLinkSubmit();
+                            }
+                          }}
                         />
                         <button type="button" onClick={handleLinkSubmit} className="bg-[#2D5A27] text-white px-3 rounded-lg text-[12px] font-bold hover:brightness-110">Tambah</button>
                       </div>
@@ -444,28 +539,33 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
       <div className="flex-none bg-white border-t border-[#F0F2EB] px-4 sm:px-12 py-3.5 sm:py-5 flex items-center justify-between gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         <button
           type="button"
-          onClick={onClose}
-          className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-xs sm:text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95"
+          onClick={handleClose}
+          disabled={isSubmitting}
+          className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-xs sm:text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95 disabled:opacity-50"
         >
           Batal
         </button>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {!content && (
-            <button
-              type="button"
-              onClick={(e) => handlePreSubmit(e, 'DRAFT')}
-              className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
-            >
-              Simpan Draft
-            </button>
-          )}
           <button
             type="button"
-            onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
-            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
+            disabled={isSubmitting}
+            onClick={(e) => handlePreSubmit(e, 'DRAFT')}
+            className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95 disabled:opacity-50"
           >
-            {content ? 'Simpan Perubahan' : 'Terbitkan'}
+            Simpan Draft
+          </button>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
+            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            {isSubmitting
+              ? 'Menyimpan...'
+              : !content || content.status === 'DRAFT'
+              ? 'Terbitkan'
+              : 'Simpan Perubahan'}
           </button>
         </div>
       </div>
@@ -478,7 +578,7 @@ export function EducationModal({ content, isOpen, onClose, onSubmit }: Education
           if (confirmModal.status === 'ERROR' || confirmModal.status === 'ERROR_FILE_SIZE') {
             setConfirmModal({ isOpen: false, status: null });
           } else {
-            executeSubmit();
+            void executeSubmit(confirmModal.status === 'DRAFT' ? 'DRAFT' : 'PUBLISHED');
           }
         }}
         title={

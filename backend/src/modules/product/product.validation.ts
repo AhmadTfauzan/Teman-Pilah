@@ -55,7 +55,21 @@ export const createProductSchema = z.object({
   }),
 
   whatsappLink: z
-    .union([z.string().url("Format WhatsApp link tidak valid"), z.literal("")])
+    .string()
+    .trim()
+    .refine(
+      (val) => {
+        if (val === "") return true;
+        if (!/^https?:\/\//i.test(val)) return false;
+        try {
+          const parsed = new URL(val);
+          return parsed.protocol === "http:" || parsed.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      "URL harus diawali http:// atau https://",
+    )
     .optional(),
 });
 

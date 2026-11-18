@@ -7,6 +7,7 @@ import {
   updateHeroSchema,
 } from "./hero.validation";
 import { AuthRequest } from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class HeroController {
   private readonly heroService: HeroService;
@@ -70,6 +71,7 @@ export class HeroController {
         data: slide,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
@@ -90,6 +92,7 @@ export class HeroController {
         data: slide,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

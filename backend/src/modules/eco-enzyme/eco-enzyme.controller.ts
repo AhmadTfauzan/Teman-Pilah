@@ -9,7 +9,10 @@ import {
   publicCodeParamSchema,
   updateBatchSchema,
 } from "./eco-enzyme.validation";
-import { AuthRequest } from "@/middlewares/auth.middleware";
+import {
+  AuthRequest,
+  isAuthenticatedAdminRequest,
+} from "@/middlewares/auth.middleware";
 
 export class EcoEnzymeController {
   private readonly ecoEnzymeService: EcoEnzymeService;
@@ -24,8 +27,12 @@ export class EcoEnzymeController {
     next: NextFunction
   ): Promise<void> => {
     try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
       const query = batchQuerySchema.parse(req.query);
-      const { data, meta } = await this.ecoEnzymeService.getAllBatches(query);
+      const { data, meta } = await this.ecoEnzymeService.getAllBatches(
+        query,
+        isAdmin,
+      );
 
       paginatedResponse({
         res,
@@ -44,8 +51,9 @@ export class EcoEnzymeController {
     next: NextFunction
   ): Promise<void> => {
     try {
+      const isAdmin = isAuthenticatedAdminRequest(req);
       const id = req.params["id"] as string;
-      const batch = await this.ecoEnzymeService.getBatchById(id);
+      const batch = await this.ecoEnzymeService.getBatchById(id, isAdmin);
 
       successResponse({
         res,
@@ -193,7 +201,7 @@ export class EcoEnzymeController {
   ): Promise<void> => {
     try {
       const id = req.params["id"] as string;
-      await this.ecoEnzymeService.archiveBatch(id);
+      await this.ecoEnzymeService.deleteBatch(id);
 
       successResponse({
         res,

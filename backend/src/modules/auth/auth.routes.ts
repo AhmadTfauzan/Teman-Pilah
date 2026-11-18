@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { PrismaClient } from "../../../generated/prisma";
+import rateLimit from "express-rate-limit";
 import { AuthController } from "./auth.controller";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
@@ -7,6 +7,18 @@ import { prisma } from "@/lib/prisma";
 import { authenticate } from "@/middlewares/auth.middleware";
 
 const router: Router = Router();
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+  message: {
+    status: "error",
+    message: "Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.",
+  },
+});
 
 // Dependency injection
 const authRepository = new AuthRepository(prisma);
@@ -19,7 +31,7 @@ const authController = new AuthController(authService);
  * @access  ADMIN
  * @body    { email: string, password: string }
  */
-router.post("/login", authController.login);
+router.post("/login", loginLimiter, authController.login);
 
 /**
  * @route   GET /api/auth/me

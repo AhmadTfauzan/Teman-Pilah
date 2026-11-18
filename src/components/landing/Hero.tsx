@@ -42,7 +42,7 @@ export function Hero({ initialSlides }: HeroProps) {
   const [slides, setSlides] = useState<HeroSlide[]>(() => {
     if (initialSlides && initialSlides.length > 0) {
       const activeOnly = initialSlides.filter((s) => s.isActive);
-      return activeOnly.length > 0 ? activeOnly : initialSlides;
+      return activeOnly.length > 0 ? activeOnly : DEFAULT_SLIDES;
     }
     return DEFAULT_SLIDES;
   });
@@ -120,7 +120,7 @@ export function Hero({ initialSlides }: HeroProps) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full h-[490px] sm:h-[640px] lg:h-[820px] max-h-[100vh] min-h-[450px] flex items-center justify-center overflow-hidden bg-[#012D1D] select-none"
+      className="group relative w-full h-[490px] sm:h-[640px] lg:h-[820px] max-h-[100vh] min-h-[450px] flex items-center justify-center overflow-hidden bg-[#012D1D] select-none"
     >
       {/* ─── BACKGROUND SLIDES CAROUSEL ─── */}
       <div className="absolute inset-0 z-0">
@@ -202,6 +202,9 @@ export function Hero({ initialSlides }: HeroProps) {
               return (
                 <button
                   key={idx}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => goToSlide(idx)}
                   aria-label={`Slide ${idx + 1}`}
                   className={`h-[6px] w-[32px] rounded-[99px] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#FC9634] ${
@@ -218,16 +221,18 @@ export function Hero({ initialSlides }: HeroProps) {
       {totalSlides > 1 && (
         <>
           <button
+            type="button"
             onClick={prevSlide}
             aria-label="Slide sebelumnya"
-            className="hidden md:flex absolute left-6 lg:left-12 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95"
+            className="hidden md:flex absolute left-6 lg:left-12 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:scale-110 active:scale-95"
           >
             <ChevronLeft size={24} />
           </button>
           <button
+            type="button"
             onClick={nextSlide}
             aria-label="Slide selanjutnya"
-            className="hidden md:flex absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95"
+            className="hidden md:flex absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:scale-110 active:scale-95"
           >
             <ChevronRight size={24} />
           </button>

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -22,8 +21,10 @@ import {
   Leaf,
   Play,
   Film,
+  Calculator,
 } from 'lucide-react';
 import { EcoEnzymeQrModal } from '@/components/admin/EcoEnzymeQrModal';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
 import { ecoEnzymeVideoApi, getEcoEnzymeVideoThumbnailUrl } from '@/lib/api/eco-enzyme-video';
 import { EcoEnzymeBatch, EcoEnzymeVideoItem } from '@/types';
@@ -33,8 +34,92 @@ import {
   getDayPassed,
   parseOrganicWasteTypes,
 } from '@/lib/eco-enzyme';
-import { buildBatchPath, buildBatchUrl } from '@/lib/batch-url';
+import { buildBatchPath } from '@/lib/batch-url';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
+
+type BatchStatusFilter = 'ALL' | 'FERMENTING' | 'READY' | 'HARVESTED';
+
+const STATUS_FILTER_TABS: ReadonlyArray<{ id: BatchStatusFilter; label: string }> = [
+  { id: 'ALL', label: 'Semua' },
+  { id: 'FERMENTING', label: 'Fermentasi' },
+  { id: 'READY', label: 'Siap Panen' },
+  { id: 'HARVESTED', label: 'Dipanen' },
+];
+
+function isLocalVideoSource(videoUrl?: string | null, platform?: string | null): boolean {
+  if (platform === 'Local') return true;
+  const trimmed = videoUrl?.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  const pathWithoutQuery = trimmed.split(/[?#]/)[0].toLowerCase();
+  return pathWithoutQuery.endsWith('.mp4') || pathWithoutQuery.endsWith('.webm');
+}
+
+function extractYouTubeId(rawUrl?: string | null): string | null {
+  const trimmed = rawUrl?.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      const id = parsed.pathname.split('/').filter(Boolean)[0];
+      return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+
+    if (
+      host === 'youtube.com' ||
+      host === 'm.youtube.com' ||
+      host === 'music.youtube.com' ||
+      host === 'youtube-nocookie.com'
+    ) {
+      const vParam = parsed.searchParams.get('v');
+      if (vParam && /^[a-zA-Z0-9_-]{11}$/.test(vParam)) {
+        return vParam;
+      }
+
+      const segments = parsed.pathname.split('/').filter(Boolean);
+      if (
+        segments.length >= 2 &&
+        ['embed', 'shorts', 'live', 'v'].includes(segments[0].toLowerCase())
+      ) {
+        const candidate = segments[1];
+        return /^[a-zA-Z0-9_-]{11}$/.test(candidate) ? candidate : null;
+      }
+    }
+  } catch {
+    // Fallback regex below
+  }
+
+  const match = trimmed.match(
+    /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
+  );
+  return match ? match[1] : null;
+}
+
+function isSafeExternalVideoUrl(rawUrl?: string | null): boolean {
+  const trimmed = rawUrl?.trim();
+  if (!trimmed) return false;
+  return (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('//'))
+  );
+}
+
+function formatEcoWeight(kg: number): string {
+  if (kg <= 0 || !Number.isFinite(kg)) return '0 gr';
+  if (kg < 1) {
+    return `${Math.round(kg * 1000).toLocaleString('id-ID')} gr`;
+  }
+  return `${Number(kg.toFixed(2)).toLocaleString('id-ID')} kg`;
+}
+
+function formatEcoLiter(liter: number): string {
+  if (liter <= 0 || !Number.isFinite(liter)) return '0 L';
+  return `${Number(liter.toFixed(2)).toLocaleString('id-ID')} L`;
+}
 
 const DEFAULT_EDUCATION_VIDEOS: EcoEnzymeVideoItem[] = [
   {
@@ -74,9 +159,12 @@ export default function EcoEnzymePublicPage() {
   const [batches, setBatches] = useState<EcoEnzymeBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'FERMENTING' | 'READY' | 'HARVESTED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<BatchStatusFilter>('ALL');
   const [selectedBatchForLabel, setSelectedBatchForLabel] = useState<EcoEnzymeBatch | null>(null);
   const [educationVideos, setEducationVideos] = useState<EcoEnzymeVideoItem[]>(DEFAULT_EDUCATION_VIDEOS);
+  const [calcMode, setCalcMode] = useState<'capacity' | 'waste'>('capacity');
+  const [calcInput, setCalcInput] = useState<string>('15');
+  const inlineVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [activeEducationVideo, setActiveEducationVideo] = useState<{
     title: string;
     category: string;
@@ -84,7 +172,46 @@ export default function EcoEnzymePublicPage() {
     duration: string;
     description: string;
     platform?: string;
+    aspect?: string | null;
   } | null>(null);
+
+  useEffect(() => {
+    if (!activeEducationVideo) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveEducationVideo(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeEducationVideo]);
+
+  const openEducationVideoModal = (video: EcoEnzymeVideoItem) => {
+    // Pause any inline HTML5 video playing so audio does not overlap with fullscreen modal
+    Object.values(inlineVideoRefs.current).forEach((el) => {
+      if (el && !el.paused) {
+        el.pause();
+      }
+    });
+
+    setActiveEducationVideo({
+      title: video.title,
+      category: video.category || 'Edukasi Eco Enzyme',
+      src: video.videoUrl,
+      duration: video.duration || '00:00',
+      description: video.description || '',
+      platform: video.platform,
+      aspect: video.aspect,
+    });
+  };
 
   useEffect(() => {
     async function loadBatches() {
@@ -117,6 +244,53 @@ export default function EcoEnzymePublicPage() {
     loadVideos();
   }, []);
 
+  const calcResult = useMemo(() => {
+    const parsed = Number.parseFloat(calcInput.replace(',', '.'));
+    const value = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+
+    if (calcMode === 'capacity') {
+      const waterLiter = value * 0.6;
+      const molassesKg = waterLiter / 10;
+      const organicWasteKg = (waterLiter * 3) / 10;
+      return {
+        waterLiter,
+        molassesKg,
+        organicWasteKg,
+        recommendedContainerLiter: value,
+      };
+    }
+
+    const organicWasteKg = value;
+    const unitPartKg = organicWasteKg / 3;
+    const molassesKg = unitPartKg;
+    const waterLiter = unitPartKg * 10;
+    const recommendedContainerLiter = waterLiter > 0 ? waterLiter / 0.6 : 0;
+    return {
+      waterLiter,
+      molassesKg,
+      organicWasteKg,
+      recommendedContainerLiter,
+    };
+  }, [calcMode, calcInput]);
+
+  const handleCalcModeChange = (nextMode: 'capacity' | 'waste') => {
+    if (nextMode === calcMode) return;
+    if (nextMode === 'waste') {
+      const nextVal =
+        calcResult.organicWasteKg > 0
+          ? String(Number(calcResult.organicWasteKg.toFixed(2)))
+          : '1.5';
+      setCalcInput(nextVal);
+    } else {
+      const nextVal =
+        calcResult.recommendedContainerLiter > 0
+          ? String(Number(calcResult.recommendedContainerLiter.toFixed(1)))
+          : '15';
+      setCalcInput(nextVal);
+    }
+    setCalcMode(nextMode);
+  };
+
   // Filter galon berdasarkan pencarian dan status
   const filteredBatches = useMemo(() => {
     return batches.filter((b) => {
@@ -135,14 +309,18 @@ export default function EcoEnzymePublicPage() {
 
       if (!matchSearch) return false;
 
+      const isFailed = b.status === 'FAILED' || b.displayStatus === 'FAILED';
+      const isHarvested =
+        !isFailed && (b.status === 'HARVESTED' || b.displayStatus === 'HARVESTED');
       const isReady =
-        b.displayStatus === 'READY_TO_HARVEST' ||
-        getFermentationProgress(b.startDate, b.harvestEstimate) >= 100;
-      const isHarvested = b.status === 'HARVESTED';
-      const isFermenting = !isHarvested && !isReady;
+        !isFailed &&
+        !isHarvested &&
+        (b.displayStatus === 'READY_TO_HARVEST' ||
+          getFermentationProgress(b.startDate, b.harvestEstimate) >= 100);
+      const isFermenting = !isFailed && !isHarvested && !isReady;
 
       if (statusFilter === 'FERMENTING') return isFermenting;
-      if (statusFilter === 'READY') return isReady && !isHarvested;
+      if (statusFilter === 'READY') return isReady;
       if (statusFilter === 'HARVESTED') return isHarvested;
 
       return true;
@@ -152,21 +330,25 @@ export default function EcoEnzymePublicPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (!q) return;
+    if (!q) {
+      document.getElementById('galon-tracker')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
 
-    // Cek apakah ada kecocokan persis pada kode galon
+    // Cek apakah ada kecocokan persis pada kode galon atau nama wadah
+    const lowerQ = q.toLowerCase();
     const exactMatch = batches.find(
       (b) =>
-        b.batchCode?.toLowerCase() === q.toLowerCase() ||
-        b.publicCode?.toLowerCase() === q.toLowerCase() ||
-        b.containerName?.toLowerCase() === q.toLowerCase()
+        b.batchCode?.toLowerCase() === lowerQ ||
+        b.publicCode?.toLowerCase() === lowerQ ||
+        b.containerName?.toLowerCase() === lowerQ
     );
 
     if (exactMatch) {
       router.push(buildBatchPath(exactMatch.publicCode));
     } else {
-      // Jika tidak langsung redirect, arahkan ke pencarian detail
-      router.push(`/eco-enzyme/batch/${encodeURIComponent(q)}`);
+      // Pencarian parsial memfilter daftar di halaman yang sama lalu gulir ke bagian galon tracker
+      document.getElementById('galon-tracker')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -229,39 +411,198 @@ export default function EcoEnzymePublicPage() {
         </div>
       </section>
 
-      {/* ════════════════ FORMULA 1:3:10 RINGKAS ════════════════ */}
-      <section className="max-w-5xl mx-auto px-3 sm:px-6 -mt-6 sm:-mt-8 relative z-20">
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xl border border-stone-200/80 flex flex-col md:flex-row items-center justify-between gap-3.5 sm:gap-5">
-          <div className="space-y-1 text-center md:text-left">
-            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[#3B9734] block">
-              Standar Rumus Alami
-            </span>
-            <h3 className="text-sm sm:text-lg font-black text-stone-900">
-              Formula Emas 1 : 3 : 10 (90 Hari)
-            </h3>
-            <p className="text-[11px] sm:text-xs text-stone-500 max-w-sm leading-relaxed">
-              Keseimbangan takaran fermentasi alami untuk menghasilkan enzim aktif berkualitas.
-            </p>
+      {/* ════════════════ FORMULA 1:3:10 RINGKAS & KALKULATOR ════════════════ */}
+      <section
+        id="kalkulator"
+        className="max-w-5xl mx-auto px-3 sm:px-6 -mt-6 sm:-mt-8 relative z-20 scroll-mt-20"
+      >
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xl border border-stone-200/80 space-y-4 sm:space-y-5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 sm:gap-5">
+            <div className="space-y-1 text-center md:text-left">
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[#3B9734] block">
+                Standar Rumus Alami
+              </span>
+              <h3 className="text-sm sm:text-lg font-black text-stone-900">
+                Formula Emas 1 : 3 : 10 (90 Hari)
+              </h3>
+              <p className="text-[11px] sm:text-xs text-stone-500 max-w-sm leading-relaxed">
+                Keseimbangan takaran fermentasi alami untuk menghasilkan enzim aktif berkualitas.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto">
+              <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
+                <div className="text-xs sm:text-lg font-black text-[#B45309] whitespace-nowrap">1 Bagian</div>
+                <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Pemanis</div>
+                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Gula / Madu</div>
+              </div>
+
+              <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
+                <div className="text-xs sm:text-lg font-black text-[#2C5F2D] whitespace-nowrap">3 Bagian</div>
+                <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Bahan BO</div>
+                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Kulit Buah</div>
+              </div>
+
+              <div className="bg-[#F0F7FC] border border-[#CEE3F5] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
+                <div className="text-xs sm:text-lg font-black text-[#0369A1] whitespace-nowrap">10 Bagian</div>
+                <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Air Bersih</div>
+                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Air Sumur/AC</div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto">
-            <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
-              <div className="text-xs sm:text-lg font-black text-[#B45309] whitespace-nowrap">1 Bagian</div>
-              <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Pemanis</div>
-              <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Gula / Madu</div>
+          {/* KALKULATOR INTERAKTIF 1:3:10 */}
+          <div className="pt-4 sm:pt-5 border-t border-stone-200/80 space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#2C5F2D] shrink-0">
+                  <Calculator className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-stone-900">
+                    Kalkulator Takaran Eco Enzyme
+                  </h4>
+                  <p className="text-[10px] sm:text-[11px] text-stone-500">
+                    Hitung otomatis kebutuhan Gula/Molase, Sampah Organik, dan Air.
+                  </p>
+                </div>
+              </div>
+
+              <div className="inline-flex rounded-xl bg-stone-100 p-1 border border-stone-200/80 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => handleCalcModeChange('capacity')}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+                    calcMode === 'capacity'
+                      ? 'bg-[#012D1D] text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  Kapasitas Wadah (L)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCalcModeChange('waste')}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+                    calcMode === 'waste'
+                      ? 'bg-[#012D1D] text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  Berat Sampah (Kg)
+                </button>
+              </div>
             </div>
 
-            <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
-              <div className="text-xs sm:text-lg font-black text-[#2C5F2D] whitespace-nowrap">3 Bagian</div>
-              <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Bahan BO</div>
-              <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Kulit Buah</div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-center">
+              {/* Input Control */}
+              <div className="lg:col-span-5 bg-[#FAFBF9] border border-stone-200 rounded-xl sm:rounded-2xl p-3 space-y-2">
+                <label
+                  htmlFor="eco-enzyme-calc-input"
+                  className="block text-[11px] font-bold text-stone-700"
+                >
+                  {calcMode === 'capacity'
+                    ? 'Masukkan Kapasitas Wadah / Galon (Liter)'
+                    : 'Masukkan Berat Sampah Organik / BO (Kg)'}
+                </label>
+
+                <div className="flex items-center">
+                  <input
+                    id="eco-enzyme-calc-input"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={calcInput}
+                    onChange={(e) => setCalcInput(e.target.value)}
+                    placeholder={calcMode === 'capacity' ? 'cth. 15' : 'cth. 1.5'}
+                    className="w-full text-sm font-black text-stone-900 bg-white border border-stone-300 rounded-l-xl px-3 py-2 focus:outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+                  />
+                  <span className="bg-stone-200 text-stone-800 px-3 py-2 text-xs font-bold rounded-r-xl border border-l-0 border-stone-300">
+                    {calcMode === 'capacity' ? 'Liter' : 'Kg'}
+                  </span>
+                </div>
+
+                {/* Preset Cepat */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] font-medium text-stone-400 mr-0.5">
+                    Cepat:
+                  </span>
+                  {(calcMode === 'capacity'
+                    ? ['5', '10', '15', '19']
+                    : ['0.5', '1', '1.5', '3']
+                  ).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setCalcInput(preset)}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
+                        calcInput === preset
+                          ? 'bg-emerald-700 text-white border-emerald-700'
+                          : 'bg-white text-stone-700 border-stone-200 hover:border-emerald-400'
+                      }`}
+                    >
+                      {preset} {calcMode === 'capacity' ? 'L' : 'Kg'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Calculated Outputs */}
+              <div className="lg:col-span-7 grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center">
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#B45309] block">
+                    Gula / Molase
+                  </span>
+                  <div className="text-sm sm:text-xl font-black text-stone-900 mt-1">
+                    {formatEcoWeight(calcResult.molassesKg)}
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-stone-500 block mt-0.5">
+                    1 Bagian
+                  </span>
+                </div>
+
+                <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center">
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#2C5F2D] block">
+                    Sampah Organik
+                  </span>
+                  <div className="text-sm sm:text-xl font-black text-stone-900 mt-1">
+                    {formatEcoWeight(calcResult.organicWasteKg)}
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-stone-500 block mt-0.5">
+                    3 Bagian (BO)
+                  </span>
+                </div>
+
+                <div className="bg-[#F0F7FC] border border-[#CEE3F5] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center">
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#0369A1] block">
+                    Air Bersih
+                  </span>
+                  <div className="text-sm sm:text-xl font-black text-stone-900 mt-1">
+                    {formatEcoLiter(calcResult.waterLiter)}
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] text-stone-500 block mt-0.5">
+                    10 Bagian
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-[#F0F7FC] border border-[#CEE3F5] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
-              <div className="text-xs sm:text-lg font-black text-[#0369A1] whitespace-nowrap">10 Bagian</div>
-              <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Air Bersih</div>
-              <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Air Sumur/AC</div>
-            </div>
+            <p className="text-[10px] sm:text-[11px] text-stone-500 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#FC9634] shrink-0" />
+              {calcMode === 'capacity' ? (
+                <span>
+                  Takaran air dihitung <strong>60% kapasitas wadah</strong> agar menyisakan ruang udara bagi gas fermentasi selama 90 hari.
+                </span>
+              ) : (
+                <span>
+                  Disarankan memakai wadah minimal{' '}
+                  <strong>
+                    {formatEcoLiter(Math.ceil(calcResult.recommendedContainerLiter))}
+                  </strong>{' '}
+                  agar tersedia ruang aman untuk gas fermentasi.
+                </span>
+              )}
+            </p>
           </div>
         </div>
       </section>
@@ -297,11 +638,8 @@ export default function EcoEnzymePublicPage() {
           {/* Dynamic Video Cards Grid */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-6 md:gap-8 pt-4 sm:pt-8 relative z-10">
             {educationVideos.map((video, idx) => {
-              const isLocal =
-                video.platform === 'Local' ||
-                video.videoUrl.startsWith('/') ||
-                video.videoUrl.endsWith('.mp4') ||
-                video.videoUrl.endsWith('.webm');
+              const isLocal = isLocalVideoSource(video.videoUrl, video.platform);
+              const videoRefKey = video.id || String(idx);
 
               return (
                 <div
@@ -313,6 +651,9 @@ export default function EcoEnzymePublicPage() {
                     <div className="relative aspect-[9/12] sm:aspect-[9/13] max-h-[220px] sm:max-h-[480px] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-stone-950 shadow-inner flex items-center justify-center">
                       {isLocal ? (
                         <video
+                          ref={(el) => {
+                            inlineVideoRefs.current[videoRefKey] = el;
+                          }}
                           controls
                           preload="metadata"
                           playsInline
@@ -324,12 +665,11 @@ export default function EcoEnzymePublicPage() {
                       ) : (
                         <div className="relative w-full h-full bg-stone-900 group/thumb">
                           {video.thumbnail ? (
-                            <Image
+                            <SafeImage
                               src={getEcoEnzymeVideoThumbnailUrl(video.thumbnail)}
+                              fallbackSrc="/activity/Pengmas (1).jpeg"
                               alt={video.title}
-                              fill
-                              unoptimized
-                              className="object-cover group-hover/thumb:scale-105 transition-transform duration-300"
+                              className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-stone-800 text-stone-400">
@@ -340,17 +680,9 @@ export default function EcoEnzymePublicPage() {
                           <div className="absolute inset-0 bg-black/40 group-hover/thumb:bg-black/20 transition-colors flex items-center justify-center">
                             <button
                               type="button"
-                              onClick={() =>
-                                setActiveEducationVideo({
-                                  title: video.title,
-                                  category: video.category || 'Edukasi Eco Enzyme',
-                                  src: video.videoUrl,
-                                  duration: video.duration || '00:00',
-                                  description: video.description || '',
-                                  platform: video.platform,
-                                })
-                              }
+                              onClick={() => openEducationVideoModal(video)}
                               className="h-10 w-10 sm:h-14 sm:w-14 rounded-full bg-[#FC9634] hover:bg-[#e8801a] hover:scale-110 flex items-center justify-center text-[#012D1D] shadow-xl transition-all"
+                              aria-label={`Putar video ${video.title}`}
                             >
                               <Play className="w-4 h-4 sm:w-6 sm:h-6 fill-[#012D1D] ml-0.5" />
                             </button>
@@ -426,16 +758,7 @@ export default function EcoEnzymePublicPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() =>
-                        setActiveEducationVideo({
-                          title: video.title,
-                          category: video.category || 'Edukasi Eco Enzyme',
-                          src: video.videoUrl,
-                          duration: video.duration || '00:00',
-                          description: video.description || '',
-                          platform: video.platform,
-                        })
-                      }
+                      onClick={() => openEducationVideoModal(video)}
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] sm:text-xs font-bold transition-colors"
                     >
                       <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current shrink-0" />
@@ -451,7 +774,10 @@ export default function EcoEnzymePublicPage() {
       </section>
 
       {/* ════════════════ DAFTAR GALON KOMUNITAS ════════════════ */}
-      <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-8 md:py-16 space-y-4 sm:space-y-6">
+      <section
+        id="galon-tracker"
+        className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-8 md:py-16 space-y-4 sm:space-y-6 scroll-mt-20"
+      >
         
         {/* Top Control Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2 border-b border-stone-200">
@@ -466,15 +792,11 @@ export default function EcoEnzymePublicPage() {
 
           {/* Filter Status Tabs */}
           <div className="flex items-center gap-1 sm:gap-1.5 bg-stone-200/60 p-1 rounded-2xl self-start sm:self-center max-w-full overflow-x-auto no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[
-              { id: 'ALL', label: 'Semua' },
-              { id: 'FERMENTING', label: 'Fermentasi' },
-              { id: 'READY', label: 'Siap Panen' },
-              { id: 'HARVESTED', label: 'Dipanen' },
-            ].map((tab) => (
+            {STATUS_FILTER_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setStatusFilter(tab.id as any)}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
                 className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                   statusFilter === tab.id
                     ? 'bg-white text-stone-900 shadow-xs'
@@ -501,16 +823,22 @@ export default function EcoEnzymePublicPage() {
             <AlertCircle className="w-10 h-10 text-stone-400 mx-auto" />
             <h3 className="text-sm font-bold text-stone-800">Tidak ada galon yang sesuai</h3>
             <p className="text-xs text-stone-500 max-w-sm mx-auto">
-              {searchQuery
-                ? `Tidak ditemukan galon dengan kata kunci "${searchQuery}". Coba periksa kembali kode galon.`
+              {searchQuery.trim()
+                ? `Tidak ditemukan galon dengan kata kunci "${searchQuery.trim()}". Coba periksa kembali kode galon atau filter status.`
+                : statusFilter !== 'ALL'
+                ? 'Tidak ditemukan galon pada status fermentasi yang dipilih.'
                 : 'Belum ada data galon fermentasi yang terdaftar.'}
             </p>
-            {searchQuery && (
+            {(searchQuery.trim() !== '' || statusFilter !== 'ALL') && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="text-xs font-bold text-emerald-800 hover:underline"
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('ALL');
+                }}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-800 transition-colors"
               >
-                Reset Pencarian
+                Reset Pencarian &amp; Filter
               </button>
             )}
           </div>
@@ -520,15 +848,22 @@ export default function EcoEnzymePublicPage() {
         {!loading && filteredBatches.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-5">
             {filteredBatches.map((batch) => {
-              const progress = getFermentationProgress(batch.startDate, batch.harvestEstimate);
               const dayPassed = getDayPassed(batch.startDate);
               const daysLeft = getDaysRemaining(batch.harvestEstimate);
               const fruits = parseOrganicWasteTypes(batch.organicWasteTypes);
 
-              const isHarvested = batch.status === 'HARVESTED';
+              const isFailed =
+                batch.status === 'FAILED' || batch.displayStatus === 'FAILED';
+              const isHarvested =
+                !isFailed &&
+                (batch.status === 'HARVESTED' || batch.displayStatus === 'HARVESTED');
+              const progress = isHarvested
+                ? 100
+                : getFermentationProgress(batch.startDate, batch.harvestEstimate);
               const isReady =
-                batch.displayStatus === 'READY_TO_HARVEST' || progress >= 100;
-              const isFermenting = !isHarvested && !isReady;
+                !isFailed &&
+                !isHarvested &&
+                (batch.displayStatus === 'READY_TO_HARVEST' || progress >= 100);
 
               // Format Takaran Pemanis
               const molassesDisplay =
@@ -555,7 +890,11 @@ export default function EcoEnzymePublicPage() {
                         </span>
                       </div>
 
-                      {isHarvested ? (
+                      {isFailed ? (
+                        <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                          <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" /> Gagal Fermentasi
+                        </span>
+                      ) : isHarvested ? (
                         <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
                           <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" /> Dipanen
                         </span>
@@ -593,6 +932,7 @@ export default function EcoEnzymePublicPage() {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
+                            timeZone: 'Asia/Jakarta',
                           })}
                         </span>
                       </div>
@@ -608,6 +948,7 @@ export default function EcoEnzymePublicPage() {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
+                            timeZone: 'Asia/Jakarta',
                           })}
                         </span>
                       </div>
@@ -617,21 +958,31 @@ export default function EcoEnzymePublicPage() {
                         <div className="w-full bg-stone-200 h-1.5 sm:h-2 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all ${
-                              isHarvested
+                              isFailed
+                                ? 'bg-rose-600'
+                                : isHarvested
                                 ? 'bg-blue-600'
                                 : isReady
                                 ? 'bg-emerald-600'
                                 : 'bg-[#FC9634]'
                             }`}
-                            style={{ width: `${progress}%` }}
+                            style={{ width: `${isHarvested ? 100 : progress}%` }}
                           />
                         </div>
                         <div className="flex justify-between gap-1 text-[9px] sm:text-[10px] text-stone-500 pt-1 font-medium">
                           <span>
-                            {progress}%<span className="hidden sm:inline"> Selesai</span>
+                            {isFailed ? (
+                              <span className="text-rose-700 font-bold">Dihentikan</span>
+                            ) : (
+                              <>
+                                {isHarvested ? 100 : progress}%<span className="hidden sm:inline"> Selesai</span>
+                              </>
+                            )}
                           </span>
-                          <span className="truncate">
-                            {isHarvested
+                          <span className={`truncate ${isFailed ? 'text-rose-700 font-semibold' : ''}`}>
+                            {isFailed
+                              ? 'Gagal Fermentasi'
+                              : isHarvested
                               ? 'Tuntas'
                               : isReady
                               ? 'Siap Panen!'
@@ -724,79 +1075,107 @@ export default function EcoEnzymePublicPage() {
         isOpen={!!selectedBatchForLabel}
         onClose={() => setSelectedBatchForLabel(null)}
         batch={selectedBatchForLabel}
+        isPublicView={true}
       />
 
       {/* ════════════════ VIDEO MODAL POPUP ════════════════ */}
-      {activeEducationVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-stone-900 rounded-2xl sm:rounded-3xl max-w-lg w-full p-3.5 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-2.5 sm:space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-stone-800">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#FC9634] block">
-                  {activeEducationVideo.category}
-                </span>
-                <h3 className="text-sm sm:text-base font-bold text-white">
-                  {activeEducationVideo.title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setActiveEducationVideo(null)}
-                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {activeEducationVideo && (() => {
+        const isModalLocal = isLocalVideoSource(
+          activeEducationVideo.src,
+          activeEducationVideo.platform
+        );
+        const modalYoutubeId = !isModalLocal
+          ? extractYouTubeId(activeEducationVideo.src)
+          : null;
+        const isModalWide = activeEducationVideo.aspect === 'wide';
 
-            <div className="relative aspect-[9/14] sm:aspect-[9/13] max-h-[70vh] w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center">
-              {activeEducationVideo.src.startsWith('/') ||
-              activeEducationVideo.src.endsWith('.mp4') ||
-              activeEducationVideo.src.endsWith('.webm') ? (
-                <video
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                  src={activeEducationVideo.src}
-                >
-                  Browser Anda tidak mendukung pemutar video HTML5.
-                </video>
-              ) : activeEducationVideo.src.includes('youtube.com') || activeEducationVideo.src.includes('youtu.be') ? (
-                <iframe
-                  className="w-full h-full rounded-2xl"
-                  src={
-                    activeEducationVideo.src.includes('embed')
-                      ? activeEducationVideo.src
-                      : `https://www.youtube.com/embed/${
-                          activeEducationVideo.src.match(/(?:youtu\.be\/|v=)([^"&?\/\s]{11})/)?.[1] || ''
-                        }?autoplay=1`
-                  }
-                  title={activeEducationVideo.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-6 text-center space-y-3">
-                  <p className="text-sm text-stone-300">
-                    Video eksternal di {activeEducationVideo.platform || 'situs web'}
-                  </p>
-                  <a
-                    href={activeEducationVideo.src}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FC9634] text-[#012D1D] font-bold text-xs hover:bg-[#e8801a] transition-all"
-                  >
-                    Buka Video di Tab Baru <ExternalLink className="w-4 h-4" />
-                  </a>
+        return (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={activeEducationVideo.title}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveEducationVideo(null);
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4 backdrop-blur-md transition-opacity duration-200"
+          >
+            <div
+              className={`bg-stone-900 rounded-2xl sm:rounded-3xl w-full p-3.5 sm:p-5 shadow-2xl border border-stone-700 relative text-white space-y-2.5 sm:space-y-3 animate-pop ${
+                isModalWide ? 'max-w-3xl' : 'max-w-lg'
+              }`}
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-stone-800">
+                <div className="min-w-0 pr-2">
+                  <span className="text-[10px] uppercase font-bold text-[#FC9634] block">
+                    {activeEducationVideo.category}
+                  </span>
+                  <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                    {activeEducationVideo.title}
+                  </h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveEducationVideo(null)}
+                  aria-label="Tutup pemutar video"
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div
+                className={
+                  isModalWide
+                    ? 'relative aspect-video w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center'
+                    : 'relative aspect-[9/14] sm:aspect-[9/13] max-h-[70vh] w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center'
+                }
+              >
+                {isModalLocal ? (
+                  <video
+                    controls
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain"
+                    src={activeEducationVideo.src}
+                  >
+                    Browser Anda tidak mendukung pemutar video HTML5.
+                  </video>
+                ) : modalYoutubeId ? (
+                  <iframe
+                    className="w-full h-full rounded-2xl"
+                    src={`https://www.youtube.com/embed/${modalYoutubeId}?autoplay=1&rel=0`}
+                    title={activeEducationVideo.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-6 text-center space-y-3">
+                    <p className="text-sm text-stone-300">
+                      Video eksternal di {activeEducationVideo.platform || 'situs web'}
+                    </p>
+                    {isSafeExternalVideoUrl(activeEducationVideo.src) && (
+                      <a
+                        href={activeEducationVideo.src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FC9634] text-[#012D1D] font-bold text-xs hover:bg-[#e8801a] transition-all"
+                      >
+                        Buka Video di Tab Baru <ExternalLink className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {activeEducationVideo.description && (
+                <p className="text-xs text-stone-300 leading-relaxed pt-1">
+                  {activeEducationVideo.description}
+                </p>
               )}
             </div>
-
-            <p className="text-xs text-stone-300 leading-relaxed pt-1">
-              {activeEducationVideo.description}
-            </p>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

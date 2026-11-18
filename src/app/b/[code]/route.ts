@@ -6,8 +6,15 @@ export async function GET(
   context: { params: Promise<{ code: string }> }
 ) {
   const { code } = await context.params;
-  const normalized = normalizeBatchCode(code);
-  const targetUrl = new URL(`/eco-enzyme/batch/${normalized}`, request.url);
+  let decoded = code;
+  try {
+    decoded = decodeURIComponent(code);
+  } catch {
+    decoded = code;
+  }
+
+  const normalized = normalizeBatchCode(decoded);
+  const targetUrl = new URL(`/eco-enzyme/batch/${encodeURIComponent(normalized)}`, request.url);
 
   // 308 Permanent Redirect
   return NextResponse.redirect(targetUrl, 308);

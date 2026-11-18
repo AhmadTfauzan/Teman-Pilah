@@ -6,7 +6,6 @@ import {
   BookOpen,
   MessageCircle,
   HelpCircle,
-  Search,
 } from 'lucide-react';
 
 const COMMUNITY_WHATSAPP = '6281234567890';

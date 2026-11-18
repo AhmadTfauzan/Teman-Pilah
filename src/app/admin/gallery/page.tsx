@@ -53,21 +53,48 @@ export default function AdminGallery() {
     title: string;
     description: string;
   }>({ isOpen: false, id: '', title: '', description: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchGallery = async () => {
-    setIsLoading(true);
+  const fetchGallery = async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const data = await galleryApi.getAll();
       setItems(data);
     } catch (error) {
+      console.error('Fetch gallery error:', error);
       toast.error('Gagal mengambil data galeri dari server');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchGallery();
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await galleryApi.getAll();
+        if (!cancelled) {
+          setItems(data);
+        }
+      } catch (error) {
+        console.error('Fetch gallery error:', error);
+        if (!cancelled) {
+          toast.error('Gagal mengambil data galeri dari server');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredItems = useMemo(() => {
@@ -89,23 +116,23 @@ export default function AdminGallery() {
 
   const handleSubmit = async (data: FormData) => {
     try {
+      const isEditing = Boolean(editingItem);
       if (editingItem) {
         await galleryApi.update(editingItem.id, data);
-        setSuccessModal({
-          isOpen: true,
-          title: 'Berhasil Memperbarui',
-          message: 'Item galeri berhasil diperbarui.'
-        });
       } else {
         await galleryApi.create(data);
-        setSuccessModal({
-          isOpen: true,
-          title: 'Berhasil Menambahkan',
-          message: 'Item galeri baru berhasil diupload.'
-        });
       }
-      fetchGallery();
+
       setIsModalOpen(false);
+      setEditingItem(null);
+      setSuccessModal({
+        isOpen: true,
+        title: isEditing ? 'Berhasil Memperbarui' : 'Berhasil Menambahkan',
+        message: isEditing
+          ? 'Item galeri berhasil diperbarui.'
+          : 'Item galeri baru berhasil diupload.',
+      });
+      await fetchGallery(true);
     } catch (error: unknown) {
       const err = error as Error;
       toast.error(err.message || 'Gagal menyimpan item galeri');
@@ -123,19 +150,23 @@ export default function AdminGallery() {
   };
 
   const confirmDelete = async () => {
+    if (!deleteModal.id || isDeleting) return;
+    const targetId = deleteModal.id;
+    setIsDeleting(true);
     try {
-      await galleryApi.delete(deleteModal.id);
+      await galleryApi.delete(targetId);
+      setDeleteModal({ isOpen: false, id: '', title: '', description: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Berhasil Menghapus',
         message: 'Item galeri berhasil dihapus.'
       });
-      fetchGallery();
+      await fetchGallery(true);
     } catch (error: unknown) {
       const err = error as Error;
       toast.error(err.message || 'Gagal menghapus item galeri');
     } finally {
-      setDeleteModal({ isOpen: false, id: '', title: '', description: '' });
+      setIsDeleting(false);
     }
   };
 
@@ -219,7 +250,9 @@ export default function AdminGallery() {
 
       <DeleteModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        onClose={() => {
+          if (!isDeleting) setDeleteModal({ ...deleteModal, isOpen: false });
+        }}
         onConfirm={confirmDelete}
         title="Hapus Item Galeri?"
         itemName={
@@ -228,6 +261,7 @@ export default function AdminGallery() {
             : (deleteModal.title || deleteModal.description) || 'Item galeri ini'
         }
         confirmText="Hapus Item"
+        isDeleting={isDeleting}
       />
     </div>
   );

@@ -6,6 +6,7 @@ export interface FindAllEcoEnzymeVideosParams {
   search?: string;
   platform?: string;
   category?: string;
+  isActive?: boolean;
 }
 
 export class EcoEnzymeVideoRepository {
@@ -22,16 +23,21 @@ export class EcoEnzymeVideoRepository {
   async findAll(
     params: FindAllEcoEnzymeVideosParams
   ): Promise<{ data: EcoEnzymeVideo[]; total: number }> {
-    const { skip, take, search, platform, category } = params;
+    const { skip, take, search, platform, category, isActive } = params;
 
     const where: Prisma.EcoEnzymeVideoWhereInput = {
-      ...(platform && platform !== "ALL" && { platform }),
-      ...(category && { category }),
+      ...(platform &&
+        platform.toUpperCase() !== "ALL" && {
+          platform: { equals: platform, mode: "insensitive" },
+        }),
+      ...(category && category !== "ALL" && { category }),
+      ...(isActive !== undefined && { isActive }),
       ...(search && {
         OR: [
           { title: { contains: search, mode: "insensitive" } },
           { description: { contains: search, mode: "insensitive" } },
           { category: { contains: search, mode: "insensitive" } },
+          { tags: { has: search } },
         ],
       }),
     };

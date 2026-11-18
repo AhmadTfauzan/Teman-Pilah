@@ -1,6 +1,6 @@
 import { getBatchByPublicCode } from "@/lib/server/eco-enzyme-service";
 import { apiSuccess } from "@/lib/server/response";
-import { handleApiError } from "@/lib/server/error";
+import { handleApiError, safeDecodeURIComponent } from "@/lib/server/error";
 
 export async function GET(
   _req: Request,
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { code } = await params;
-    const batch = await getBatchByPublicCode(decodeURIComponent(code));
+    const batch = await getBatchByPublicCode(safeDecodeURIComponent(code));
     return apiSuccess(batch);
   } catch (error) {
     return handleApiError(error);

@@ -6,6 +6,117 @@ import { Button } from '@/components/ui/Button';
 import { getThumbnailUrl } from '@/lib/api/education';
 import { toast } from 'sonner';
 
+const FALLBACK_HERO_IMAGE =
+  'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=2000';
+
+const DANGEROUS_HTML_TAGS =
+  'script, style, iframe, object, embed, link, meta, base, form, input, button, textarea, select, svg, math, noscript, template';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function isSafeUrl(url: string, options: { allowDataImage: boolean; allowHashAndMailto: boolean }): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  const compact = trimmed.replace(/[\u0000-\u0020]+/g, '').toLowerCase();
+
+  if (
+    compact.startsWith('javascript:') ||
+    compact.startsWith('vbscript:') ||
+    compact.startsWith('data:text/html')
+  ) {
+    return false;
+  }
+
+  if (compact.startsWith('data:')) {
+    if (!options.allowDataImage) return false;
+    return /^data:image\/(png|jpeg|jpg|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(compact);
+  }
+
+  if (
+    compact.startsWith('https://') ||
+    compact.startsWith('http://') ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('//'))
+  ) {
+    return true;
+  }
+
+  if (options.allowHashAndMailto && (compact.startsWith('#') || compact.startsWith('mailto:'))) {
+    return true;
+  }
+
+  return false;
+}
+
+function sanitizeDescriptionHtml(dirtyHtml: string): string {
+  if (!dirtyHtml) return '';
+
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(dirtyHtml, 'text/html');
+    doc.body.querySelectorAll(DANGEROUS_HTML_TAGS).forEach((el) => el.remove());
+
+    const elements = doc.body.querySelectorAll('*');
+    elements.forEach((el) => {
+      for (const attr of Array.from(el.attributes)) {
+        const name = attr.name.toLowerCase();
+        const val = attr.value;
+
+        if (name.startsWith('on') || name === 'srcdoc' || name === 'formaction') {
+          el.removeAttribute(attr.name);
+          continue;
+        }
+
+        if (name === 'href' || name === 'xlink:href') {
+          if (!isSafeUrl(val, { allowDataImage: false, allowHashAndMailto: true })) {
+            el.removeAttribute(attr.name);
+          }
+          continue;
+        }
+
+        if (name === 'src' || name === 'poster' || name === 'background' || name === 'action') {
+          if (!isSafeUrl(val, { allowDataImage: true, allowHashAndMailto: false })) {
+            el.removeAttribute(attr.name);
+          }
+          continue;
+        }
+
+        if (name === 'style') {
+          const compactStyle = val.replace(/[\u0000-\u0020]+/g, '').toLowerCase();
+          if (
+            compactStyle.includes('expression(') ||
+            compactStyle.includes('javascript:') ||
+            compactStyle.includes('vbscript:') ||
+            compactStyle.includes('data:text/html') ||
+            compactStyle.includes('@import') ||
+            compactStyle.includes('url(')
+          ) {
+            el.removeAttribute(attr.name);
+          }
+        }
+      }
+
+      if (el.tagName === 'A' && el.getAttribute('target') === '_blank') {
+        el.setAttribute('rel', 'noopener noreferrer');
+      }
+    });
+
+    return doc.body.innerHTML;
+  }
+
+  return dirtyHtml
+    .replace(/<\s*(script|style|iframe|object|embed)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<\s*(script|style|iframe|object|embed)\b[^>]*\/?>/gi, '')
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(?:javascript|vbscript)\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '');
+}
+
 interface DownloadPdfButtonProps {
   content: {
     title: string;
@@ -42,9 +153,22 @@ export function DownloadPdfButton({ content }: DownloadPdfButtonProps) {
         })
       : '-';
 
-    const heroImageUrl = content.thumbnail
+    const rawHeroImageUrl = content.thumbnail
       ? getThumbnailUrl(content.thumbnail)
-      : 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=2000';
+      : FALLBACK_HERO_IMAGE;
+    const safeHeroImageUrl = isSafeUrl(rawHeroImageUrl, {
+      allowDataImage: true,
+      allowHashAndMailto: false,
+    })
+      ? rawHeroImageUrl
+      : FALLBACK_HERO_IMAGE;
+
+    const safeTitle = escapeHtml(content.title || '');
+    const safeSlug = escapeHtml(content.slug || '');
+    const safeFormattedDate = escapeHtml(formattedDate);
+    const safeOverview = content.overview ? escapeHtml(content.overview) : '';
+    const safeDescriptionHtml = sanitizeDescriptionHtml(content.description || '');
+    const safeHeroSrcAttr = escapeHtml(safeHeroImageUrl);
 
     // Write a beautifully-styled, print-optimized document layout with cover image
     printWindow.document.write(`
@@ -52,7 +176,7 @@ export function DownloadPdfButton({ content }: DownloadPdfButtonProps) {
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>${content.title}</title>
+          <title>${safeTitle}</title>
           <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
           <style>
             body {
@@ -184,18 +308,18 @@ export function DownloadPdfButton({ content }: DownloadPdfButtonProps) {
               <div class="logo">Teman Pilah — Pusat Edukasi</div>
               <div class="logo-site">temanpilah.com</div>
             </div>
-            <h1 class="title">${content.title}</h1>
-            <div class="meta">Dipublikasikan pada: ${formattedDate} | URL: temanpilah.com/edukasi/${content.slug}</div>
+            <h1 class="title">${safeTitle}</h1>
+            <div class="meta">Dipublikasikan pada: ${safeFormattedDate} | URL: temanpilah.com/edukasi/${safeSlug}</div>
           </div>
           
           <div class="hero-image-container">
-            <img src="${heroImageUrl}" alt="Hero Thumbnail" class="hero-image" />
+            <img src="${safeHeroSrcAttr}" alt="Hero Thumbnail" class="hero-image" />
           </div>
           
-          ${content.overview ? `<div class="overview">"${content.overview}"</div>` : ''}
+          ${safeOverview ? `<div class="overview">"${safeOverview}"</div>` : ''}
           
           <div class="content">
-            ${content.description}
+            ${safeDescriptionHtml}
           </div>
           
           <div class="footer">

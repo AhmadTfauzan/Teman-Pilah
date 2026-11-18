@@ -19,8 +19,11 @@ export class VideoRepository {
     const { skip, take, search, platform, category } = params;
 
     const where: Prisma.BankSampahVideoWhereInput = {
-      ...(platform && { platform }),
-      ...(category && { category }),
+      ...(platform &&
+        platform.toUpperCase() !== "ALL" && {
+          platform: { equals: platform, mode: "insensitive" },
+        }),
+      ...(category && category !== "ALL" && { category }),
       ...(search && {
         OR: [
           { title: { contains: search, mode: "insensitive" } },

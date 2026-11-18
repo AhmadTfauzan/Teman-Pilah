@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Container } from '@/components/layout/Container';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { Gallery as GalleryType } from '@/types';
 import { getGalleryImageUrl } from '@/lib/api/gallery';
 import { ConcentricCircles, OutlineLeaf } from '@/components/ui/DecorativeElements';
@@ -93,16 +94,11 @@ export function Gallery({ items }: GalleryProps) {
           <div className="grid grid-cols-2 lg:grid-cols-12 gap-2.5 sm:gap-5">
             {row1[0] && (
               <div className="lg:col-span-7 relative h-[145px] sm:h-[240px] lg:h-[300px] rounded-xl sm:rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5">
-                <img
+                <SafeImage
                   src={row1[0].image}
+                  fallbackSrc={row1[0].fallback}
                   alt={row1[0].title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src !== row1[0].fallback) {
-                      target.src = row1[0].fallback;
-                    }
-                  }}
                 />
                 {/* Gradient overlay: #0B4A31 to transparent */}
                 <div
@@ -123,16 +119,11 @@ export function Gallery({ items }: GalleryProps) {
 
             {row1[1] && (
               <div className="lg:col-span-5 relative h-[145px] sm:h-[240px] lg:h-[300px] rounded-xl sm:rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5">
-                <img
+                <SafeImage
                   src={row1[1].image}
+                  fallbackSrc={row1[1].fallback}
                   alt={row1[1].title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src !== row1[1].fallback) {
-                      target.src = row1[1].fallback;
-                    }
-                  }}
                 />
                 <div
                   aria-hidden="true"
@@ -157,16 +148,11 @@ export function Gallery({ items }: GalleryProps) {
                 key={item.id || idx}
                 className="relative h-[145px] sm:h-[240px] lg:h-[300px] rounded-xl sm:rounded-[16px] overflow-hidden bg-[#012D1D] shadow-md group border border-black/5"
               >
-                <img
+                <SafeImage
                   src={item.image}
+                  fallbackSrc={item.fallback}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src !== item.fallback) {
-                      target.src = item.fallback;
-                    }
-                  }}
                 />
                 <div
                   aria-hidden="true"

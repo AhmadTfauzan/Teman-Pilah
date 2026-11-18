@@ -8,9 +8,12 @@ import {
   UpdateProfileInput,
 } from "./auth.validation";
 import { AppError } from "@/middlewares/error.middleware";
+import { getJwtSecret } from "@/utils/jwt";
 
 const SALT_ROUNDS = 12;
 const JWT_EXPIRES = "7d";
+const DUMMY_BCRYPT_HASH =
+  "$2b$12$I.clkwmTfJVudApmpH.X2eAKJgy08lSZTz/8HU1esAj4aden3L.n2";
 
 interface LoginResult {
   token: string;
@@ -52,8 +55,7 @@ export class AuthService {
 
     // Tetap jalankan bcrypt.compare meski user tidak ada
     // untuk mencegah timing attack (response time tidak berbeda)
-    const dummyHash = "$2b$12$dummyhashfortimingattackprevention123456789012";
-    const passwordToCheck = user?.password ?? dummyHash;
+    const passwordToCheck = user?.password ?? DUMMY_BCRYPT_HASH;
 
     const isPasswordValid: boolean = await bcrypt.compare(
       data.password,
@@ -64,7 +66,7 @@ export class AuthService {
       throw new AppError("Email atau password salah", 401);
     }
 
-    const secret = process.env.JWT_SECRET || "your-super-secret-key-change-this";
+    const secret = getJwtSecret();
     const token: string = jwt.sign(
       { userId: user.id },
       secret,

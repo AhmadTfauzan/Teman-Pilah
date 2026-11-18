@@ -9,10 +9,6 @@ import {
   Check,
   ExternalLink,
   QrCode,
-  Calendar,
-  Droplet,
-  Scale,
-  Apple,
   Smartphone,
   Wifi,
   Globe,
@@ -20,6 +16,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { EcoEnzymeBatch, QrCodeRecord } from '@/types';
+import { getSiteUrl } from '@/lib/api-config';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
 import { buildBatchUrl, isTemporaryBaseUrl } from '@/lib/batch-url';
 import { parseOrganicWasteTypes } from '@/lib/eco-enzyme';
@@ -32,6 +29,47 @@ interface EcoEnzymeQrModalProps {
   batch: EcoEnzymeBatch | null;
   onQrPrinted?: () => void;
   onQrSaved?: (qr: QrCodeRecord) => void;
+  isPublicView?: boolean;
+}
+
+function getHostnameSafe(rawUrl: string): string {
+  if (!rawUrl) return '';
+  try {
+    return new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function isLocalhostUrl(rawUrl: string): boolean {
+  const host = getHostnameSafe(rawUrl);
+  return (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '[::1]'
+  );
+}
+
+function isPrivateIp(rawUrl: string): boolean {
+  const host = getHostnameSafe(rawUrl);
+  if (!host) return false;
+  if (isLocalhostUrl(rawUrl)) return true;
+
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!match) return false;
+  const octets = match.slice(1).map((part) => Number(part));
+  if (octets.some((o) => !Number.isInteger(o) || o < 0 || o > 255)) {
+    return false;
+  }
+
+  const [a, b] = octets;
+  if (a === 10) return true; // RFC 1918 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true; // RFC 1918 172.16.0.0/12
+  if (a === 192 && b === 168) return true; // RFC 1918 192.168.0.0/16
+  if (a === 127) return true; // Loopback 127.0.0.0/8
+  return false;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -44,20 +82,118 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+function truncateCanvasLine(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  const ellipsis = '...';
+  let truncated = text;
+  while (truncated.length > 0 && ctx.measureText(`${truncated}${ellipsis}`).width > maxWidth) {
+    truncated = truncated.slice(0, -1).trimEnd();
+  }
+  return truncated ? `${truncated}${ellipsis}` : ellipsis;
+}
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number = 2
+): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized || maxLines <= 0) return [];
+  if (maxLines === 1) {
+    return [truncateCanvasLine(ctx, normalized, maxWidth)];
+  }
+
+  const words = normalized.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (let i = 0; i < words.length; i++) {
+    let word = words[i];
+
+    if (!currentLine) {
+      while (ctx.measureText(word).width > maxWidth) {
+        if (lines.length >= maxLines - 1) {
+          lines.push(truncateCanvasLine(ctx, word, maxWidth));
+          return lines;
+        }
+        let cut = word.length - 1;
+        while (cut > 1 && ctx.measureText(word.slice(0, cut)).width > maxWidth) {
+          cut--;
+        }
+        lines.push(word.slice(0, cut));
+        word = word.slice(cut);
+      }
+      currentLine = word;
+      continue;
+    }
+
+    const candidate = `${currentLine} ${word}`;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      currentLine = candidate;
+    } else if (lines.length < maxLines - 1) {
+      lines.push(currentLine);
+      currentLine = '';
+      i--;
+    } else {
+      lines.push(truncateCanvasLine(ctx, `${currentLine}...`, maxWidth));
+      return lines;
+    }
+  }
+
+  if (currentLine) {
+    lines.push(truncateCanvasLine(ctx, currentLine, maxWidth));
+  }
+
+  return lines;
+}
+
 export function EcoEnzymeQrModal({
   isOpen,
   onClose,
   batch,
   onQrPrinted,
   onQrSaved,
+  isPublicView = false,
 }: EcoEnzymeQrModalProps) {
+  if (!isOpen || !batch) return null;
+
+  return (
+    <EcoEnzymeQrModalContent
+      key={batch.id}
+      batch={batch}
+      onClose={onClose}
+      onQrPrinted={onQrPrinted}
+      onQrSaved={onQrSaved}
+      isPublicView={isPublicView}
+    />
+  );
+}
+
+function EcoEnzymeQrModalContent({
+  batch,
+  onClose,
+  onQrPrinted,
+  onQrSaved,
+  isPublicView = false,
+}: {
+  batch: EcoEnzymeBatch;
+  onClose: () => void;
+  onQrPrinted?: () => void;
+  onQrSaved?: (qr: QrCodeRecord) => void;
+  isPublicView?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const [savedQrOverride, setSavedQrOverride] = useState<{
     batchId: string;
     qrCode: QrCodeRecord;
   } | null>(null);
   const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
+    if (!isPublicView && typeof window !== 'undefined') {
       return localStorage.getItem('tp_qr_base_url') || '';
     }
     return '';
@@ -70,31 +206,54 @@ export function EcoEnzymeQrModal({
   const svgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isPublicView) return;
+    let cancelled = false;
     fetch('/api/network-ip')
       .then((res) => res.json())
       .then((data) => {
-        if (data?.ip) {
+        if (!cancelled && data?.ip) {
           setDetectedWifiIp(data.ip);
         }
       })
       .catch(() => {});
-  }, []);
-
-  if (!isOpen || !batch) return null;
+    return () => {
+      cancelled = true;
+    };
+  }, [isPublicView]);
 
   const handleApplyBaseUrl = (url: string) => {
-    const clean = url.trim().replace(/\/+$/, '');
-    setCustomBaseUrl(clean);
-    if (clean) {
-      localStorage.setItem('tp_qr_base_url', clean);
-      toast.success(`URL QR diarahkan ke: ${clean}`);
-    } else {
+    const trimmed = url.trim().replace(/\/+$/, '');
+    if (!trimmed) {
+      setCustomBaseUrl('');
       localStorage.removeItem('tp_qr_base_url');
       toast.success('URL QR dikembalikan ke default');
+      setDomainInputVal('');
+      setShowDomainInput(false);
+      return;
     }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      toast.error('URL tidak valid. Contoh: https://teman-pilah.trycloudflare.com');
+      return;
+    }
+
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.hostname) {
+      toast.error('URL harus diawali http:// atau https:// dengan domain/IP yang valid.');
+      return;
+    }
+
+    const cleanOrigin = parsed.origin;
+    setCustomBaseUrl(cleanOrigin);
+    localStorage.setItem('tp_qr_base_url', cleanOrigin);
+    toast.success(`URL QR diarahkan ke: ${cleanOrigin}`);
+    setDomainInputVal('');
     setShowDomainInput(false);
   };
 
+  const effectiveCustomBaseUrl = isPublicView ? '' : customBaseUrl;
   const activeQr =
     (savedQrOverride?.batchId === batch.id ? savedQrOverride.qrCode : null) ||
     batch.qrCode ||
@@ -116,26 +275,25 @@ export function EcoEnzymeQrModal({
   }
 
   const effectiveBaseUrl =
-    customBaseUrl ||
+    effectiveCustomBaseUrl ||
     storedOrigin ||
     (typeof window !== 'undefined' ? window.location.origin : '');
-  const isLocalhost =
-    effectiveBaseUrl.includes('localhost') || effectiveBaseUrl.includes('127.0.0.1');
-  const isPrivateIp =
-    effectiveBaseUrl.includes('192.168.') ||
-    effectiveBaseUrl.includes('10.') ||
-    effectiveBaseUrl.includes('172.16.') ||
-    effectiveBaseUrl.includes('172.31.');
-  const isPublicUrl = !isLocalhost && !isPrivateIp;
+  const isLocalhost = isLocalhostUrl(effectiveBaseUrl);
+  const isPrivateNetwork = !isLocalhost && isPrivateIp(effectiveBaseUrl);
+  const isPublicUrl = !isLocalhost && !isPrivateIp(effectiveBaseUrl);
 
-  const qrCanonicalUrl = customBaseUrl
-    ? buildBatchUrl(effectiveCode, { short: true, baseUrl: customBaseUrl })
+  const publicBaseUrl = storedOrigin || getSiteUrl();
+  const qrCanonicalUrl = effectiveCustomBaseUrl
+    ? buildBatchUrl(effectiveCode, { short: true, baseUrl: effectiveCustomBaseUrl })
     : isStoredTargetPublic
     ? storedTargetUrl
-    : buildBatchUrl(effectiveCode, { short: true });
+    : buildBatchUrl(effectiveCode, {
+        short: true,
+        baseUrl: isPublicView ? publicBaseUrl : undefined,
+      });
   const fullWebUrl = buildBatchUrl(effectiveCode, {
     short: false,
-    baseUrl: customBaseUrl || undefined,
+    baseUrl: isPublicView ? publicBaseUrl : effectiveCustomBaseUrl || undefined,
   });
 
   const organicItems = parseOrganicWasteTypes(batch.organicWasteTypes);
@@ -152,6 +310,7 @@ export function EcoEnzymeQrModal({
       : `${Number(batch.organicWasteKg)} kg`;
 
   const notifyPrinted = async () => {
+    if (isPublicView) return;
     try {
       await ecoEnzymeApi.markQrPrinted(batch.id);
       if (onQrPrinted) onQrPrinted();
@@ -185,7 +344,54 @@ export function EcoEnzymeQrModal({
 
       const scale = 2;
       const width = 420;
-      const height = 670;
+      const boxX = 26;
+      const boxWidth = width - boxX * 2;
+      const boxInnerWidth = width - 80;
+      const boMaxWidth = width - 95;
+      const gallonCode = batch.batchCode || effectiveCode;
+
+      ctx.font = 'bold 16px monospace';
+      const gallonBadgeText =
+        wrapCanvasText(ctx, `KODE: ${gallonCode}`, width - 104, 1)[0] ||
+        `KODE: ${gallonCode}`;
+
+      ctx.font = 'bold 10px monospace';
+      const publicCodeText =
+        wrapCanvasText(ctx, effectiveCode, width - 80, 1)[0] || effectiveCode;
+
+      ctx.font = 'bold 13px sans-serif';
+      const containerLines = wrapCanvasText(
+        ctx,
+        `Wadah : ${batch.containerName}`,
+        boxInnerWidth,
+        2
+      );
+
+      ctx.font = '11px sans-serif';
+      const boLines = wrapCanvasText(
+        ctx,
+        organicItems.join(', '),
+        boMaxWidth,
+        3
+      );
+
+      const boxY = 336;
+      const wadahStartY = 360;
+      const afterWadahY = wadahStartY + Math.max(0, containerLines.length - 1) * 17;
+      const startDateY = afterWadahY + 24;
+      const harvestDateY = startDateY + 22;
+      const sepY = harvestDateY + 14;
+      const bahanTitleY = sepY + 20;
+      const airY = bahanTitleY + 22;
+      const pemanisY = airY + 22;
+      const boHeaderY = pemanisY + 22;
+      const boListStartY = boHeaderY + 20;
+      const afterBoY = boListStartY + Math.max(0, boLines.length - 1) * 15;
+      const boxHeight = Math.max(252, afterBoY - boxY + 22);
+      const footerY1 = boxY + boxHeight + 27;
+      const footerY2 = footerY1 + 20;
+      const height = Math.max(670, footerY2 + 35);
+
       exportCanvas.width = width * scale;
       exportCanvas.height = height * scale;
       ctx.scale(scale, scale);
@@ -214,11 +420,11 @@ export function EcoEnzymeQrModal({
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('TEMAN PILAH', width / 2, 42);
+      ctx.fillText('TEMAN PILAH', width / 2, 42, 240);
 
       ctx.fillStyle = '#2C5F2D';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('ECO ENZYME FERMENTASI', width / 2, 62);
+      ctx.fillText('ECO ENZYME FERMENTASI', width / 2, 62, 240);
 
       // Gambar Logo Telkom di Kanan
       if (telkomLogo) {
@@ -236,7 +442,6 @@ export function EcoEnzymeQrModal({
       ctx.stroke();
 
       // Kode Galon Badge
-      const gallonCode = batch.batchCode || effectiveCode;
       ctx.fillStyle = '#EBF4E9';
       ctx.fillRect(40, 90, width - 80, 34);
       ctx.strokeStyle = '#2C5F2D';
@@ -245,7 +450,7 @@ export function EcoEnzymeQrModal({
 
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 16px monospace';
-      ctx.fillText(`KODE: ${gallonCode}`, width / 2, 113);
+      ctx.fillText(gallonBadgeText, width / 2, 113, width - 104);
 
       // Render QR Code di tengah (170x170 px)
       ctx.drawImage(canvas, (width - 170) / 2, 136, 170, 170);
@@ -253,19 +458,21 @@ export function EcoEnzymeQrModal({
       // Public code text
       ctx.fillStyle = '#666666';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(effectiveCode, width / 2, 322);
+      ctx.fillText(publicCodeText, width / 2, 322, width - 80);
 
       // Box Detail Bahan & Tanggal
       ctx.fillStyle = '#FAFBF9';
-      ctx.fillRect(26, 336, width - 52, 252);
+      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
       ctx.strokeStyle = '#CFE1CC';
       ctx.lineWidth = 1;
-      ctx.strokeRect(26, 336, width - 52, 252);
+      ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
       ctx.textAlign = 'left';
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(`Wadah : ${batch.containerName}`, 40, 362);
+      containerLines.forEach((line, idx) => {
+        ctx.fillText(line, 40, wadahStartY + idx * 17, boxInnerWidth);
+      });
 
       const startStr = new Date(batch.startDate).toLocaleDateString('id-ID', {
         day: 'numeric',
@@ -280,41 +487,42 @@ export function EcoEnzymeQrModal({
 
       ctx.font = '12px sans-serif';
       ctx.fillStyle = '#333333';
-      ctx.fillText(`Tanggal Buat   : ${startStr}`, 40, 386);
-      ctx.fillText(`Tanggal Panen  : ${harvestStr} (90 Hari)`, 40, 408);
+      ctx.fillText(`Tanggal Buat   : ${startStr}`, 40, startDateY, boxInnerWidth);
+      ctx.fillText(`Tanggal Panen  : ${harvestStr} (90 Hari)`, 40, harvestDateY, boxInnerWidth);
 
       // Garis pemisah dalam box
       ctx.strokeStyle = '#E3E8DC';
       ctx.beginPath();
-      ctx.moveTo(40, 422);
-      ctx.lineTo(width - 40, 422);
+      ctx.moveTo(40, sepY);
+      ctx.lineTo(width - 40, sepY);
       ctx.stroke();
 
       ctx.font = 'bold 12px sans-serif';
       ctx.fillStyle = '#012D1D';
-      ctx.fillText('Bahan :', 40, 442);
+      ctx.fillText('Bahan :', 40, bahanTitleY, boxInnerWidth);
 
       ctx.font = '12px sans-serif';
       ctx.fillStyle = '#222222';
-      ctx.fillText(`- Air       = ${Number(batch.waterLiter)} L`, 50, 464);
-      ctx.fillText(`- Pemanis = ${molassesDisplay} (Gula/Madu)`, 50, 486);
-      ctx.fillText(`- BO (${wasteDisplay}) :`, 50, 508);
+      ctx.fillText(`- Air       = ${Number(batch.waterLiter)} L`, 50, airY, boMaxWidth);
+      ctx.fillText(`- Pemanis = ${molassesDisplay} (Gula/Madu)`, 50, pemanisY, boMaxWidth);
+      ctx.fillText(`- BO (${wasteDisplay}) :`, 50, boHeaderY, boMaxWidth);
 
       // List BO
-      const boList = organicItems.slice(0, 4).join(', ');
       ctx.font = '11px sans-serif';
       ctx.fillStyle = '#444444';
-      ctx.fillText(`  ${boList}${organicItems.length > 4 ? ', dll.' : ''}`, 55, 528);
+      boLines.forEach((line, idx) => {
+        ctx.fillText(line, 55, boListStartY + idx * 15, boMaxWidth);
+      });
 
       // Footer
       ctx.textAlign = 'center';
       ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = '#2C5F2D';
-      ctx.fillText('Scan QR Code untuk Cek Progres Hari Panen', width / 2, 615);
+      ctx.fillText('Scan QR Code untuk Cek Progres Hari Panen', width / 2, footerY1, width - 52);
 
       ctx.font = 'italic 9px sans-serif';
       ctx.fillStyle = '#888888';
-      ctx.fillText('Komunitas Teman Pilah x Universitas Telkom', width / 2, 635);
+      ctx.fillText('Komunitas Teman Pilah x Universitas Telkom', width / 2, footerY2, width - 52);
 
       // Unduh File
       const pngUrl = exportCanvas.toDataURL('image/png');
@@ -437,7 +645,7 @@ export function EcoEnzymeQrModal({
             <div className="mb-2">
               <PersistentQrCode
                 value={qrCanonicalUrl}
-                qrCode={batch.qrCode}
+                qrCode={activeQr}
                 entityType="ECO_ENZYME_BATCH"
                 entityId={batch.id}
                 entityKey={batch.batchCode}
@@ -448,6 +656,8 @@ export function EcoEnzymeQrModal({
                 canvasWrapperRef={canvasRef}
                 svgWrapperRef={svgRef}
                 reused={batch.reusedQr}
+                showStatusBadge={!isPublicView}
+                isPublicView={isPublicView}
                 onSaved={(savedQr) => {
                   setSavedQrOverride({ batchId: batch.id, qrCode: savedQr });
                   onQrSaved?.(savedQr);
@@ -510,6 +720,7 @@ export function EcoEnzymeQrModal({
         </div>
 
         {/* BANNER BANTUAN SCAN HP & MODE PUBLIK */}
+        {!isPublicView && (
         <div className="mb-2.5 sm:mb-3 print:hidden">
           {isPublicUrl ? (
             <div className="bg-emerald-50/90 border border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-left text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -546,7 +757,7 @@ export function EcoEnzymeQrModal({
                 </button>
               </div>
             </div>
-          ) : isPrivateIp ? (
+          ) : isPrivateNetwork ? (
             <div className="bg-amber-50/90 border border-amber-200 rounded-xl sm:rounded-2xl p-2.5 text-left text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-amber-950 min-w-0">
                 <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0">
@@ -663,6 +874,7 @@ export function EcoEnzymeQrModal({
             </div>
           )}
         </div>
+        )}
 
         {/* TOMBOL UTAMA: BUKA DETAIL LENGKAP GALON */}
         <a

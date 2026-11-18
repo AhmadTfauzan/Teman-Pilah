@@ -1,15 +1,51 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, QrCode, Lock, Sparkles, Calendar, Beaker, Apple, Droplet, Scale } from 'lucide-react';
-import { EcoEnzymeBatch, EnzymeFailureReason } from '@/types';
+import React, { useState } from 'react';
+import { X, QrCode, Lock, Sparkles, Beaker, Apple, Droplet, Scale } from 'lucide-react';
+import { EcoEnzymeBatch, EcoEnzymeBatchStatus, EnzymeFailureReason } from '@/types';
+import {
+  addDaysToDateInput,
+  formatDateInputWib,
+  getTodayWibDateInput,
+} from '@/lib/eco-enzyme';
+import { toast } from 'sonner';
+
+export interface EcoEnzymeModalSubmitData {
+  batchCode?: string;
+  containerName: string;
+  containerCapacityLiter: number;
+  molassesKg: number;
+  organicWasteKg: number;
+  waterLiter: number;
+  organicWasteTypes: string;
+  startDate: string;
+  harvestEstimate?: string;
+  photoUrl?: string | null;
+  notes?: string | null;
+  status?: EcoEnzymeBatchStatus;
+  failureReason?: EnzymeFailureReason | null;
+  failureNotes?: string | null;
+  previousBatchId?: string | null;
+}
 
 interface EcoEnzymeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: EcoEnzymeModalSubmitData) => Promise<void>;
   initialData?: EcoEnzymeBatch | null;
   successorOfBatch?: EcoEnzymeBatch | null;
+}
+
+function isSafePhotoUrlInput(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 export function EcoEnzymeModal({
@@ -19,119 +55,111 @@ export function EcoEnzymeModal({
   initialData,
   successorOfBatch,
 }: EcoEnzymeModalProps) {
-  const [batchCode, setBatchCode] = useState('');
-  const [containerName, setContainerName] = useState('');
-  const [containerCapacityLiter, setContainerCapacityLiter] = useState<number>(5);
-  
-  // Satuan & Nilai Pemanis (Madu / Gula)
-  const [molassesUnit, setMolassesUnit] = useState<'gr' | 'kg'>('gr');
-  const [molassesInput, setMolassesInput] = useState<number>(150);
-
-  // Satuan & Nilai Bahan Organik (BO)
-  const [wasteUnit, setWasteUnit] = useState<'gr' | 'kg'>('gr');
-  const [wasteInput, setWasteInput] = useState<number>(450);
-
-  // Air (Liter)
-  const [waterLiter, setWaterLiter] = useState<number>(3);
-
-  // Komposisi Kulit Buah & Daun (BO)
-  const [organicWasteTypes, setOrganicWasteTypes] = useState('');
-
-  const [startDate, setStartDate] = useState('');
-  const [harvestEstimate, setHarvestEstimate] = useState('');
-  const [isCustomHarvestDate, setIsCustomHarvestDate] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<string>('IN_PROGRESS');
-  const [failureReason, setFailureReason] = useState<EnzymeFailureReason | ''>('');
-  const [failureNotes, setFailureNotes] = useState('');
-  const [previousBatchId, setPreviousBatchId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (initialData) {
-      setBatchCode(initialData.batchCode || '');
-      setContainerName(initialData.containerName || '');
-      setContainerCapacityLiter(Number(initialData.containerCapacityLiter) || 5);
-      
-      const mKg = Number(initialData.molassesKg) || 0.15;
-      if (mKg < 1) {
-        setMolassesUnit('gr');
-        setMolassesInput(Math.round(mKg * 1000));
-      } else {
-        setMolassesUnit('kg');
-        setMolassesInput(mKg);
-      }
-
-      const wKg = Number(initialData.organicWasteKg) || 0.45;
-      if (wKg < 1) {
-        setWasteUnit('gr');
-        setWasteInput(Math.round(wKg * 1000));
-      } else {
-        setWasteUnit('kg');
-        setWasteInput(wKg);
-      }
-
-      setWaterLiter(Number(initialData.waterLiter) || 3);
-      setOrganicWasteTypes(initialData.organicWasteTypes || '');
-      setStartDate(initialData.startDate ? initialData.startDate.slice(0, 10) : '');
-      setHarvestEstimate(initialData.harvestEstimate ? initialData.harvestEstimate.slice(0, 10) : '');
-      setIsCustomHarvestDate(false);
-      setPhotoUrl(initialData.photoUrl || '');
-      setNotes(initialData.notes || '');
-      setStatus(initialData.status || 'IN_PROGRESS');
-      setFailureReason(initialData.failureReason || '');
-      setFailureNotes(initialData.failureNotes || '');
-      setPreviousBatchId(initialData.previousBatchId || null);
-    } else if (successorOfBatch) {
-      setBatchCode('');
-      setContainerName(successorOfBatch.containerName || '');
-      setContainerCapacityLiter(Number(successorOfBatch.containerCapacityLiter) || 5);
-      setMolassesUnit('gr');
-      setMolassesInput(150);
-      setWasteUnit('gr');
-      setWasteInput(450);
-      setWaterLiter(3);
-      setOrganicWasteTypes('Semangka, Melon, Nanas, Pepaya, Mangga');
-      const today = new Date().toISOString().slice(0, 10);
-      setStartDate(today);
-      const est = new Date();
-      est.setDate(est.getDate() + 89);
-      setHarvestEstimate(est.toISOString().slice(0, 10));
-      setIsCustomHarvestDate(false);
-      setPhotoUrl('');
-      setNotes(`Siklus baru wadah ${successorOfBatch.containerName}`);
-      setStatus('IN_PROGRESS');
-      setFailureReason('');
-      setFailureNotes('');
-      setPreviousBatchId(successorOfBatch.id);
-    } else {
-      setBatchCode('');
-      setContainerName('');
-      setContainerCapacityLiter(5);
-      setMolassesUnit('gr');
-      setMolassesInput(150);
-      setWasteUnit('gr');
-      setWasteInput(450);
-      setWaterLiter(3);
-      setOrganicWasteTypes('Semangka, Melon, Nanas, Pepaya, Mangga');
-      const today = new Date().toISOString().slice(0, 10);
-      setStartDate(today);
-      const est = new Date();
-      est.setDate(est.getDate() + 89);
-      setHarvestEstimate(est.toISOString().slice(0, 10));
-      setIsCustomHarvestDate(false);
-      setPhotoUrl('');
-      setNotes('');
-      setStatus('IN_PROGRESS');
-      setFailureReason('');
-      setFailureNotes('');
-      setPreviousBatchId(null);
-    }
-  }, [initialData, successorOfBatch, isOpen]);
-
   if (!isOpen) return null;
 
+  const modalKey = initialData?.id
+    ? `edit-${initialData.id}`
+    : successorOfBatch?.id
+    ? `successor-${successorOfBatch.id}`
+    : 'new';
+
+  return (
+    <EcoEnzymeModalContent
+      key={modalKey}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      initialData={initialData}
+      successorOfBatch={successorOfBatch}
+    />
+  );
+}
+
+function EcoEnzymeModalContent({
+  onClose,
+  onSubmit,
+  initialData,
+  successorOfBatch,
+}: Omit<EcoEnzymeModalProps, 'isOpen'>) {
+  const todayWib = getTodayWibDateInput();
+  const initialMolassesKg = initialData ? Number(initialData.molassesKg) || 0.15 : 0.15;
+  const initialWasteKg = initialData ? Number(initialData.organicWasteKg) || 0.45 : 0.45;
+
+  const [batchCode, setBatchCode] = useState(initialData?.batchCode || '');
+  const [containerName, setContainerName] = useState(
+    initialData?.containerName || successorOfBatch?.containerName || ''
+  );
+  const [containerCapacityLiter, setContainerCapacityLiter] = useState<number>(
+    initialData
+      ? Number(initialData.containerCapacityLiter) || 5
+      : successorOfBatch
+      ? Number(successorOfBatch.containerCapacityLiter) || 5
+      : 5
+  );
+
+  // Satuan & Nilai Pemanis (Madu / Gula)
+  const [molassesUnit, setMolassesUnit] = useState<'gr' | 'kg'>(
+    initialData && initialMolassesKg >= 1 ? 'kg' : 'gr'
+  );
+  const [molassesInput, setMolassesInput] = useState<number>(
+    initialData
+      ? initialMolassesKg < 1
+        ? Math.round(initialMolassesKg * 1000)
+        : initialMolassesKg
+      : 150
+  );
+
+  // Satuan & Nilai Bahan Organik (BO)
+  const [wasteUnit, setWasteUnit] = useState<'gr' | 'kg'>(
+    initialData && initialWasteKg >= 1 ? 'kg' : 'gr'
+  );
+  const [wasteInput, setWasteInput] = useState<number>(
+    initialData
+      ? initialWasteKg < 1
+        ? Math.round(initialWasteKg * 1000)
+        : initialWasteKg
+      : 450
+  );
+
+  // Air (Liter)
+  const [waterLiter, setWaterLiter] = useState<number>(
+    initialData ? Number(initialData.waterLiter) || 3 : 3
+  );
+
+  // Komposisi Kulit Buah & Daun (BO)
+  const [organicWasteTypes, setOrganicWasteTypes] = useState(
+    initialData
+      ? initialData.organicWasteTypes || ''
+      : 'Semangka, Melon, Nanas, Pepaya, Mangga'
+  );
+
+  const [startDate, setStartDate] = useState(() =>
+    initialData ? formatDateInputWib(initialData.startDate) : todayWib
+  );
+  const [harvestEstimate, setHarvestEstimate] = useState(() =>
+    initialData
+      ? formatDateInputWib(initialData.harvestEstimate)
+      : addDaysToDateInput(todayWib)
+  );
+  const [isCustomHarvestDate, setIsCustomHarvestDate] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(initialData?.photoUrl || '');
+  const [notes, setNotes] = useState(
+    initialData
+      ? initialData.notes || ''
+      : successorOfBatch
+      ? `Siklus baru wadah ${successorOfBatch.containerName}`
+      : ''
+  );
+  const [status, setStatus] = useState<EcoEnzymeBatchStatus>(
+    initialData?.status || 'IN_PROGRESS'
+  );
+  const [failureReason, setFailureReason] = useState<EnzymeFailureReason | ''>(
+    initialData?.failureReason || ''
+  );
+  const [failureNotes, setFailureNotes] = useState(initialData?.failureNotes || '');
+  const previousBatchId = initialData
+    ? initialData.previousBatchId || null
+    : successorOfBatch?.id || null;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Hitung ekuivalen kg untuk submit
   const finalMolassesKg = molassesUnit === 'gr' ? molassesInput / 1000 : molassesInput;
@@ -145,25 +173,52 @@ export function EcoEnzymeModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    const parsedStart = new Date(startDate);
+    if (!startDate || Number.isNaN(parsedStart.getTime())) {
+      toast.error('Tanggal mulai fermentasi tidak valid.');
+      return;
+    }
+
+    let parsedHarvestIso: string | undefined;
+    if (harvestEstimate) {
+      const parsedHarvest = new Date(harvestEstimate);
+      if (Number.isNaN(parsedHarvest.getTime())) {
+        toast.error('Tanggal estimasi panen tidak valid.');
+        return;
+      }
+      parsedHarvestIso = parsedHarvest.toISOString();
+    }
+
+    const trimmedPhoto = photoUrl.trim();
+    if (!isSafePhotoUrlInput(trimmedPhoto)) {
+      toast.error('URL foto tidak valid. Gunakan awalan https://, http://, atau /.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
         batchCode: batchCode.trim() || undefined,
         containerName: containerName.trim(),
-        containerCapacityLiter: Number(containerCapacityLiter) || Math.ceil(waterLiter * 1.3),
+        containerCapacityLiter:
+          Number(containerCapacityLiter) > 0
+            ? Number(containerCapacityLiter)
+            : Math.ceil(waterLiter * 1.3),
         molassesKg: Number(finalMolassesKg) || 0.15,
         organicWasteKg: Number(finalWasteKg) || 0.45,
         waterLiter: Number(waterLiter) || 3,
         organicWasteTypes: organicWasteTypes.trim() || 'Kulit Buah Campur',
-        startDate: new Date(startDate).toISOString(),
-        harvestEstimate: harvestEstimate ? new Date(harvestEstimate).toISOString() : undefined,
-        photoUrl: photoUrl.trim() || undefined,
+        startDate: parsedStart.toISOString(),
+        harvestEstimate: parsedHarvestIso,
+        photoUrl: trimmedPhoto ? trimmedPhoto : initialData ? null : undefined,
         notes: notes.trim() || undefined,
         ...(initialData
           ? {
               status,
-              failureReason: status === 'FAILED' ? failureReason || undefined : undefined,
-              failureNotes: status === 'FAILED' ? failureNotes.trim() || undefined : undefined,
+              failureReason: status === 'FAILED' ? failureReason || null : null,
+              failureNotes: status === 'FAILED' ? failureNotes.trim() || null : null,
             }
           : {
               previousBatchId: previousBatchId || undefined,
@@ -275,6 +330,20 @@ export function EcoEnzymeModal({
                 Jika nama wadah / kode galon sama dengan yang sudah ada, QR Code sebelumnya akan dipakai kembali (tidak membuat QR ganda).
               </p>
             </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-800 mb-1">
+                Kapasitas Wadah (Liter)
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                placeholder="cth. 5"
+                value={containerCapacityLiter}
+                onChange={(e) => setContainerCapacityLiter(parseFloat(e.target.value) || 0)}
+                className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2.5 text-stone-900 focus:outline-none focus:border-emerald-600"
+              />
+            </div>
           </div>
 
           {/* Baris 2: Tanggal Buat & Tanggal Panen */}
@@ -292,9 +361,13 @@ export function EcoEnzymeModal({
                     const newStart = e.target.value;
                     setStartDate(newStart);
                     if (newStart && !isCustomHarvestDate) {
-                      const d = new Date(newStart);
-                      d.setDate(d.getDate() + 89);
-                      setHarvestEstimate(d.toISOString().slice(0, 10));
+                      const parsed = new Date(newStart);
+                      if (!Number.isNaN(parsed.getTime())) {
+                        const nextEstimate = addDaysToDateInput(newStart);
+                        if (nextEstimate) {
+                          setHarvestEstimate(nextEstimate);
+                        }
+                      }
                     }
                   }}
                   className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:border-emerald-600"
@@ -310,10 +383,14 @@ export function EcoEnzymeModal({
                     type="button"
                     onClick={() => {
                       if (startDate) {
-                        const d = new Date(startDate);
-                        d.setDate(d.getDate() + 89);
-                        setHarvestEstimate(d.toISOString().slice(0, 10));
-                        setIsCustomHarvestDate(false);
+                        const parsed = new Date(startDate);
+                        if (!Number.isNaN(parsed.getTime())) {
+                          const nextEstimate = addDaysToDateInput(startDate);
+                          if (nextEstimate) {
+                            setHarvestEstimate(nextEstimate);
+                            setIsCustomHarvestDate(false);
+                          }
+                        }
                       }
                     }}
                     className="text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold cursor-pointer"
@@ -452,7 +529,7 @@ export function EcoEnzymeModal({
                 </label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => setStatus(e.target.value as EcoEnzymeBatchStatus)}
                   className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2 text-stone-800"
                 >
                   <option value="IN_PROGRESS">Sedang Berjalan (Fermentasi)</option>
@@ -464,25 +541,54 @@ export function EcoEnzymeModal({
               </div>
 
               {status === 'FAILED' && (
-                <div>
-                  <label className="block text-[11px] font-bold text-rose-800 mb-1">
-                    Alasan Kegagalan
-                  </label>
-                  <select
-                    value={failureReason}
-                    onChange={(e) => setFailureReason(e.target.value as any)}
-                    className="w-full text-xs bg-white border border-rose-300 rounded-xl px-3 py-2 text-stone-800"
-                  >
-                    <option value="">Pilih Alasan</option>
-                    <option value="KONTAMINASI_JAMUR_HITAM">Kontaminasi Jamur Hitam</option>
-                    <option value="AROMA_BUSUK_MENYENGAT">Aroma Busuk Menyengat</option>
-                    <option value="WADAH_BOCOR_RUSAK">Wadah Bocor/Rusak</option>
-                    <option value="LAINNYA">Lainnya</option>
-                  </select>
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-rose-800 mb-1">
+                      Alasan Kegagalan
+                    </label>
+                    <select
+                      value={failureReason}
+                      onChange={(e) => setFailureReason(e.target.value as EnzymeFailureReason | '')}
+                      className="w-full text-xs bg-white border border-rose-300 rounded-xl px-3 py-2 text-stone-800"
+                    >
+                      <option value="">Pilih Alasan</option>
+                      <option value="KONTAMINASI_JAMUR_HITAM">Kontaminasi Jamur Hitam</option>
+                      <option value="AROMA_BUSUK_MENYENGAT">Aroma Busuk Menyengat</option>
+                      <option value="WADAH_BOCOR_RUSAK">Wadah Bocor/Rusak</option>
+                      <option value="LAINNYA">Lainnya</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-rose-800 mb-1">
+                      Catatan Kegagalan (Opsional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="cth. Tutup wadah sempat longgar sehingga terkontaminasi jamur hitam..."
+                      value={failureNotes}
+                      onChange={(e) => setFailureNotes(e.target.value)}
+                      className="w-full text-xs bg-white border border-rose-300 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:border-rose-500"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           )}
+
+          {/* URL Foto Galon (Opsional) */}
+          <div>
+            <label className="block text-xs font-bold text-stone-700 mb-1">
+              URL Foto Galon (Opsional)
+            </label>
+            <input
+              type="text"
+              placeholder="cth. https://... atau /images/galon-1.jpg"
+              value={photoUrl}
+              onChange={(e) => setPhotoUrl(e.target.value)}
+              className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:border-emerald-600"
+            />
+          </div>
 
           {/* Catatan Tambahan (Opsional) */}
           <div>

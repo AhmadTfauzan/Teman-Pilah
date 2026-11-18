@@ -1,9 +1,14 @@
 import React from 'react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CalendarDays, Link as LinkIcon, ArrowLeft } from 'lucide-react';
-import { educationApi, getThumbnailUrl } from '@/lib/api/education';
+import { prisma } from '@/lib/prisma';
 import { DownloadPdfButton } from '@/components/landing/DownloadPdfButton';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 interface PageProps {
   params: Promise<{
@@ -11,13 +16,48 @@ interface PageProps {
   }>;
 }
 
+const FALLBACK_HERO_IMAGE = '/activity/Pengmas (7).jpeg';
+
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
+const useEnvApiBase =
+  Boolean(envApiUrl) &&
+  !envApiUrl!.includes('trycloudflare.com') &&
+  !envApiUrl!.includes('ngrok') &&
+  !envApiUrl!.includes('localhost:2000');
+
+function resolveEducationImageUrl(rawPath?: string | null): string | null {
+  const path = rawPath?.trim();
+  if (!path) return null;
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('data:') ||
+    (path.startsWith('/') && !path.startsWith('//'))
+  ) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, '');
+  return useEnvApiBase ? `${envApiUrl}/${cleanPath}` : `/${cleanPath}`;
+}
+
 export default async function DynamicEducationDetail({ params }: PageProps) {
   const { slug } = await params;
-  
+
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    decodedSlug = slug;
+  }
+
   let content = null;
   try {
-    const allEducation = await educationApi.getAll();
-    content = allEducation.find((item) => item.slug === slug);
+    content = await prisma.educationContent.findFirst({
+      where: {
+        OR: [{ slug: decodedSlug }, { id: decodedSlug }],
+        status: 'PUBLISHED',
+      },
+    });
   } catch (error) {
     console.error('Failed to fetch education article:', error);
   }
@@ -26,19 +66,29 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
     notFound();
   }
 
-  const formattedDate = content.publishDate 
-    ? new Date(content.publishDate).toLocaleDateString('id-ID', {
+  const displayDate = content.publishDate ?? content.createdAt;
+  const formattedDate = displayDate
+    ? displayDate.toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'long',
-        year: 'numeric'
-      })
-    : content.createdAt 
-    ? new Date(content.createdAt).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'Asia/Jakarta',
       })
     : '-';
+
+  const resolvedThumbnail = resolveEducationImageUrl(content.thumbnail);
+  const heroImageUrl = resolvedThumbnail ?? FALLBACK_HERO_IMAGE;
+
+  const downloadableContent = {
+    title: content.title,
+    overview: content.overview,
+    description: content.description,
+    publishDate: content.publishDate ? content.publishDate.toISOString() : undefined,
+    createdAt: content.createdAt.toISOString(),
+    tags: content.tags,
+    slug: content.slug,
+    thumbnail: resolvedThumbnail ?? undefined,
+  };
 
   return (
     <div className="pt-20 md:pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
@@ -51,44 +101,38 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
       </div>
       {/* CONTAINED WRAPPER - Matches Navbar and Footer limits */}
       <div className="mx-auto max-w-[1440px] 2xl:px-12 px-4 sm:px-6 lg:px-8 py-5 sm:py-10 flex flex-col gap-4 sm:gap-8">
-        
         {/* BACK BUTTON */}
         <div>
-          <a
+          <Link
             href="/#edukasi"
             className="inline-flex items-center gap-2 text-xs sm:text-[15px] font-bold text-[#616b5a] hover:text-[#1a2f1d] transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 sm:w-[18px] sm:h-[18px] transition-transform group-hover:-translate-x-1 text-[#616b5a] group-hover:text-[#1a2f1d]" />
             <span>Kembali ke Pusat Edukasi</span>
-          </a>
+          </Link>
         </div>
 
         {/* HERO IMAGE / THUMBNAIL - Aligned & Contained */}
         <div className="w-full h-[190px] sm:h-[250px] md:h-[480px] relative overflow-hidden bg-[#e0e5db] rounded-2xl sm:rounded-[32px] border border-[#e5e7e0] shadow-sm">
-          {content.thumbnail ? (
-            <img
-              src={getThumbnailUrl(content.thumbnail)}
-              alt={content.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <img
-              src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=2000"
-              alt="Edukasi Lingkungan"
-              className="w-full h-full object-cover opacity-90"
-            />
-          )}
+          <SafeImage
+            src={heroImageUrl}
+            fallbackSrc={FALLBACK_HERO_IMAGE}
+            alt={resolvedThumbnail ? content.title : 'Edukasi Lingkungan'}
+            className={`w-full h-full object-cover ${resolvedThumbnail ? '' : 'opacity-90'}`}
+          />
           <div className="absolute inset-0 bg-black/10 mix-blend-multiply"></div>
         </div>
 
         {/* ARTICLE CONTENT */}
         <div className="w-full px-0 py-2 sm:py-4 md:py-6">
-          
           {/* TAGS */}
           {content.tags && content.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
               {content.tags.map((tag: string, index: number) => (
-                <span key={index} className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-xs sm:text-[13px] font-bold tracking-wide">
+                <span
+                  key={index}
+                  className="px-3 py-1 sm:px-4 sm:py-1.5 bg-[#DCFCE7] text-[#166534] rounded-full text-xs sm:text-[13px] font-bold tracking-wide"
+                >
                   {tag}
                 </span>
               ))}
@@ -116,7 +160,7 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
           {content.overview && (
             <div className="bg-[#E8F5E9] border-l-[4px] sm:border-l-[6px] border-[#1a2f1d] p-4 sm:p-6 md:p-8 mb-8 sm:mb-12 rounded-r-2xl">
               <p className="text-[#1a2f1d] font-bold text-[15px] sm:text-[18px] md:text-[20px] leading-relaxed italic">
-                "{content.overview}"
+                &ldquo;{content.overview}&rdquo;
               </p>
             </div>
           )}
@@ -135,9 +179,8 @@ export default async function DynamicEducationDetail({ params }: PageProps) {
 
           {/* BOTTOM BUTTON */}
           <div className="mt-8 sm:mt-14 mb-4 sm:mb-8">
-            <DownloadPdfButton content={content} />
+            <DownloadPdfButton content={downloadableContent} />
           </div>
-
         </div>
       </div>
     </div>

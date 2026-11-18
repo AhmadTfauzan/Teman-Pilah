@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest } from "@/lib/server/auth";
 import { AppError, handleApiError } from "@/lib/server/error";
+import { assertSafeImageDataUrl } from "@/lib/server/form-payload";
 import { buildPaginationMeta, parsePagination } from "@/lib/server/pagination";
 import {
   findQrByCodeOrEntity,
@@ -29,8 +30,9 @@ function validateQrDataUrl(qrDataUrl: unknown): string {
     throw new AppError("Ukuran data gambar QR melebihi batas maksimal 200KB", 400);
   }
 
-  const isPng = trimmed.startsWith("data:image/png;base64,");
-  const isSvg = trimmed.startsWith("data:image/svg+xml");
+  const lower = trimmed.toLowerCase();
+  const isPng = lower.startsWith("data:image/png;base64,");
+  const isSvg = lower.startsWith("data:image/svg+xml");
   if (!isPng && !isSvg) {
     throw new AppError(
       "Format qrDataUrl harus berupa data:image/png;base64,... atau data:image/svg+xml",
@@ -39,19 +41,7 @@ function validateQrDataUrl(qrDataUrl: unknown): string {
   }
 
   if (isSvg) {
-    const lower = trimmed.toLowerCase();
-    if (lower.includes("<script")) {
-      throw new AppError("Konten SVG QR tidak valid", 400);
-    }
-    const base64Marker = ";base64,";
-    const markerIndex = lower.indexOf(base64Marker);
-    if (markerIndex !== -1) {
-      const base64Payload = trimmed.slice(markerIndex + base64Marker.length);
-      const decoded = Buffer.from(base64Payload, "base64").toString("utf8").toLowerCase();
-      if (decoded.includes("<script")) {
-        throw new AppError("Konten SVG QR tidak valid", 400);
-      }
-    }
+    assertSafeImageDataUrl(trimmed, "Konten SVG QR tidak valid");
   }
 
   return trimmed;
@@ -67,7 +57,7 @@ function validateTargetUrl(targetUrl: unknown): string | null | undefined {
   if (
     !trimmed.startsWith("https://") &&
     !trimmed.startsWith("http://") &&
-    !trimmed.startsWith("/")
+    !(trimmed.startsWith("/") && !trimmed.startsWith("//"))
   ) {
     throw new AppError("Format targetUrl harus berupa URL http/https atau path relatif", 400);
   }
@@ -101,6 +91,11 @@ export async function GET(req: Request) {
       return apiSuccess(qrCode);
     }
 
+    const user = await authenticateRequest(req);
+    if (!user) {
+      return apiError("Unauthorized", 401);
+    }
+
     const { skip, take, page, limit } = parsePagination({
       page: searchParams.get("page"),
       limit: searchParams.get("limit"),
@@ -125,8 +120,12 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
     const user = await authenticateRequest(req);
+    if (!user) {
+      return apiError("Unauthorized", 401);
+    }
+
+    const body = await req.json();
 
     const isSaveImageAction =
       body?.action === "save-image" ||
@@ -134,13 +133,9 @@ export async function POST(req: Request) {
         Boolean(body?.qrCodeId || body?.code || body?.entityId));
 
     if (isSaveImageAction) {
-      if (body?.force && !user) {
-        return apiError("Unauthorized", 401);
-      }
-
       const entityType = parseEntityType(body?.entityType);
       const qrDataUrl = validateQrDataUrl(body?.qrDataUrl);
-      const targetUrl = user ? validateTargetUrl(body?.targetUrl) : undefined;
+      const targetUrl = validateTargetUrl(body?.targetUrl);
 
       const result = await saveQrImage({
         qrCodeId: body?.qrCodeId,
@@ -149,7 +144,7 @@ export async function POST(req: Request) {
         entityId: body?.entityId,
         targetUrl,
         qrDataUrl,
-        force: Boolean(user && body?.force),
+        force: Boolean(body?.force),
       });
 
       return apiSuccess(
@@ -164,19 +159,6 @@ export async function POST(req: Request) {
     }
 
     const entityId = typeof body?.entityId === "string" ? body.entityId.trim() : null;
-    if (!user) {
-      if (!entityId) {
-        return apiError("Unauthorized", 401);
-      }
-      const entityExists =
-        entityType === "ECO_ENZYME_BATCH"
-          ? await prisma.ecoEnzymeBatch.findUnique({ where: { id: entityId }, select: { id: true } })
-          : await prisma.product.findUnique({ where: { id: entityId }, select: { id: true } });
-
-      if (!entityExists) {
-        return apiError("Entity tidak ditemukan", 404);
-      }
-    }
 
     const pathPrefix = body?.pathPrefix;
     if (pathPrefix !== undefined && pathPrefix !== null && pathPrefix !== "/b" && pathPrefix !== "/p") {

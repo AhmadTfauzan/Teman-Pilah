@@ -1,5 +1,9 @@
 // PERINGATAN ARSITEKTUR: Jangan ubah path ini setelah label dicetak; jika harus berubah, pasang redirect.
-import { getSiteUrl } from './api-config';
+import {
+  getSiteUrl,
+  isLocalOrTunnelHostname,
+  parseUrlHostname,
+} from './api-config';
 
 /**
  * Normalisasi kode batch (menghapus spasi dan huruf besar semua)
@@ -16,7 +20,8 @@ export function normalizeBatchCode(code: string): string {
  */
 export function buildBatchPath(code: string, short: boolean = false): string {
   const normalized = normalizeBatchCode(code);
-  return short ? `/b/${normalized}` : `/eco-enzyme/batch/${normalized}`;
+  const encoded = encodeURIComponent(normalized);
+  return short ? `/b/${encoded}` : `/eco-enzyme/batch/${encoded}`;
 }
 
 /**
@@ -26,10 +31,15 @@ export function buildBatchPath(code: string, short: boolean = false): string {
  */
 export function buildBatchUrl(
   code: string,
-  options?: { short?: boolean; baseUrl?: string }
+  options?: {
+    short?: boolean;
+    baseUrl?: string;
+    allowLocalStorageOverride?: boolean;
+  }
 ): string {
-  let siteUrl = options?.baseUrl;
-  if (!siteUrl && typeof window !== 'undefined') {
+  let siteUrl = options?.baseUrl?.trim();
+  const allowLocalStorage = options?.allowLocalStorageOverride ?? true;
+  if (!siteUrl && allowLocalStorage && typeof window !== 'undefined') {
     const saved = localStorage.getItem('tp_qr_base_url');
     if (saved && saved.trim()) {
       siteUrl = saved.trim();
@@ -43,20 +53,33 @@ export function buildBatchUrl(
   return `${siteUrl}${path}`;
 }
 
+function isPrivateOrLoopbackIpv4(hostname: string): boolean {
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+  if (!match) return false;
+
+  const octets = match.slice(1).map((part) => Number(part));
+  if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    return false;
+  }
+
+  const [a, b] = octets;
+  if (a === 127) return true; // Loopback 127.0.0.0/8
+  if (a === 10) return true; // RFC 1918 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true; // RFC 1918 172.16.0.0/12
+  if (a === 192 && b === 168) return true; // RFC 1918 192.168.0.0/16
+  return false;
+}
+
 /**
  * Deteksi apakah URL merupakan URL sementara/lokal
- * (localhost, IP privat, atau tunnel ngrok/trycloudflare)
+ * (localhost, loopback, IP privat RFC 1918, atau tunnel ngrok/trycloudflare)
  */
 export function isTemporaryBaseUrl(url?: string): boolean {
-  const target = url || getSiteUrl();
-  return (
-    target.includes('localhost') ||
-    target.includes('127.0.0.1') ||
-    target.includes('192.168.') ||
-    target.includes('10.') ||
-    target.includes('172.16.') ||
-    target.includes('172.31.') ||
-    target.includes('trycloudflare.com') ||
-    target.includes('ngrok')
-  );
+  const target = (url || getSiteUrl()).trim();
+  if (!target) return false;
+
+  const hostname = parseUrlHostname(target);
+  if (!hostname) return false;
+
+  return isLocalOrTunnelHostname(hostname) || isPrivateOrLoopbackIpv4(hostname);
 }

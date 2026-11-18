@@ -38,6 +38,7 @@ export function Accordion({ items, className, allowMultiple = false }: Accordion
         return (
           <div key={index}>
             <button
+              type="button"
               id={headerId}
               aria-expanded={isOpen}
               aria-controls={panelId}

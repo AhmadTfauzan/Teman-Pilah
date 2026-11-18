@@ -11,7 +11,33 @@ export enum NewsVisibility {
   PRIVATE = "PRIVATE",
 }
 
-export const createNewsSchema = z.object({
+const authorsSchema = z.union([
+  z.array(z.string().trim()),
+  z.string().transform((val) =>
+    val.split(",").map((a) => a.trim()).filter(Boolean)
+  ),
+]);
+
+const tagsSchema = z.union([
+  z.array(z.string().trim()),
+  z.string().transform((val) =>
+    val.split(",").map((t) => t.trim()).filter(Boolean)
+  ),
+]);
+
+const optionalDateSchema = (label: string) =>
+  z
+    .string()
+    .trim()
+    .refine(
+      (val) => val === "" || !isNaN(new Date(val).getTime()),
+      `Format ${label} tidak valid`,
+    )
+    .transform((val) => (val === "" ? null : new Date(val)))
+    .nullable()
+    .optional();
+
+const newsBaseSchema = z.object({
   title: z
     .string()
     .min(1, "Judul berita wajib diisi")
@@ -40,44 +66,32 @@ export const createNewsSchema = z.object({
     .max(100, "Kategori maksimal 100 karakter")
     .trim(),
 
-  authors: z
-    .union([
-      z.array(z.string().trim()),
-      z.string().transform((val) =>
-        val.split(",").map((a) => a.trim()).filter(Boolean)
-      ),
-    ])
-    .optional()
-    .default(["Admin Teman Pilah"]),
+  authors: authorsSchema.optional(),
 
-  tags: z
-    .union([
-      z.array(z.string().trim()),
-      z.string().transform((val) =>
-        val.split(",").map((t) => t.trim()).filter(Boolean)
-      ),
-    ])
-    .optional()
-    .default([]),
+  tags: tagsSchema.optional(),
 
-  status: z.nativeEnum(NewsStatus).optional().default(NewsStatus.DRAFT),
+  status: z.nativeEnum(NewsStatus).optional(),
 
-  visibility: z.nativeEnum(NewsVisibility).optional().default(NewsVisibility.PUBLIC),
+  visibility: z.nativeEnum(NewsVisibility).optional(),
 
-  publishDate: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Date(val) : null)),
+  publishDate: optionalDateSchema("tanggal publikasi"),
 
-  endDate: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Date(val) : null)),
+  endDate: optionalDateSchema("tanggal selesai"),
 
   partnership: z.string().trim().optional(),
 });
 
-export const updateNewsSchema = createNewsSchema.partial();
+export const createNewsSchema = newsBaseSchema.extend({
+  authors: authorsSchema.optional().default(["Admin Teman Pilah"]),
+  tags: tagsSchema.optional().default([]),
+  status: z.nativeEnum(NewsStatus).optional().default(NewsStatus.DRAFT),
+  visibility: z
+    .nativeEnum(NewsVisibility)
+    .optional()
+    .default(NewsVisibility.PUBLIC),
+});
+
+export const updateNewsSchema = newsBaseSchema.partial();
 
 export const newsQuerySchema = z.object({
   page: z

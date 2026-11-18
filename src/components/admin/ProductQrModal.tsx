@@ -48,9 +48,74 @@ function getCategoryLabel(category: Product['category']): string {
   }
 }
 
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength - 3)}...`;
+function truncateCanvasLine(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  const ellipsis = '...';
+  let truncated = text;
+  while (truncated.length > 0 && ctx.measureText(`${truncated}${ellipsis}`).width > maxWidth) {
+    truncated = truncated.slice(0, -1).trimEnd();
+  }
+  return truncated ? `${truncated}${ellipsis}` : ellipsis;
+}
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number = 2
+): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized || maxLines <= 0) return [];
+  if (maxLines === 1) {
+    return [truncateCanvasLine(ctx, normalized, maxWidth)];
+  }
+
+  const words = normalized.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (let i = 0; i < words.length; i++) {
+    let word = words[i];
+
+    if (!currentLine) {
+      while (ctx.measureText(word).width > maxWidth) {
+        if (lines.length >= maxLines - 1) {
+          lines.push(truncateCanvasLine(ctx, word, maxWidth));
+          return lines;
+        }
+        let cut = word.length - 1;
+        while (cut > 1 && ctx.measureText(word.slice(0, cut)).width > maxWidth) {
+          cut--;
+        }
+        lines.push(word.slice(0, cut));
+        word = word.slice(cut);
+      }
+      currentLine = word;
+      continue;
+    }
+
+    const candidate = `${currentLine} ${word}`;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      currentLine = candidate;
+    } else if (lines.length < maxLines - 1) {
+      lines.push(currentLine);
+      currentLine = '';
+      i--;
+    } else {
+      lines.push(truncateCanvasLine(ctx, `${currentLine}...`, maxWidth));
+      return lines;
+    }
+  }
+
+  if (currentLine) {
+    lines.push(truncateCanvasLine(ctx, currentLine, maxWidth));
+  }
+
+  return lines;
 }
 
 export function ProductQrModal({
@@ -130,7 +195,41 @@ export function ProductQrModal({
 
       const scale = 2;
       const width = 400;
-      const height = 520;
+      const badgeMaxWidth = width - 96;
+      const boxMaxTextWidth = width - 84;
+      const rawCodeLabel = `KODE: ${product.productCode || effectiveCode}`;
+
+      ctx.font = 'bold 14px monospace';
+      const codeBadgeText =
+        wrapCanvasText(ctx, rawCodeLabel, badgeMaxWidth, 1)[0] || rawCodeLabel;
+
+      ctx.font = 'bold 10px monospace';
+      const qrIdText =
+        wrapCanvasText(ctx, `QR ID: ${effectiveCode}`, width - 60, 1)[0] ||
+        `QR ID: ${effectiveCode}`;
+
+      ctx.font = 'bold 15px sans-serif';
+      const nameLines = wrapCanvasText(ctx, product.name, boxMaxTextWidth, 2);
+
+      ctx.font = 'bold 11px sans-serif';
+      const categoryLabel = getCategoryLabel(product.category);
+      const categoryText =
+        wrapCanvasText(ctx, categoryLabel, boxMaxTextWidth, 1)[0] || categoryLabel;
+
+      ctx.font = 'bold 16px sans-serif';
+      const priceLines = wrapCanvasText(ctx, formattedPrice, boxMaxTextWidth, 2);
+
+      const boxY = 346;
+      const nameStartY = nameLines.length > 1 ? 370 : 376;
+      const afterNameY = nameStartY + Math.max(0, nameLines.length - 1) * 18;
+      const categoryY = afterNameY + 24;
+      const priceStartY = categoryY + 28;
+      const afterPriceY = priceStartY + Math.max(0, priceLines.length - 1) * 20;
+      const boxHeight = Math.max(108, afterPriceY - boxY + 22);
+      const footerY1 = boxY + boxHeight + 26;
+      const footerY2 = footerY1 + 18;
+      const height = Math.max(520, footerY2 + 22);
+
       exportCanvas.width = width * scale;
       exportCanvas.height = height * scale;
       ctx.scale(scale, scale);
@@ -150,11 +249,11 @@ export function ProductQrModal({
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 18px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('TEMAN PILAH', width / 2, 40);
+      ctx.fillText('TEMAN PILAH', width / 2, 40, 230);
 
       ctx.fillStyle = '#2C5F2D';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText('KATALOG PRODUK DAUR ULANG', width / 2, 58);
+      ctx.fillText('KATALOG PRODUK DAUR ULANG', width / 2, 58, 230);
 
       ctx.strokeStyle = '#D5E3D2';
       ctx.lineWidth = 1.5;
@@ -171,43 +270,43 @@ export function ProductQrModal({
 
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 14px monospace';
-      ctx.fillText(
-        `KODE: ${product.productCode || effectiveCode}`,
-        width / 2,
-        107
-      );
+      ctx.fillText(codeBadgeText, width / 2, 107, badgeMaxWidth);
 
       ctx.drawImage(canvas, (width - 180) / 2, 134, 180, 180);
 
       ctx.fillStyle = '#666666';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(`QR ID: ${effectiveCode}`, width / 2, 330);
+      ctx.fillText(qrIdText, width / 2, 330, width - 60);
 
       ctx.fillStyle = '#FAFBF9';
-      ctx.fillRect(26, 346, width - 52, 108);
+      ctx.fillRect(26, boxY, width - 52, boxHeight);
       ctx.strokeStyle = '#CFE1CC';
       ctx.lineWidth = 1;
-      ctx.strokeRect(26, 346, width - 52, 108);
+      ctx.strokeRect(26, boxY, width - 52, boxHeight);
 
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(truncateText(product.name, 30), width / 2, 376);
+      nameLines.forEach((line, idx) => {
+        ctx.fillText(line, width / 2, nameStartY + idx * 18, boxMaxTextWidth);
+      });
 
       ctx.fillStyle = '#2C5F2D';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(getCategoryLabel(product.category), width / 2, 400);
+      ctx.fillText(categoryText, width / 2, categoryY, boxMaxTextWidth);
 
       ctx.fillStyle = '#111111';
       ctx.font = 'bold 16px sans-serif';
-      ctx.fillText(formattedPrice, width / 2, 432);
+      priceLines.forEach((line, idx) => {
+        ctx.fillText(line, width / 2, priceStartY + idx * 20, boxMaxTextWidth);
+      });
 
       ctx.fillStyle = '#2C5F2D';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText('Scan QR untuk detail & pemesanan produk', width / 2, 480);
+      ctx.fillText('Scan QR untuk detail & pemesanan produk', width / 2, footerY1, width - 48);
 
       ctx.fillStyle = '#888888';
       ctx.font = 'italic 9px sans-serif';
-      ctx.fillText('Komunitas Bank Sampah Teman Pilah', width / 2, 498);
+      ctx.fillText('Komunitas Bank Sampah Teman Pilah', width / 2, footerY2, width - 48);
 
       const pngUrl = exportCanvas.toDataURL('image/png');
       const link = document.createElement('a');
@@ -300,7 +399,10 @@ export function ProductQrModal({
 
         {/* Printable Label Preview */}
         <div className="py-3 sm:py-5 flex justify-center">
-          <div className="w-full max-w-[320px] sm:w-[350px] sm:max-w-none bg-white rounded-2xl border-2 border-[#012D1D] p-3.5 sm:p-5 shadow-md text-center flex flex-col items-center print:border-solid print:border-2 print:border-black print:m-0 print:shadow-none">
+          <div
+            id="printable-gallon-label"
+            className="w-full max-w-[320px] sm:w-[350px] sm:max-w-none bg-white rounded-2xl border-2 border-[#012D1D] p-3.5 sm:p-5 shadow-md text-center flex flex-col items-center print:border-solid print:border-2 print:border-black print:m-0 print:shadow-none"
+          >
             <div className="w-full flex items-center justify-between gap-2 mb-2 sm:mb-2.5 px-0.5 sm:px-1">
               <img
                 src="/logo-teman-pilah.png"
@@ -337,7 +439,7 @@ export function ProductQrModal({
             <div className="mb-2 sm:mb-3">
               <PersistentQrCode
                 value={qrCanonicalUrl}
-                qrCode={product.qrCode}
+                qrCode={activeQr}
                 entityType="PRODUCT"
                 entityId={product.id}
                 entityKey={product.productCode ?? null}
@@ -347,7 +449,7 @@ export function ProductQrModal({
                 marginSize={2}
                 canvasWrapperRef={canvasRef}
                 svgWrapperRef={svgRef}
-                reused={Boolean(product.qrCode?.qrDataUrl)}
+                reused={Boolean(activeQr?.id)}
                 onSaved={(savedQr) => {
                   setSavedQrOverride({ productId: product.id, qrCode: savedQr });
                   onQrSaved?.(savedQr);

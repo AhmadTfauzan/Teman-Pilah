@@ -1,5 +1,6 @@
 import { Category, Prisma, StockLabel } from "@prisma/client";
 import { AppError } from "./error";
+import { assertSafeImageDataUrl, uploadedFileToDataUrl } from "./form-payload";
 
 export interface ParsedProductPayload {
   productCode?: string;
@@ -76,16 +77,7 @@ function parseOptionalNullableString(value: unknown): string | null {
 }
 
 async function fileToDataUrl(file: File): Promise<string> {
-  if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
-    throw new AppError("Ukuran gambar produk maksimal 2MB", 400);
-  }
-  if (file.type && !file.type.startsWith("image/")) {
-    throw new AppError("File yang diunggah harus berupa gambar", 400);
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const mimeType = file.type || "image/png";
-  return `data:${mimeType};base64,${buffer.toString("base64")}`;
+  return uploadedFileToDataUrl(file, MAX_PRODUCT_IMAGE_BYTES);
 }
 
 export async function parseProductPayload(req: Request): Promise<ParsedProductPayload> {
@@ -144,7 +136,7 @@ export async function parseProductPayload(req: Request): Promise<ParsedProductPa
           result.image = await fileToDataUrl(imageEntry);
         }
       } else if (typeof imageEntry === "string" && imageEntry.trim() !== "") {
-        result.image = imageEntry.trim();
+        result.image = assertSafeImageDataUrl(imageEntry.trim());
       }
     }
 
@@ -170,7 +162,8 @@ export async function parseProductPayload(req: Request): Promise<ParsedProductPa
     result.description = parseOptionalNullableString(body.description);
   }
   if (body.image !== undefined) {
-    result.image = parseOptionalNullableString(body.image);
+    const parsedImage = parseOptionalNullableString(body.image);
+    result.image = parsedImage ? assertSafeImageDataUrl(parsedImage) : null;
   }
   if (body.price !== undefined) {
     result.price = parsePrice(body.price);

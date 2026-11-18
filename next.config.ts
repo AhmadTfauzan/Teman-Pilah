@@ -21,22 +21,25 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Proxy uploads ke backend Express
+  // Proxy uploads ke backend Express hanya jika URL backend dikonfigurasi
   async rewrites() {
+    const internalBackendUrl = process.env.BACKEND_INTERNAL_URL?.trim().replace(/\/+$/, '');
+    const devExpressUrl =
+      process.env.NODE_ENV === 'development'
+        ? (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || '')
+            .trim()
+            .replace(/\/+$/, '')
+        : '';
+    const uploadProxyTarget = internalBackendUrl || devExpressUrl;
+
+    if (!uploadProxyTarget) {
+      return [];
+    }
+
     return [
       {
         source: '/uploads/:path*',
-        destination: 'http://localhost:2000/uploads/:path*',
-      },
-    ];
-  },
-  // Alias permanen untuk link pendek QR Code galon
-  async redirects() {
-    return [
-      {
-        source: '/b/:code',
-        destination: '/eco-enzyme/batch/:code',
-        permanent: true,
+        destination: `${uploadProxyTarget}/uploads/:path*`,
       },
     ];
   },

@@ -1,29 +1,62 @@
-import { getBaseUrl } from '../../../../lib/api-config';
 import React from 'react';
-import { CalendarDays, Building, Recycle, Users, BookOpen, Tag, ArrowLeft } from 'lucide-react';
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { CalendarDays, Building, BookOpen, Tag, ArrowLeft } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const FALLBACK_PROGRAM_IMAGE = '/activity/Pengmas (1).jpeg';
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-const BASE_URL = getBaseUrl();
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
+const useEnvApiBase =
+  Boolean(envApiUrl) &&
+  !envApiUrl!.includes('trycloudflare.com') &&
+  !envApiUrl!.includes('ngrok') &&
+  !envApiUrl!.includes('localhost:2000');
+
+function resolveProgramImageUrl(rawPath?: string | null): string | null {
+  const path = rawPath?.trim();
+  if (!path) return null;
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('data:') ||
+    (path.startsWith('/') && !path.startsWith('//'))
+  ) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, '');
+  return useEnvApiBase ? `${envApiUrl}/${cleanPath}` : `/${cleanPath}`;
+}
 
 export default async function DetailProgramPage({ params }: Props) {
   const { slug } = await params;
 
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    decodedSlug = slug;
+  }
+
   let program = null;
 
   try {
-    const res = await fetch(`${BASE_URL}/api/news`, { cache: 'no-store' });
-    const json = await res.json();
-    
-    // Find the matching program (check slug first, fallback to id)
-    program = (json.data || []).find(
-      (item: any) => item.slug === slug || item.id?.toString() === slug
-    );
+    program = await prisma.news.findFirst({
+      where: {
+        OR: [{ slug: decodedSlug }, { id: decodedSlug }],
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+      },
+    });
   } catch (error) {
     console.error('Failed to fetch program details:', error);
   }
@@ -32,12 +65,26 @@ export default async function DetailProgramPage({ params }: Props) {
     notFound();
   }
 
-  // Format Dates
-  const startDate = program.publishDate ? new Date(program.publishDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const endDate = program.endDate ? new Date(program.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const dateRange = startDate && endDate ? `${startDate} - ${endDate}` : (startDate || 'Tanggal Belum Ditentukan');
+  const dateFormatOpts: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  };
 
-  const imageUrl = program.imageUrl ? `${BASE_URL}/${program.imageUrl}` : (program.image || `https://picsum.photos/seed/${program.id}/2000/1000`);
+  const startDate = program.publishDate
+    ? program.publishDate.toLocaleDateString('id-ID', dateFormatOpts)
+    : '';
+  const endDate = program.endDate
+    ? program.endDate.toLocaleDateString('id-ID', dateFormatOpts)
+    : '';
+  const dateRange =
+    startDate && endDate
+      ? `${startDate} - ${endDate}`
+      : startDate || 'Tanggal Belum Ditentukan';
+
+  const imageUrl =
+    resolveProgramImageUrl(program.imageUrl) ?? FALLBACK_PROGRAM_IMAGE;
 
   return (
     <div className="pt-20 md:pt-[88px] min-h-screen bg-[#FAFAF8] relative overflow-hidden">
@@ -49,11 +96,10 @@ export default async function DetailProgramPage({ params }: Props) {
         <ConcentricCircles size={300} color="#FC9634" />
       </div>
       <div className="max-w-[1440px] 2xl:px-12 mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 md:py-12">
-        
         {/* BACK BUTTON */}
         <div className="mb-4 sm:mb-8">
-          <Link 
-            href="/#program" 
+          <Link
+            href="/#program"
             className="inline-flex items-center text-xs sm:text-[14px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
           >
             <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
@@ -65,7 +111,10 @@ export default async function DetailProgramPage({ params }: Props) {
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-8">
           {program.tags && program.tags.length > 0 ? (
             program.tags.map((tag: string, index: number) => (
-              <span key={index} className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#e4f0e9] text-[#166534] rounded-md text-[10px] sm:text-[11px] font-bold tracking-wider uppercase">
+              <span
+                key={index}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#e4f0e9] text-[#166534] rounded-md text-[10px] sm:text-[11px] font-bold tracking-wider uppercase"
+              >
                 <Tag className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {tag}
               </span>
             ))
@@ -100,9 +149,10 @@ export default async function DetailProgramPage({ params }: Props) {
 
         {/* HERO IMAGE */}
         <div className="w-full aspect-[16/9] sm:aspect-[2.2/1] rounded-2xl sm:rounded-[24px] overflow-hidden mb-5 sm:mb-8 bg-[#e0e5db] relative shadow-sm">
-          <img 
-            src={imageUrl} 
-            alt={program.title} 
+          <SafeImage
+            src={imageUrl}
+            fallbackSrc={FALLBACK_PROGRAM_IMAGE}
+            alt={program.title}
             className="w-full h-full object-cover opacity-90"
           />
         </div>
@@ -111,7 +161,7 @@ export default async function DetailProgramPage({ params }: Props) {
         {program.summary && (
           <div className="bg-[#f4f2ea] rounded-2xl sm:rounded-[24px] p-4 sm:p-6 md:p-8 mb-6 sm:mb-12 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-[#ecebe1]">
             <p className="text-[#42493E] text-sm sm:text-[16px] md:text-[17px] leading-relaxed font-medium">
-              {program.summary ? program.summary.replace(/<[^>]*>/g, '') : ''}
+              {program.summary.replace(/<[^>]*>/g, '')}
             </p>
           </div>
         )}
@@ -132,7 +182,6 @@ export default async function DetailProgramPage({ params }: Props) {
             <p>Konten program belum tersedia.</p>
           )}
         </div>
-
       </div>
     </div>
   );

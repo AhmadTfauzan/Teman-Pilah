@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { getBaseUrl } from '@/lib/api-config';
+import {
+  clearStoredAuthSession,
+  getStoredAuthToken,
+  isStoredAdminAuthenticated,
+} from '@/lib/api/auth-session';
 import { toast } from 'sonner';
 
 export default function AdminRootLayout({
@@ -15,40 +20,55 @@ export default function AdminRootLayout({
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const isAuthenticated = localStorage.getItem('isAdminAuthenticated') === 'true';
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const clearSession = () => {
+      clearStoredAuthSession();
+    };
+
+    const token = getStoredAuthToken();
+    const isAuthenticated = isStoredAdminAuthenticated();
 
     if (!token || !isAuthenticated) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('isAdminAuthenticated');
-      localStorage.removeItem('adminEmail');
+      clearSession();
       router.push('/login');
       return;
     }
 
-    // Verifikasi validitas token ke backend
+    // Verifikasi validitas token dan role ADMIN ke backend (fail-closed)
     const BASE_URL = getBaseUrl();
     fetch(`${BASE_URL}/api/auth/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      cache: 'no-store',
+      signal: controller.signal,
     })
-      .then((res) => {
-        if (!res.ok) {
-          // Token expired atau invalid
-          localStorage.removeItem('token');
-          localStorage.removeItem('isAdminAuthenticated');
-          localStorage.removeItem('adminEmail');
+      .then(async (res) => {
+        const json = await res.json().catch(() => null);
+        if (cancelled) return;
+
+        if (!res.ok || json?.data?.role !== 'ADMIN') {
+          clearSession();
           toast.error('Sesi login telah berakhir. Silakan login kembali.');
           router.push('/login?expired=true');
-        } else {
-          setIsReady(true);
+          return;
         }
+
+        setIsReady(true);
       })
       .catch(() => {
-        // Jika server backend offline saat verifikasi, tetap izinkan jika ada token
-        setIsReady(true);
+        if (cancelled) return;
+        clearSession();
+        toast.error('Gagal memverifikasi sesi admin. Periksa koneksi server Anda.');
+        router.push('/login');
       });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [router]);
 
   if (!isReady) {

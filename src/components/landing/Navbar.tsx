@@ -14,12 +14,10 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const isHome = pathname === '/';
+  const navSolid = !isHome || isScrolled;
 
   useEffect(() => {
-    if (!isHome) {
-      setIsScrolled(true);
-      return;
-    }
+    if (!isHome) return;
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -43,15 +41,15 @@ export function Navbar() {
     <nav
       className={cn(
         'fixed top-0 left-0 right-0 z-50 h-14 md:h-[76px] w-full transition-all duration-300',
-        isScrolled
+        navSolid
           ? 'bg-[#012D1D]/95 backdrop-blur-md shadow-lg border-b border-[#0B4A31]'
           : 'bg-[#012D1D]/75 backdrop-blur-sm border-b border-white/10'
       )}
     >
-      <Container className="h-full flex items-center justify-between">
+      <Container className="h-full flex items-center justify-between gap-2">
         {/* LOGO & BRAND */}
-        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
-          <div className="relative h-8 w-8 md:h-12 md:w-12 rounded-full overflow-hidden flex items-center justify-center bg-white/10 transition-transform group-hover:scale-105">
+        <Link href="/" className="flex items-center gap-2 sm:gap-2.5 lg:gap-3 shrink-0 group">
+          <div className="relative h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 rounded-full overflow-hidden flex items-center justify-center bg-white/10 transition-transform group-hover:scale-105">
             <img
               src="/IMG_8588.JPG-removebg-preview.png"
               alt="Teman Pilah"
@@ -62,18 +60,18 @@ export function Navbar() {
               }}
             />
           </div>
-          <span className="font-['Poppins'] font-bold text-base sm:text-[20px] text-white tracking-tight">
+          <span className="font-['Poppins'] font-bold text-base md:text-[17px] lg:text-[20px] text-white tracking-tight whitespace-nowrap">
             Teman Pilah
           </span>
         </Link>
 
         {/* DESKTOP MENU */}
-        <div className="hidden md:flex items-center gap-7 lg:gap-9">
+        <div className="hidden md:flex items-center md:gap-3.5 lg:gap-7 xl:gap-9">
           {navLinks.map((link) => (
             <Link
               key={link.name}
               href={link.href}
-              className="font-['Poppins'] font-semibold text-[15px] lg:text-[16px] text-white/90 hover:text-white transition-colors relative py-1 group"
+              className="font-['Poppins'] font-semibold text-[13px] lg:text-[15px] xl:text-[16px] text-white/90 hover:text-white transition-colors relative py-1 whitespace-nowrap group"
             >
               {link.name}
               <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[#FC9634] transition-all duration-200 group-hover:w-full" />
@@ -82,20 +80,19 @@ export function Navbar() {
         </div>
 
         {/* RIGHT ACTION BUTTON */}
-        <div className="hidden lg:flex items-center gap-3">
-          <a
-            href="https://wa.me/6281234567890"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[#FC9634] hover:bg-[#e8801a] text-white font-['Poppins'] font-semibold text-sm px-5 py-2.5 transition-all duration-200 shadow-md hover:scale-105 active:scale-95"
-          >
-            <img src="/wa.png" alt="WhatsApp" className="h-4 w-4 object-contain brightness-0 invert" />
-            <span>Hubungi Kami</span>
-          </a>
-        </div>
+        <a
+          href="https://wa.me/6281234567890"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:inline-flex items-center gap-1.5 lg:gap-2 rounded-full bg-[#FC9634] hover:bg-[#e8801a] text-white font-['Poppins'] font-semibold text-xs lg:text-sm px-3.5 py-2 lg:px-5 lg:py-2.5 whitespace-nowrap shrink-0 transition-all duration-200 shadow-md hover:scale-105 active:scale-95"
+        >
+          <img src="/wa.png" alt="WhatsApp" className="h-3.5 w-3.5 lg:h-4 lg:w-4 object-contain brightness-0 invert" />
+          <span>Hubungi Kami</span>
+        </a>
 
         {/* MOBILE MENU TOGGLE */}
         <button
+          type="button"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
           aria-label={isMobileMenuOpen ? 'Tutup menu' : 'Buka menu'}

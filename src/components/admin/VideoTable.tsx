@@ -4,11 +4,13 @@ import React from 'react';
 import Image from 'next/image';
 import { BankSampahVideoItem, VideoPlatform } from '@/types';
 import { getVideoThumbnailUrl } from '@/lib/api/video';
-import { Edit2, Trash2, ExternalLink, Play, Clock, Video } from 'lucide-react';
+import { Edit2, Trash2, ExternalLink, Play, Clock, Video, Search } from 'lucide-react';
 
 interface VideoTableProps {
   videos: BankSampahVideoItem[];
   isLoading: boolean;
+  hasActiveFilter?: boolean;
+  onResetFilter?: () => void;
   onEdit: (video: BankSampahVideoItem) => void;
   onDelete: (video: BankSampahVideoItem) => void;
   onAddNew: () => void;
@@ -17,6 +19,8 @@ interface VideoTableProps {
 export function VideoTable({
   videos,
   isLoading,
+  hasActiveFilter = false,
+  onResetFilter,
   onEdit,
   onDelete,
   onAddNew,
@@ -61,6 +65,31 @@ export function VideoTable({
   }
 
   if (videos.length === 0) {
+    if (hasActiveFilter) {
+      return (
+        <div className="w-full bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center shadow-sm">
+          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center mb-4">
+            <Search size={26} className="sm:w-7 sm:h-7" />
+          </div>
+          <h3 className="font-['Poppins'] font-bold text-lg sm:text-xl text-gray-900">
+            Tidak ada video yang cocok
+          </h3>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-md mx-auto">
+            Coba ubah kata kunci pencarian atau pilih filter platform lain untuk melihat daftar video.
+          </p>
+          {onResetFilter && (
+            <button
+              type="button"
+              onClick={onResetFilter}
+              className="mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold shadow-xs transition-all"
+            >
+              <span>Reset Filter</span>
+            </button>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="w-full bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center shadow-sm">
         <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
@@ -73,6 +102,7 @@ export function VideoTable({
           Mulai tambahkan video kegiatan Bank Sampah dengan memasukkan link dari YouTube, Instagram, atau TikTok.
         </p>
         <button
+          type="button"
           onClick={onAddNew}
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#012D1D] hover:bg-[#0B4A31] text-white px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95"
         >
@@ -143,6 +173,7 @@ export function VideoTable({
                   <span>Buka</span>
                 </a>
                 <button
+                  type="button"
                   onClick={() => onEdit(video)}
                   className="p-1.5 rounded-md text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                   title="Edit Video"
@@ -150,6 +181,7 @@ export function VideoTable({
                   <Edit2 size={14} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => onDelete(video)}
                   className="p-1.5 rounded-md text-gray-600 hover:text-red-700 hover:bg-red-50 transition-colors"
                   title="Hapus Video"
@@ -249,6 +281,7 @@ export function VideoTable({
                 <td className="py-4 px-6 text-center">
                   <div className="flex items-center justify-center gap-1.5">
                     <button
+                      type="button"
                       onClick={() => onEdit(video)}
                       className="p-2 rounded-lg text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                       title="Edit Video"
@@ -256,6 +289,7 @@ export function VideoTable({
                       <Edit2 size={16} />
                     </button>
                     <button
+                      type="button"
                       onClick={() => onDelete(video)}
                       className="p-2 rounded-lg text-gray-600 hover:text-red-700 hover:bg-red-50 transition-colors"
                       title="Hapus Video"

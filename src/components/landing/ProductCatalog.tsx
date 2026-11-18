@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Container } from '@/components/layout/Container';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
 import { Product } from '@/types';
 import { getBaseUrl } from '@/lib/api-config';
@@ -42,11 +43,42 @@ const DEFAULT_PRODUCTS = [
   },
 ];
 
-function resolveProductImage(path?: string | null, fallbackIndex: number = 0): string {
+function resolveProductImage(rawPath?: string | null, fallbackIndex: number = 0): string {
+  const path = rawPath?.trim();
   if (!path) return DEFAULT_PRODUCTS[fallbackIndex % DEFAULT_PRODUCTS.length].image;
-  if (path.startsWith('http')) return path;
-  if (path.startsWith('/')) return path;
-  return `${BASE_URL}/${path}`;
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('data:') ||
+    (path.startsWith('/') && !path.startsWith('//'))
+  ) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, '');
+  const cleanBase = BASE_URL.replace(/\/+$/, '');
+  return cleanBase ? `${cleanBase}/${cleanPath}` : `/${cleanPath}`;
+}
+
+function buildSafeWhatsappLink(
+  rawLink?: string | null,
+  productName: string = 'produk Teman Pilah'
+): string {
+  const fallback = `https://wa.me/6281234567890?text=${encodeURIComponent(
+    `Halo saya tertarik dengan produk ${productName}`
+  )}`;
+  const trimmed = rawLink?.trim();
+  if (!trimmed) return fallback;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href;
+    }
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
 }
 
 export function ProductCatalog({ products }: ProductCatalogProps) {
@@ -59,11 +91,7 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
         price: Number(p.price),
         image: resolveProductImage(p.image || p.imageUrl, idx),
         fallbackImage: DEFAULT_PRODUCTS[idx % DEFAULT_PRODUCTS.length].image,
-        whatsappLink:
-          p.whatsappLink ||
-          `https://wa.me/6281234567890?text=Halo%20saya%20tertarik%20dengan%20produk%20${encodeURIComponent(
-            p.name
-          )}`,
+        whatsappLink: buildSafeWhatsappLink(p.whatsappLink, p.name),
       }))
       : DEFAULT_PRODUCTS.map((p) => ({ ...p, fallbackImage: p.image }));
 
@@ -105,16 +133,11 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
               <div>
                 {/* Product Image (Figma: 254px x 254px, rounded 8px) */}
                 <div className="relative h-[115px] sm:h-[254px] w-full rounded-[8px] overflow-hidden bg-gray-100 shadow-inner flex items-center justify-center">
-                  <img
+                  <SafeImage
                     src={prod.image}
+                    fallbackSrc={prod.fallbackImage}
                     alt={prod.name}
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (target.src !== prod.fallbackImage) {
-                        target.src = prod.fallbackImage;
-                      }
-                    }}
                   />
                 </div>
 

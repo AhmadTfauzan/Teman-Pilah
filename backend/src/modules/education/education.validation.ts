@@ -5,7 +5,26 @@ export enum ContentStatus {
   PUBLISHED = "PUBLISHED",
 }
 
-export const createEducationSchema = z.object({
+const tagsSchema = z.union([
+  z.array(z.string().trim()),
+  z.string().transform((val) =>
+    val.split(",").map((t) => t.trim()).filter(Boolean),
+  ),
+]);
+
+const optionalDateSchema = (label: string) =>
+  z
+    .string()
+    .trim()
+    .refine(
+      (val) => val === "" || !isNaN(new Date(val).getTime()),
+      `Format ${label} tidak valid`,
+    )
+    .transform((val) => (val === "" ? null : new Date(val)))
+    .nullable()
+    .optional();
+
+const educationBaseSchema = z.object({
   title: z
     .string()
     .min(1, "Judul edukasi wajib diisi")
@@ -24,25 +43,19 @@ export const createEducationSchema = z.object({
 
   description: z.string().min(1, "Deskripsi edukasi wajib diisi").trim(),
 
-  tags: z
-    .union([
-      z.array(z.string().trim()),
-      z.string().transform((val) =>
-        val.split(",").map((t) => t.trim()).filter(Boolean),
-      ),
-    ])
-    .optional()
-    .default([]),
+  tags: tagsSchema.optional(),
 
-  status: z.nativeEnum(ContentStatus).optional().default(ContentStatus.DRAFT),
+  status: z.nativeEnum(ContentStatus).optional(),
 
-  publishDate: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Date(val) : null)),
+  publishDate: optionalDateSchema("tanggal publikasi"),
 });
 
-export const updateEducationSchema = createEducationSchema.partial();
+export const createEducationSchema = educationBaseSchema.extend({
+  tags: tagsSchema.optional().default([]),
+  status: z.nativeEnum(ContentStatus).optional().default(ContentStatus.DRAFT),
+});
+
+export const updateEducationSchema = educationBaseSchema.partial();
 
 export const educationQuerySchema = z.object({
   page: z

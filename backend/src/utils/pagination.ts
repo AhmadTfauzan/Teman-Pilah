@@ -1,6 +1,6 @@
 export interface PaginationQuery {
-  page?: string;
-  limit?: string;
+  page?: string | null;
+  limit?: string | null;
 }
 
 export interface PaginationParams {
@@ -20,10 +20,10 @@ export interface PaginationMeta {
 }
 
 export const parsePagination = (query: PaginationQuery): PaginationParams => {
-  const page: number = Math.max(1, parseInt(query.page ?? "1", 10));
+  const page: number = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
   const limit: number = Math.min(
     100,
-    Math.max(1, parseInt(query.limit ?? "10", 10)),
+    Math.max(1, parseInt(query.limit ?? "10", 10) || 10),
   );
   const skip: number = (page - 1) * limit;
 
@@ -35,12 +35,13 @@ export const buildPaginationMeta = (
   page: number,
   limit: number,
 ): PaginationMeta => {
-  const totalPages: number = Math.ceil(total / limit);
+  const safeLimit = Math.max(1, limit || 10);
+  const totalPages: number = Math.ceil(total / safeLimit) || 1;
 
   return {
     total,
     page,
-    limit,
+    limit: safeLimit,
     totalPages,
     hasNextPage: page < totalPages,
     hasPrevPage: page > 1,

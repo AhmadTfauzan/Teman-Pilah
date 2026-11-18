@@ -7,6 +7,7 @@ import {
   updateVideoSchema,
 } from "./video.validation";
 import { AuthRequest } from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class VideoController {
   private readonly videoService: VideoService;
@@ -70,6 +71,7 @@ export class VideoController {
         data: video,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
@@ -90,6 +92,7 @@ export class VideoController {
         data: video,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

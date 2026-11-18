@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest } from "@/lib/server/auth";
+import { parseVideoUpdatePayload } from "@/lib/server/form-payload";
 import { apiSuccess, apiError } from "@/lib/server/response";
 import { handleApiError, AppError } from "@/lib/server/error";
 
@@ -26,11 +27,13 @@ export async function PATCH(
     if (!user) return apiError("Unauthorized", 401);
 
     const { id } = await params;
-    const body = await req.json();
+    const existing = await prisma.bankSampahVideo.findUnique({ where: { id } });
+    if (!existing) throw new AppError("Video tidak ditemukan", 404);
 
+    const data = await parseVideoUpdatePayload(req);
     const updated = await prisma.bankSampahVideo.update({
       where: { id },
-      data: body,
+      data,
     });
     return apiSuccess(updated, "Video berhasil diupdate");
   } catch (error) {
@@ -47,6 +50,9 @@ export async function DELETE(
     if (!user) return apiError("Unauthorized", 401);
 
     const { id } = await params;
+    const existing = await prisma.bankSampahVideo.findUnique({ where: { id } });
+    if (!existing) throw new AppError("Video tidak ditemukan", 404);
+
     await prisma.bankSampahVideo.delete({ where: { id } });
     return apiSuccess(null, "Video berhasil dihapus");
   } catch (error) {

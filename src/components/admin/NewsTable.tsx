@@ -20,24 +20,24 @@ const getStatusStyles = (status: string) => {
       };
     case 'DRAFT':
       return {
-        label: 'Mendatang',
-        bgClass: 'bg-[#fff3e0]',
-        dotClass: 'bg-[#f97316]',
-        textClass: 'text-[#c2410c]',
+        label: 'Draft',
+        bgClass: 'bg-[#fef3c7]',
+        dotClass: 'bg-[#eab308]',
+        textClass: 'text-[#92400e]',
       };
     case 'ARCHIVED':
       return {
-        label: 'Selesai',
+        label: 'Diarsipkan',
         bgClass: 'bg-[#f1f5f9]',
         dotClass: 'bg-[#94a3b8]',
         textClass: 'text-[#475569]',
       };
     default:
       return {
-        label: 'Aktif',
-        bgClass: 'bg-[#e2f5eb]',
-        dotClass: 'bg-[#21c55d]',
-        textClass: 'text-[#166534]',
+        label: status || 'Aktif',
+        bgClass: 'bg-[#f1f5f9]',
+        dotClass: 'bg-[#94a3b8]',
+        textClass: 'text-[#475569]',
       };
   }
 };
@@ -73,12 +73,13 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
   
-  const totalPages = Math.ceil(newsList.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const totalPages = Math.ceil(newsList.length / itemsPerPage) || 1;
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
   const paginatedList = newsList.slice(startIndex, startIndex + itemsPerPage);
 
-  const startItem = startIndex + 1;
-  const endItem = Math.min(startIndex + itemsPerPage, newsList.length);
+  const startItem = newsList.length === 0 ? 0 : startIndex + 1;
+  const endItem = Math.min(safePage * itemsPerPage, newsList.length);
 
   return (
     <div className="overflow-hidden rounded-2xl sm:rounded-[24px] border border-[#F0F2EB] bg-white shadow-sm mt-2 sm:mt-6">
@@ -152,10 +153,13 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
         <div className="min-w-[800px]">
           {/* TABLE HEADER */}
           <div className="flex items-center border-b border-[#F0F2EB] bg-[#F4F5F2] px-8 py-5">
-            <div className="w-[400px] text-[11px] font-bold uppercase tracking-[1px] text-[#A1A89A]">
+            <div className="w-[350px] text-[11px] font-bold uppercase tracking-[1px] text-[#A1A89A]">
               JUDUL PROGRAM
             </div>
-            <div className="w-[200px] text-[11px] font-bold uppercase tracking-[1px] text-[#A1A89A]">
+            <div className="w-[140px] text-[11px] font-bold uppercase tracking-[1px] text-[#A1A89A]">
+              STATUS
+            </div>
+            <div className="w-[170px] text-[11px] font-bold uppercase tracking-[1px] text-[#A1A89A]">
               TANGGAL
             </div>
             <div className="flex-1 text-right text-[11px] font-bold uppercase tracking-[1px] text-[#A1A89A]">
@@ -174,15 +178,23 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
                   className="flex items-center px-8 py-6 hover:bg-gray-50/50 transition-colors"
                 >
                   {/* Title & Dot */}
-                  <div className="w-[400px] pr-4 flex items-center gap-4">
-                    <div className={`h-2.5 w-2.5 rounded-full ${statusStyles.dotClass}`} />
+                  <div className="w-[350px] pr-4 flex items-center gap-4">
+                    <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusStyles.dotClass}`} />
                     <span className="text-[13.5px] font-bold text-[#2A3426] line-clamp-1">
                       {article.title}
                     </span>
                   </div>
 
+                  {/* Status Badge */}
+                  <div className="w-[140px] pr-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyles.bgClass} ${statusStyles.textClass}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${statusStyles.dotClass}`} />
+                      {statusStyles.label}
+                    </span>
+                  </div>
+
                   {/* Date */}
-                  <div className="w-[200px]">
+                  <div className="w-[170px]">
                     <span className="text-[13.5px] text-[#72796E]">
                       {formatDate(article.publishDate || article.createdAt)}
                     </span>
@@ -221,47 +233,50 @@ export function NewsTable({ newsList, onEdit, onDelete }: NewsTableProps) {
       </div>
 
       {/* FOOTER PAGINATION */}
-      {newsList.length > 0 && (
-        <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF5] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center">
-            <p className="text-xs sm:text-[13px] text-[#8F9A8A] font-medium">
-              Menampilkan {startItem}–{endItem} dari {newsList.length} program
-            </p>
-          </div>
-
-          <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#72796E] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-bold ${
-                  currentPage === page 
-                    ? 'bg-[#154212] text-white' 
-                    : 'bg-white border border-[#E5E7EB] text-[#72796E] hover:bg-gray-50'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#72796E] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </nav>
+      <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF5] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center">
+          <p className="text-xs sm:text-[13px] text-[#8F9A8A] font-medium">
+            {newsList.length === 0
+              ? 'Menampilkan 0 dari 0 program'
+              : `Menampilkan ${startItem}–${endItem} dari ${newsList.length} program`}
+          </p>
         </div>
-      )}
+
+        <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+            disabled={safePage === 1}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#72796E] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              type="button"
+              onClick={() => setCurrentPage(page)}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-bold ${
+                safePage === page 
+                  ? 'bg-[#154212] text-white' 
+                  : 'bg-white border border-[#E5E7EB] text-[#72796E] hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+            disabled={safePage === totalPages}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#72796E] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </nav>
+      </div>
     </div>
   );
 }

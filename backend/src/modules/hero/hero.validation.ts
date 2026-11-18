@@ -1,6 +1,29 @@
 import { z } from "zod";
 
-export const createHeroSchema = z.object({
+const preprocessOptionalSortOrder = (val: unknown): unknown => {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed === "") return undefined;
+    const num = parseInt(trimmed, 10);
+    return isNaN(num) ? val : num;
+  }
+  return val;
+};
+
+const preprocessOptionalIsActive = (val: unknown): unknown => {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed === "") return undefined;
+    if (trimmed === "true" || trimmed === "1") return true;
+    if (trimmed === "false" || trimmed === "0") return false;
+    return val;
+  }
+  return val;
+};
+
+const heroBaseSchema = z.object({
   altText: z
     .string()
     .max(255, "Alt text maksimal 255 karakter")
@@ -15,8 +38,21 @@ export const createHeroSchema = z.object({
 
   linkUrl: z
     .string()
-    .max(500, "Link URL maksimal 500 karakter")
     .trim()
+    .max(500, "Link URL maksimal 500 karakter")
+    .refine(
+      (val) => {
+        if (val === "") return true;
+        if (!/^https?:\/\//i.test(val)) return false;
+        try {
+          const parsed = new URL(val);
+          return parsed.protocol === "http:" || parsed.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      "URL harus diawali http:// atau https://",
+    )
     .optional(),
 
   linkLabel: z
@@ -25,6 +61,16 @@ export const createHeroSchema = z.object({
     .trim()
     .optional(),
 
+  sortOrder: z
+    .preprocess(preprocessOptionalSortOrder, z.number().int())
+    .optional(),
+
+  isActive: z
+    .preprocess(preprocessOptionalIsActive, z.boolean())
+    .optional(),
+});
+
+export const createHeroSchema = heroBaseSchema.extend({
   sortOrder: z
     .preprocess((val) => {
       if (typeof val === "string" && val.trim() !== "") {
@@ -49,7 +95,7 @@ export const createHeroSchema = z.object({
     .default(true),
 });
 
-export const updateHeroSchema = createHeroSchema.partial();
+export const updateHeroSchema = heroBaseSchema.partial();
 
 export const heroQuerySchema = z.object({
   page: z

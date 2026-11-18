@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { EducationTable } from '@/components/admin/EducationTable';
-import { EducationModal } from '@/components/admin/EducationModal';
+import { EducationModal, EducationModalSubmitData } from '@/components/admin/EducationModal';
 import { SuccessModal } from '@/components/admin/SuccessModal';
 import { DeleteModal } from '@/components/admin/DeleteModal';
 import { toast } from 'sonner';
@@ -115,23 +115,48 @@ export default function AdminEducationPage() {
     id: string;
     name: string;
   }>({ isOpen: false, id: '', name: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Instead of actual API call, we just use the dummy data to match exactly the mock requirements
-  // Wait, I will wrap it in a mock fetch to simulate loading.
-  const fetchContents = async () => {
-    setIsLoading(true);
+  const fetchContents = async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const data = await educationApi.getAll();
       setContents(data);
     } catch (error) {
+      console.error('Fetch education error:', error);
       toast.error('Gagal memuat konten edukasi');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchContents();
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await educationApi.getAll();
+        if (!cancelled) {
+          setContents(data);
+        }
+      } catch (error) {
+        console.error('Fetch education error:', error);
+        if (!cancelled) {
+          toast.error('Gagal memuat konten edukasi');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredContents = useMemo(() => {
@@ -147,7 +172,7 @@ export default function AdminEducationPage() {
       result = result.filter(item => item.status === statusFilter);
     }
 
-    // Client-side date sorting
+    // Client-side sorting
     if (dateFilter === 'newest') {
       result.sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -160,10 +185,25 @@ export default function AdminEducationPage() {
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeA - timeB;
       });
+    } else if (dateFilter === 'title-asc') {
+      result.sort((a, b) =>
+        a.title.localeCompare(b.title, 'id-ID', { sensitivity: 'base' })
+      );
     }
 
     return result;
   }, [contents, searchTerm, statusFilter, dateFilter]);
+
+  const handleCycleSort = () => {
+    setDateFilter((prev) => (prev === 'title-asc' ? 'newest' : 'title-asc'));
+  };
+
+  const sortLabel =
+    dateFilter === 'title-asc'
+      ? 'Urutkan: Judul A-Z'
+      : dateFilter === 'oldest'
+      ? 'Urutkan: Terlama'
+      : 'Urutkan: Terbaru';
 
   const handleEdit = (content: Education) => {
     setEditingContent(content);
@@ -175,9 +215,7 @@ export default function AdminEducationPage() {
     setIsModalOpen(true);
   };
 
-  const handleModalSubmit = async (data: any) => {
-    setIsLoading(true);
-    setIsModalOpen(false);
+  const handleModalSubmit = async (data: EducationModalSubmitData) => {
     try {
       const formData = new FormData();
       formData.append('title', data.title);
@@ -196,24 +234,27 @@ export default function AdminEducationPage() {
         formData.append('thumbnail', data.imageFile);
       }
 
+      const isEditing = Boolean(editingContent);
+
       if (editingContent) {
         await educationApi.update(editingContent.id, formData);
       } else {
         await educationApi.create(formData);
       }
 
+      setIsModalOpen(false);
+      setEditingContent(null);
       setSuccessModal({
         isOpen: true,
-        title: editingContent ? 'Berhasil Memperbarui' : 'Berhasil Menambahkan',
-        message: editingContent 
-          ? 'Konten edukasi berhasil diperbarui.' 
+        title: isEditing ? 'Berhasil Memperbarui' : 'Berhasil Menambahkan',
+        message: isEditing
+          ? 'Konten edukasi berhasil diperbarui.'
           : 'Konten edukasi berhasil ditambahkan.'
       });
-      fetchContents();
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal menyimpan konten edukasi');
-    } finally {
-      setIsLoading(false);
+      await fetchContents(true);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan konten edukasi');
+      throw error;
     }
   };
 
@@ -227,21 +268,23 @@ export default function AdminEducationPage() {
   };
 
   const confirmDelete = async () => {
-    setIsLoading(true);
+    if (!deleteModal.id || isDeleting) return;
+    const targetId = deleteModal.id;
     const nameToDelete = deleteModal.name;
-    setDeleteModal({ isOpen: false, id: '', name: '' });
+    setIsDeleting(true);
     try {
-      await educationApi.delete(deleteModal.id, nameToDelete);
+      await educationApi.delete(targetId, nameToDelete);
+      setDeleteModal({ isOpen: false, id: '', name: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Berhasil Menghapus',
         message: 'Konten edukasi berhasil dihapus.'
       });
-      fetchContents();
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal menghapus konten edukasi');
+      await fetchContents(true);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menghapus konten edukasi');
     } finally {
-      setIsLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -315,7 +358,7 @@ export default function AdminEducationPage() {
               <ChevronDownIcon />
             </div>
 
-            <div className="relative w-full sm:w-[140px]">
+            <div className="relative w-full sm:w-[165px]">
               <select
                 className="h-9 sm:h-11 w-full appearance-none rounded-xl sm:rounded-[14px] bg-[#F9FAF8] border border-[#F0F2EB] px-3 sm:px-4 pr-8 sm:pr-10 text-xs sm:text-[13px] font-medium text-[#72796E] outline-none cursor-pointer"
                 value={dateFilter}
@@ -323,16 +366,21 @@ export default function AdminEducationPage() {
               >
                 <option value="newest">Tanggal: Terbaru</option>
                 <option value="oldest">Tanggal: Terlama</option>
+                <option value="title-asc">Judul: A-Z</option>
               </select>
               <ChevronDownIcon />
             </div>
 
             <button
               type="button"
-              className="col-span-2 sm:col-auto inline-flex h-9 sm:h-11 items-center justify-center gap-2 rounded-xl sm:rounded-[14px] border border-[#F0F2EB] bg-white px-4 sm:px-5 hover:bg-gray-50 transition-colors"
+              onClick={handleCycleSort}
+              title="Ubah urutan konten (Terbaru / Judul A-Z)"
+              className="col-span-2 sm:col-auto inline-flex h-9 sm:h-11 items-center justify-center gap-2 rounded-xl sm:rounded-[14px] border border-[#F0F2EB] bg-white px-4 sm:px-5 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               <SortIcon />
-              <span className="text-xs sm:text-[13px] font-medium text-[#72796E]">Urutkan</span>
+              <span className="text-xs sm:text-[13px] font-medium text-[#72796E]">
+                {sortLabel}
+              </span>
             </button>
           </div>
         </div>
@@ -356,15 +404,19 @@ export default function AdminEducationPage() {
         onClose={() => setSuccessModal({ ...successModal, isOpen: false })}
         title={successModal.title}
         message={successModal.message}
+        buttonText="Tutup"
       />
 
       <DeleteModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        onClose={() => {
+          if (!isDeleting) setDeleteModal({ ...deleteModal, isOpen: false });
+        }}
         onConfirm={confirmDelete}
         title="Hapus Konten?"
         itemName={deleteModal.name}
         confirmText="Hapus Konten"
+        isDeleting={isDeleting}
       />
     </div>
   );

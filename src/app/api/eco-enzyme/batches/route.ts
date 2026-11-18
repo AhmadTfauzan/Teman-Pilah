@@ -1,16 +1,21 @@
 import { getAllBatches, createBatch } from "@/lib/server/eco-enzyme-service";
 import { authenticateRequest } from "@/lib/server/auth";
+import { redactPublicEcoEnzymeBatch } from "@/lib/server/form-payload";
 import { apiPaginated, apiSuccess, apiError } from "@/lib/server/response";
 import { handleApiError } from "@/lib/server/error";
 
 export async function GET(req: Request) {
   try {
+    const user = await authenticateRequest(req);
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status");
+    const rawStatus = searchParams.get("status");
     const search = searchParams.get("search");
-    const includeArchived = searchParams.get("includeArchived") === "true";
+    const rawIncludeArchived = searchParams.get("includeArchived") === "true";
     const page = searchParams.get("page");
     const limit = searchParams.get("limit");
+
+    const status = !user && rawStatus === "ARCHIVED" ? null : rawStatus;
+    const includeArchived = user ? rawIncludeArchived : false;
 
     const result = await getAllBatches({
       status,
@@ -20,7 +25,14 @@ export async function GET(req: Request) {
       limit,
     });
 
-    return apiPaginated(result.data, result.meta);
+    const batches = result.data as Record<string, unknown>[];
+    const data = user
+      ? batches
+      : batches
+          .filter((batch) => !batch.archivedAt)
+          .map((batch) => redactPublicEcoEnzymeBatch(batch));
+
+    return apiPaginated(data, result.meta);
   } catch (error) {
     return handleApiError(error);
   }

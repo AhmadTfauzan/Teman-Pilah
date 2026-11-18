@@ -60,7 +60,7 @@ export class HeroRepository {
         imageUrl: data.imageUrl,
         altText: data.altText ?? null,
         caption: data.caption ?? null,
-        linkUrl: data.linkUrl ?? null,
+        linkUrl: data.linkUrl || null,
         linkLabel: data.linkLabel ?? null,
         sortOrder: data.sortOrder ?? 0,
         isActive: data.isActive ?? true,
@@ -80,9 +80,13 @@ export class HeroRepository {
       isActive?: boolean;
     }>,
   ): Promise<HeroSlide> {
+    const updateData = {
+      ...data,
+      ...(data.linkUrl !== undefined && { linkUrl: data.linkUrl || null }),
+    };
     return this.prisma.heroSlide.update({
       where: { id },
-      data,
+      data: updateData,
     });
   }
 

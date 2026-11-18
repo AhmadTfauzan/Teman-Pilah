@@ -5,40 +5,128 @@ import React, { useState, useEffect } from 'react';
 import { News } from '@/types';
 import { X, ArrowLeft, Bold, Italic, Underline, List, ListOrdered, Quote, Link2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
+import { toast } from 'sonner';
+
+export interface NewsModalSubmitData {
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  category: string;
+  status: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
+  tags: string[];
+  publishDate: string;
+  endDate?: string;
+  partnership?: string;
+  imageFile: File | null;
+}
 
 interface NewsModalProps {
   news: News | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: NewsModalSubmitData) => void | Promise<void>;
+}
+
+function validateSafeEditorLink(rawUrl: string): string | null {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:' ||
+      parsed.protocol === 'mailto:' ||
+      parsed.protocol === 'tel:'
+    ) {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 const BASE_URL = getBaseUrl();
 
+function resolveNewsImagePreview(imagePath?: string | null): string {
+  const trimmed = imagePath?.trim();
+  if (!trimmed) return '';
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('/')
+  ) {
+    return trimmed;
+  }
+  return BASE_URL ? `${BASE_URL}/${trimmed}` : `/${trimmed}`;
+}
+
 export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
-  const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [summary, setSummary] = useState('');
-  const [content, setContent] = useState('');
-  const [category, setCategory] = useState('Edukasi');
-  const [status, setStatus] = useState<'PUBLISHED' | 'DRAFT' | 'ARCHIVED'>('PUBLISHED');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
+  if (!isOpen) return null;
+
+  return (
+    <NewsModalContent
+      key={news?.id ?? 'new'}
+      news={news}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function NewsModalContent({
+  news,
+  onClose,
+  onSubmit,
+}: Omit<NewsModalProps, 'isOpen'>) {
+  const [title, setTitle] = useState(news?.title || '');
+  const [slug, setSlug] = useState(news?.slug || '');
+  const [summary, setSummary] = useState(news?.summary || '');
+  const [content, setContent] = useState(news?.content || '');
+  const [category] = useState(news?.category || 'Edukasi');
+  const [status] = useState<'PUBLISHED' | 'DRAFT' | 'ARCHIVED'>(
+    (news?.status as 'PUBLISHED' | 'DRAFT' | 'ARCHIVED') || 'PUBLISHED'
+  );
+  const [startDate, setStartDate] = useState(
+    news?.publishDate ? news.publishDate.substring(0, 10) : ''
+  );
+  const [endDate, setEndDate] = useState(
+    news?.endDate ? news.endDate.substring(0, 10) : ''
+  );
+  const [tags, setTags] = useState<string[]>(news?.tags || []);
   const [tagInput, setTagInput] = useState('');
-  const [imagePreview, setImagePreview] = useState('');
+  const [imagePreview, setImagePreview] = useState(() =>
+    resolveNewsImagePreview(news?.imageUrl || news?.image)
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [partnership, setPartnership] = useState('');
+  const [partnership, setPartnership] = useState(news?.partnership || '');
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [savedRange, setSavedRange] = useState<Range | null>(null);
   const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    status: 'PUBLISHED' | 'DRAFT' | 'ERROR' | 'ERROR_FILE_SIZE' | null;
+    status: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED' | 'ERROR' | 'ERROR_FILE_SIZE' | null;
   }>({ isOpen: false, status: null });
   
   const editorRef = React.useRef<HTMLDivElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const updateActiveFormats = () => {
     if (!editorRef.current) return;
@@ -79,52 +167,21 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
     });
   };
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (news) {
-      setTitle(news.title || '');
-      setSlug(news.slug || '');
-      setSummary(news.summary || '');
-      setContent(news.content || '');
-      setCategory(news.category || 'Edukasi');
-      setPartnership(news.partnership || '');
-      setStatus((news.status as 'PUBLISHED' | 'DRAFT' | 'ARCHIVED') || 'PUBLISHED');
-      setStartDate(news.publishDate ? news.publishDate.substring(0, 10) : '');
-      setTags(news.tags || []);
-      setImagePreview(news.imageUrl ? `${BASE_URL}/${news.imageUrl}` : '');
-      setImageFile(null);
-    } else {
-      setTitle('');
-      setSlug('');
-      setSummary('');
-      setContent('');
-      setCategory('Edukasi');
-      setPartnership('');
-      setStatus('PUBLISHED');
-      setStartDate('');
-      setEndDate('');
-      setTags([]);
-      setImagePreview('');
-      setImageFile(null);
-    }
-  }, [news, isOpen]);
-
-  // Auto-generate slug from title if empty
-  useEffect(() => {
-    if (title && !news) {
-      setSlug(title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-    }
-  }, [title, news]);
-
-  // Sync editor content when modal opens or news changes
+  // Sinkronkan DOM contentEditable saat komponen modal mount atau news berubah
   useEffect(() => {
     if (editorRef.current) {
-      if (editorRef.current.innerHTML !== content) {
-        editorRef.current.innerHTML = content;
-      }
+      editorRef.current.innerHTML = news?.content || '';
     }
-  }, [isOpen, news]);
+  }, [news]);
+
+  // Revoke object URL preview lama saat diganti atau unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,19 +230,41 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handlePreSubmit = (e: React.FormEvent, submitStatus?: 'PUBLISHED' | 'DRAFT') => {
+  const handleClose = () => {
+    setShowLinkInput(false);
+    setLinkUrl('');
+    setSavedRange(null);
+    setTagInput('');
+    setConfirmModal({ isOpen: false, status: null });
+    onClose();
+  };
+
+  const handlePreSubmit = (e: React.FormEvent, submitStatus?: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED') => {
     e.preventDefault();
+    if (isSubmitting) return;
     
+    const currentContent = editorRef.current ? editorRef.current.innerHTML : content;
+    if (currentContent !== content) {
+      setContent(currentContent);
+    }
+
     // Basic validation for required fields
-    if (!title.trim() || !slug.trim() || !content.trim() || content.trim() === '<p><br></p>') {
+    if (
+      !title.trim() ||
+      !slug.trim() ||
+      !currentContent.trim() ||
+      currentContent.trim() === '<p><br></p>' ||
+      currentContent.trim() === '<br>'
+    ) {
       setConfirmModal({ isOpen: true, status: 'ERROR' });
       return;
     }
 
-    setConfirmModal({ isOpen: true, status: submitStatus || status as 'PUBLISHED' | 'DRAFT' });
+    setConfirmModal({ isOpen: true, status: submitStatus || status });
   };
 
-  const executeSubmit = (submitStatus: 'PUBLISHED' | 'DRAFT') => {
+  const executeSubmit = async (submitStatus: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED') => {
+    if (isSubmitting) return;
     // Process any remaining text in tagInput as space-separated tags
     const finalTags = [...tags];
     if (tagInput.trim()) {
@@ -193,25 +272,33 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
       newTags.forEach(t => {
         if (!finalTags.includes(t)) finalTags.push(t);
       });
-      // Optionally reset it, though modal will close
       setTagInput('');
     }
 
-    setConfirmModal({ isOpen: false, status: null });
+    const latestContent = editorRef.current ? editorRef.current.innerHTML : content;
 
-    onSubmit({
-      title,
-      slug,
-      summary,
-      content,
-      category,
-      status: submitStatus,
-      tags: finalTags,
-      publishDate: startDate,
-      endDate: endDate || undefined,
-      partnership: partnership || undefined,
-      imageFile,
-    });
+    setConfirmModal({ isOpen: false, status: null });
+    setIsSubmitting(true);
+
+    try {
+      await onSubmit({
+        title,
+        slug,
+        summary,
+        content: latestContent,
+        category,
+        status: submitStatus,
+        tags: finalTags,
+        publishDate: startDate,
+        endDate: endDate || undefined,
+        partnership: partnership || undefined,
+        imageFile,
+      });
+    } catch {
+      // Parent handles error toast and keeps modal open
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFormat = (command: string, value?: string) => {
@@ -232,27 +319,42 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
   };
 
   const handleLinkSubmit = () => {
-    if (linkUrl) {
+    if (linkUrl.trim()) {
+      const safeHref = validateSafeEditorLink(linkUrl);
+      if (!safeHref) {
+        toast.error('URL tautan tidak valid atau tidak aman. Gunakan awalan https://, http://, atau /.');
+        return;
+      }
+
       editorRef.current?.focus();
+      const escapedHref = escapeHtml(safeHref);
+      const escapedLabel = escapeHtml(linkUrl.trim());
       if (savedRange) {
         const selection = window.getSelection();
         selection?.removeAllRanges();
         selection?.addRange(savedRange);
-        
-        // If selection is collapsed (no text selected), insert the URL as text
+
         if (savedRange.collapsed) {
-          document.execCommand('insertHTML', false, `<a href="${linkUrl}" target="_blank">${linkUrl}</a>`);
+          document.execCommand(
+            'insertHTML',
+            false,
+            `<a href="${escapedHref}" target="_blank" rel="noopener noreferrer">${escapedLabel}</a>`
+          );
         } else {
-          document.execCommand('createLink', false, linkUrl);
+          document.execCommand('createLink', false, safeHref);
         }
       } else {
-        // Fallback if no range was saved
-        document.execCommand('insertHTML', false, `<a href="${linkUrl}" target="_blank">${linkUrl}</a>`);
+        document.execCommand(
+          'insertHTML',
+          false,
+          `<a href="${escapedHref}" target="_blank" rel="noopener noreferrer">${escapedLabel}</a>`
+        );
       }
       if (editorRef.current) setContent(editorRef.current.innerHTML);
       updateActiveFormats();
     }
     setShowLinkInput(false);
+    setLinkUrl('');
     setSavedRange(null);
   };
 
@@ -263,14 +365,13 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
     updateActiveFormats();
   };
 
-  if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[#F9FAF8] overflow-hidden animate-slide-up">
       {/* HEADER BAR */}
       <div className="flex-none px-4 sm:px-12 py-4 sm:py-6">
         <button 
-          onClick={onClose}
+          type="button"
+          onClick={handleClose}
           className="flex items-center text-xs sm:text-[13px] font-medium text-[#72796E] hover:text-[#2A3426] transition-colors"
         >
           <ArrowLeft size={16} className="mr-1.5 sm:mr-2" />
@@ -297,7 +398,18 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
                   placeholder="Masukkan judul program..."
                   className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-[#F9FAF8] border border-[#F0F2EB] rounded-xl sm:rounded-[14px] text-sm text-[#2A3426] focus:outline-none focus:border-[#c2c9bb]"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    const nextTitle = e.target.value;
+                    setTitle(nextTitle);
+                    if (!news) {
+                      setSlug(
+                        nextTitle
+                          .toLowerCase()
+                          .replace(/[^a-z0-9]+/g, '-')
+                          .replace(/(^-|-$)+/g, '')
+                      );
+                    }
+                  }}
                 />
               </div>
 
@@ -358,7 +470,12 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
                           value={linkUrl}
                           onChange={(e) => setLinkUrl(e.target.value)}
                           autoFocus
-                          onKeyDown={(e) => e.key === 'Enter' && handleLinkSubmit()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleLinkSubmit();
+                            }
+                          }}
                         />
                         <button type="button" onClick={handleLinkSubmit} className="bg-[#2D5A27] text-white px-3 rounded-lg text-[12px] font-bold hover:brightness-110">Tambah</button>
                       </div>
@@ -404,16 +521,26 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
             <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[20px] border border-[#F0F2EB] shadow-sm space-y-3 sm:space-y-4">
               <label className="text-xs sm:text-[13px] font-bold text-[#72796E]">Banner Program</label>
               
-              <div className="relative border-2 border-dashed border-[#D6D9D2] rounded-[16px] p-8 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors group overflow-hidden">
+              <div className={`relative h-44 sm:h-52 w-full rounded-[16px] flex flex-col items-center justify-center text-center transition-colors group overflow-hidden ${
+                imagePreview
+                  ? 'border border-[#E5E7EB] bg-[#F9FAF8]'
+                  : 'border-2 border-dashed border-[#D6D9D2] p-6 hover:bg-gray-50'
+              }`}>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
                 />
                 
                 {imagePreview ? (
-                  <img src={imagePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                  <>
+                    <img src={imagePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none z-20">
+                      <span className="rounded-full bg-black/70 px-3.5 py-1.5 text-white text-[13px] font-medium">Ubah Gambar</span>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div className="w-12 h-12 bg-[#F3F4EF] rounded-full flex items-center justify-center mb-3 text-[#8F9A8A] group-hover:scale-110 transition-transform">
@@ -494,28 +621,42 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
       <div className="flex-none bg-white border-t border-[#F0F2EB] px-4 sm:px-12 py-3.5 sm:py-5 flex items-center justify-between gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         <button
           type="button"
-          onClick={onClose}
-          className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-xs sm:text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95"
+          onClick={handleClose}
+          disabled={isSubmitting}
+          className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#D05B5B] font-bold text-xs sm:text-[13px] hover:bg-red-50 transition-all duration-200 active:scale-95 disabled:opacity-50"
         >
           Batal
         </button>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {!news && (
-            <button
-              type="button"
-              onClick={(e) => handlePreSubmit(e, 'DRAFT')}
-              className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95"
-            >
-              Simpan Draft
-            </button>
-          )}
           <button
             type="button"
-            onClick={(e) => handlePreSubmit(e, 'PUBLISHED')}
-            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95"
+            disabled={isSubmitting}
+            onClick={(e) => handlePreSubmit(e, 'DRAFT')}
+            className="px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] border border-[#F0F2EB] text-[#2A3426] font-bold text-xs sm:text-[13px] hover:bg-gray-50 transition-all duration-200 active:scale-95 disabled:opacity-50"
           >
-            {news ? 'Simpan Perubahan' : 'Terbitkan'}
+            Simpan Draft
+          </button>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={(e) =>
+              handlePreSubmit(
+                e,
+                !news || news.status === 'DRAFT'
+                  ? 'PUBLISHED'
+                  : news.status === 'ARCHIVED'
+                  ? 'ARCHIVED'
+                  : 'PUBLISHED'
+              )
+            }
+            className="px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-[12px] bg-[#8C5A00] text-white font-bold text-xs sm:text-[13px] hover:brightness-110 transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            {isSubmitting
+              ? 'Menyimpan...'
+              : !news || news.status === 'DRAFT'
+              ? 'Terbitkan'
+              : 'Simpan Perubahan'}
           </button>
         </div>
       </div>
@@ -528,7 +669,7 @@ export function NewsModal({ news, isOpen, onClose, onSubmit }: NewsModalProps) {
           if (confirmModal.status === 'ERROR' || confirmModal.status === 'ERROR_FILE_SIZE') {
             setConfirmModal({ isOpen: false, status: null });
           } else if (confirmModal.status) {
-            executeSubmit(confirmModal.status as 'PUBLISHED' | 'DRAFT');
+            void executeSubmit(confirmModal.status);
           }
         }}
         title={

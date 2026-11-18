@@ -6,7 +6,8 @@ import { videoApi } from '@/lib/api/video';
 import { VideoTable } from '@/components/admin/VideoTable';
 import { VideoModal } from '@/components/admin/VideoModal';
 import { DeleteModal } from '@/components/admin/DeleteModal';
-import { Plus, Search, Video, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminVideosPage() {
   const [videos, setVideos] = useState<BankSampahVideoItem[]>([]);
@@ -26,32 +27,49 @@ export default function AdminVideosPage() {
     isOpen: false,
     video: null,
   });
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Success message toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  };
-
-  const fetchVideos = useCallback(async () => {
+  const fetchVideos = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      }
       const data = await videoApi.getAll({ limit: 100 });
       setVideos(data);
     } catch (error) {
       console.error('Failed to load videos:', error);
+      toast.error(error instanceof Error ? error.message : 'Gagal memuat video Bank Sampah');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    fetchVideos();
-  }, [fetchVideos]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await videoApi.getAll({ limit: 100 });
+        if (!cancelled) {
+          setVideos(data);
+        }
+      } catch (error) {
+        console.error('Failed to load videos:', error);
+        if (!cancelled) {
+          toast.error(error instanceof Error ? error.message : 'Gagal memuat video Bank Sampah');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Filtered list
   const filteredVideos = useMemo(() => {
@@ -89,40 +107,38 @@ export default function AdminVideosPage() {
     try {
       if (selectedVideo) {
         await videoApi.update(selectedVideo.id, formData);
-        showToast('Video berhasil diperbarui!');
+        toast.success('Video berhasil diperbarui!');
       } else {
         await videoApi.create(formData);
-        showToast('Video baru berhasil ditambahkan!');
+        toast.success('Video baru berhasil ditambahkan!');
       }
       setIsModalOpen(false);
-      fetchVideos();
-    } catch (error: any) {
-      alert(error.message || 'Gagal menyimpan video');
+      setSelectedVideo(null);
+      await fetchVideos(true);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan video');
+      throw error;
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.video) return;
+    if (!deleteModal.video || isDeleting) return;
+    const targetId = deleteModal.video.id;
+    setIsDeleting(true);
     try {
-      await videoApi.delete(deleteModal.video.id);
-      showToast('Video berhasil dihapus!');
+      await videoApi.delete(targetId);
+      toast.success('Video berhasil dihapus!');
       setDeleteModal({ isOpen: false, video: null });
-      fetchVideos();
-    } catch (error: any) {
-      alert(error.message || 'Gagal menghapus video');
+      await fetchVideos(true);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Gagal menghapus video');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
     <div className="space-y-5 sm:space-y-8 pb-8 sm:pb-12">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 rounded-xl bg-[#012D1D] px-4 py-3 text-xs sm:text-sm font-semibold text-white shadow-xl animate-in slide-in-from-bottom duration-300">
-          <CheckCircle2 size={18} className="text-[#80E478]" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
@@ -136,6 +152,7 @@ export default function AdminVideosPage() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <button
+            type="button"
             onClick={() => fetchVideos()}
             className="p-2 sm:p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors shadow-sm"
             title="Segarkan Data"
@@ -144,6 +161,7 @@ export default function AdminVideosPage() {
           </button>
 
           <button
+            type="button"
             onClick={handleOpenAddModal}
             className="inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-4 py-2 sm:px-5 sm:py-2.5 font-bold text-xs sm:text-sm shadow-md shadow-[#012D1D]/20 transition-all hover:scale-105 active:scale-95"
           >
@@ -201,6 +219,7 @@ export default function AdminVideosPage() {
         {/* Platform Buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
           <button
+            type="button"
             onClick={() => setPlatformFilter('ALL')}
             className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'ALL'
@@ -211,6 +230,7 @@ export default function AdminVideosPage() {
             Semua ({stats.all})
           </button>
           <button
+            type="button"
             onClick={() => setPlatformFilter('YouTube')}
             className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'YouTube'
@@ -221,6 +241,7 @@ export default function AdminVideosPage() {
             YouTube ({stats.youtube})
           </button>
           <button
+            type="button"
             onClick={() => setPlatformFilter('Instagram')}
             className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'Instagram'
@@ -231,6 +252,7 @@ export default function AdminVideosPage() {
             Instagram ({stats.instagram})
           </button>
           <button
+            type="button"
             onClick={() => setPlatformFilter('TikTok')}
             className={`rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap ${
               platformFilter === 'TikTok'
@@ -259,6 +281,11 @@ export default function AdminVideosPage() {
       <VideoTable
         videos={filteredVideos}
         isLoading={isLoading}
+        hasActiveFilter={Boolean(searchQuery.trim() || platformFilter !== 'ALL')}
+        onResetFilter={() => {
+          setSearchQuery('');
+          setPlatformFilter('ALL');
+        }}
         onEdit={handleOpenEditModal}
         onDelete={(video) => setDeleteModal({ isOpen: true, video })}
         onAddNew={handleOpenAddModal}
@@ -279,8 +306,11 @@ export default function AdminVideosPage() {
         itemName={deleteModal.video?.title || ''}
         confirmText="Hapus Video"
         description={`Apakah Anda yakin ingin menghapus video "${deleteModal.video?.title}"? Video ini tidak akan lagi tampil di halaman Bank Sampah.`}
-        onClose={() => setDeleteModal({ isOpen: false, video: null })}
+        onClose={() => {
+          if (!isDeleting) setDeleteModal({ isOpen: false, video: null });
+        }}
         onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
       />
     </div>
   );

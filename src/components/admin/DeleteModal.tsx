@@ -1,14 +1,18 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 
 interface DeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title?: string;
   itemName?: string;
   confirmText?: string;
   description?: string;
   variant?: 'danger' | 'warning';
+  isDeleting?: boolean;
+  isLoading?: boolean;
 }
 
 export function DeleteModal({
@@ -20,10 +24,25 @@ export function DeleteModal({
   confirmText = "Hapus Program",
   description,
   variant = 'danger',
+  isDeleting = false,
+  isLoading = false,
 }: DeleteModalProps) {
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+
   if (!isOpen) return null;
 
   const isWarning = variant === 'warning';
+  const isBusy = Boolean(isDeleting || isLoading || internalSubmitting);
+
+  const handleConfirm = async () => {
+    if (isBusy) return;
+    setInternalSubmitting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setInternalSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm transition-all duration-300">
@@ -52,7 +71,7 @@ export function DeleteModal({
               <p>{description}</p>
             ) : (
               <p>
-                Apakah Anda yakin ingin menghapus "{itemName}"? Tindakan ini tidak dapat dibatalkan.
+                Apakah Anda yakin ingin menghapus &ldquo;{itemName}&rdquo;? Tindakan ini tidak dapat dibatalkan.
               </p>
             )}
           </div>
@@ -62,17 +81,19 @@ export function DeleteModal({
         <div className="flex items-center justify-center gap-2.5 sm:gap-3 bg-[#F9FAF8] px-5 sm:px-8 py-4 sm:py-5">
           <button
             onClick={onClose}
+            disabled={isBusy}
             type="button"
-            className="flex-1 rounded-xl border border-[#D6D9D2] bg-white px-4 py-2.5 text-[13px] font-medium text-[#72796E] transition-all duration-200 hover:bg-gray-50 active:scale-95"
+            className="flex-1 rounded-xl border border-[#D6D9D2] bg-white px-4 py-2.5 text-[13px] font-medium text-[#72796E] transition-all duration-200 hover:bg-gray-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Batal
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirm}
+            disabled={isBusy}
             type="button"
-            className="flex-1 rounded-xl bg-[#c21c1c] px-4 py-2.5 text-[13px] font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-700 active:scale-95"
+            className="flex-1 rounded-xl bg-[#c21c1c] px-4 py-2.5 text-[13px] font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {confirmText}
+            {isBusy ? 'Memproses...' : confirmText}
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import {
   updateGallerySchema,
 } from "./gallery.validation";
 import { AuthRequest } from "@/middlewares/auth.middleware";
+import { deleteUploadedFile } from "../../utils/file";
 
 export class GalleryController {
   private readonly galleryService: GalleryService;
@@ -70,6 +71,7 @@ export class GalleryController {
         data: gallery,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };
@@ -90,6 +92,7 @@ export class GalleryController {
         data: gallery,
       });
     } catch (error) {
+      deleteUploadedFile(req.file);
       next(error);
     }
   };

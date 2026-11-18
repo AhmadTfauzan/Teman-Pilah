@@ -1,11 +1,13 @@
 import { HeroSlide } from "../../../generated/prisma";
-import fs from "fs";
-import path from "path";
 import {
   buildPaginationMeta,
   parsePagination,
   PaginationMeta,
 } from "../../utils/pagination";
+import {
+  cleanupFailedUpload,
+  deleteStoredUploadFile,
+} from "../../utils/file";
 import { HeroRepository } from "./hero.repository";
 import {
   CreateHeroInput,
@@ -27,15 +29,7 @@ export class HeroService {
   }
 
   private deleteImageFile(imagePath: string): void {
-    if (!imagePath || imagePath.startsWith("http")) return;
-    const fullPath: string = path.join(process.cwd(), imagePath);
-    if (fs.existsSync(fullPath)) {
-      try {
-        fs.unlinkSync(fullPath);
-      } catch (err) {
-        console.error("Failed to delete image file:", err);
-      }
-    }
+    deleteStoredUploadFile(imagePath);
   }
 
   async getAllSlides(query: HeroQueryInput): Promise<HeroListResult> {
@@ -74,15 +68,20 @@ export class HeroService {
 
     const imageUrl: string = `uploads/hero/${file.filename}`;
 
-    return this.heroRepository.create({
-      imageUrl,
-      altText: data.altText,
-      caption: data.caption,
-      linkUrl: data.linkUrl,
-      linkLabel: data.linkLabel,
-      sortOrder: data.sortOrder,
-      isActive: data.isActive,
-    });
+    try {
+      return await this.heroRepository.create({
+        imageUrl,
+        altText: data.altText,
+        caption: data.caption,
+        linkUrl: data.linkUrl,
+        linkLabel: data.linkLabel,
+        sortOrder: data.sortOrder,
+        isActive: data.isActive,
+      });
+    } catch (error) {
+      cleanupFailedUpload(file, "hero");
+      throw error;
+    }
   }
 
   async updateSlide(
@@ -90,26 +89,32 @@ export class HeroService {
     data: UpdateHeroInput,
     file?: Express.Multer.File,
   ): Promise<HeroSlide> {
-    const existing: HeroSlide = await this.getSlideById(id);
+    try {
+      const existing: HeroSlide = await this.getSlideById(id);
 
-    let imageUrl: string | undefined;
+      const imageUrl: string | undefined = file
+        ? `uploads/hero/${file.filename}`
+        : undefined;
 
-    if (file) {
-      if (existing.imageUrl) {
+      const updatedSlide = await this.heroRepository.update(id, {
+        ...(imageUrl && { imageUrl }),
+        ...(data.altText !== undefined && { altText: data.altText }),
+        ...(data.caption !== undefined && { caption: data.caption }),
+        ...(data.linkUrl !== undefined && { linkUrl: data.linkUrl }),
+        ...(data.linkLabel !== undefined && { linkLabel: data.linkLabel }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      });
+
+      if (file && existing.imageUrl && existing.imageUrl !== imageUrl) {
         this.deleteImageFile(existing.imageUrl);
       }
-      imageUrl = `uploads/hero/${file.filename}`;
-    }
 
-    return this.heroRepository.update(id, {
-      ...(imageUrl && { imageUrl }),
-      ...(data.altText !== undefined && { altText: data.altText }),
-      ...(data.caption !== undefined && { caption: data.caption }),
-      ...(data.linkUrl !== undefined && { linkUrl: data.linkUrl }),
-      ...(data.linkLabel !== undefined && { linkLabel: data.linkLabel }),
-      ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
-      ...(data.isActive !== undefined && { isActive: data.isActive }),
-    });
+      return updatedSlide;
+    } catch (error) {
+      cleanupFailedUpload(file, "hero");
+      throw error;
+    }
   }
 
   async toggleActive(id: string): Promise<HeroSlide> {
@@ -122,11 +127,11 @@ export class HeroService {
   async deleteSlide(id: string): Promise<void> {
     const existing: HeroSlide = await this.getSlideById(id);
 
+    await this.heroRepository.delete(id);
+
     if (existing.imageUrl) {
       this.deleteImageFile(existing.imageUrl);
     }
-
-    await this.heroRepository.delete(id);
   }
 }
 

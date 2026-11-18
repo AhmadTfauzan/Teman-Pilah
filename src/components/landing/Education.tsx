@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Container } from '@/components/layout/Container';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { ConcentricCircles, OutlineLeaf } from '@/components/ui/DecorativeElements';
 
 import { getBaseUrl } from '@/lib/api-config';
@@ -66,10 +66,19 @@ const DEFAULT_ARTICLES = [
 ];
 
 function formatImageUrl(src?: string | null, fallback: string = ''): string {
-  if (!src) return fallback;
-  if (src.startsWith('http')) return src;
-  if (src.startsWith('/')) return src;
-  return `${BASE_URL}/${src}`;
+  const path = src?.trim();
+  if (!path) return fallback;
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('data:') ||
+    (path.startsWith('/') && !path.startsWith('//'))
+  ) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, '');
+  const cleanBase = BASE_URL.replace(/\/+$/, '');
+  return cleanBase ? `${cleanBase}/${cleanPath}` : `/${cleanPath}`;
 }
 
 export function Education({ items }: EducationProps) {
@@ -122,17 +131,11 @@ export function Education({ items }: EducationProps) {
               <div>
                 {/* Image (Figma: 286px x 200px) */}
                 <div className="relative h-[100px] sm:h-[190px] w-full rounded-[8px] sm:rounded-[10px] overflow-hidden bg-gray-50 border border-black/5 flex items-center justify-center">
-                  <img
+                  <SafeImage
                     src={art.image}
+                    fallbackSrc={`/activity/Pengmas (${(idx % 4) + 7}).jpeg`}
                     alt={art.title}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      const fallback = `/activity/Pengmas (${idx + 7}).jpeg`;
-                      if (target.src !== fallback) {
-                        target.src = fallback;
-                      }
-                    }}
                   />
                 </div>
 

@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { EcoEnzymeVideoItem, EcoEnzymeVideoPlatform } from '@/types';
 import { getEcoEnzymeVideoThumbnailUrl } from '@/lib/api/eco-enzyme-video';
-import { X, Play, Upload, ExternalLink, Image as ImageIcon, Sparkles, Film } from 'lucide-react';
-import Image from 'next/image';
+import { X, Upload, Image as ImageIcon, Film } from 'lucide-react';
 
 interface EcoEnzymeVideoModalProps {
   item: EcoEnzymeVideoItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: FormData) => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
 }
 
 export function EcoEnzymeVideoModal({
@@ -19,20 +18,50 @@ export function EcoEnzymeVideoModal({
   onClose,
   onSubmit,
 }: EcoEnzymeVideoModalProps) {
-  const [title, setTitle] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [platform, setPlatform] = useState<EcoEnzymeVideoPlatform>('Local');
-  const [duration, setDuration] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [aspect, setAspect] = useState<'wide' | 'tall'>('tall');
-  const [sortOrder, setSortOrder] = useState<number>(0);
+  if (!isOpen) return null;
+
+  return (
+    <EcoEnzymeVideoModalContent
+      key={item?.id ?? 'new'}
+      item={item}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function EcoEnzymeVideoModalContent({
+  item,
+  onClose,
+  onSubmit,
+}: Omit<EcoEnzymeVideoModalProps, 'isOpen'>) {
+  const [title, setTitle] = useState(item?.title || '');
+  const [videoUrl, setVideoUrl] = useState(item?.videoUrl || '');
+  const [platform, setPlatform] = useState<EcoEnzymeVideoPlatform>(
+    item?.platform || 'Local'
+  );
+  const [duration, setDuration] = useState(item?.duration || '');
+  const [description, setDescription] = useState(item?.description || '');
+  const [category, setCategory] = useState(
+    item ? item.category || '' : 'Manfaat & Khasiat'
+  );
+  const [aspect, setAspect] = useState<'wide' | 'tall'>(
+    item?.aspect === 'wide' ? 'wide' : 'tall'
+  );
+  const [tagsInput, setTagsInput] = useState(item?.tags?.join(', ') || '');
+  const [isActive, setIsActive] = useState<boolean>(item?.isActive ?? true);
+  const [sortOrder, setSortOrder] = useState<number>(item?.sortOrder ?? 0);
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
-  const [customThumbnailUrl, setCustomThumbnailUrl] = useState('');
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>(() =>
+    item?.thumbnail ? getEcoEnzymeVideoThumbnailUrl(item.thumbnail) : ''
+  );
+  const [customThumbnailUrl, setCustomThumbnailUrl] = useState(
+    item?.thumbnail && item.thumbnail.startsWith('http') ? item.thumbnail : ''
+  );
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper deteksi platform & YouTube ID
@@ -47,41 +76,10 @@ export function EcoEnzymeVideoModal({
 
   const extractYouTubeId = (url: string): string | null => {
     const match = url.match(
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
     );
     return match ? match[1] : null;
   };
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (item) {
-      setTitle(item.title || '');
-      setVideoUrl(item.videoUrl || '');
-      setPlatform(item.platform || 'Local');
-      setDuration(item.duration || '');
-      setDescription(item.description || '');
-      setCategory(item.category || '');
-      setAspect((item.aspect as any) === 'wide' ? 'wide' : 'tall');
-      setSortOrder(item.sortOrder ?? 0);
-      setThumbnailPreview(item.thumbnail ? getEcoEnzymeVideoThumbnailUrl(item.thumbnail) : '');
-      setCustomThumbnailUrl(item.thumbnail && item.thumbnail.startsWith('http') ? item.thumbnail : '');
-      setThumbnailFile(null);
-    } else {
-      setTitle('');
-      setVideoUrl('');
-      setPlatform('Local');
-      setDuration('');
-      setDescription('');
-      setCategory('Manfaat & Khasiat');
-      setAspect('tall');
-      setSortOrder(0);
-      setThumbnailPreview('');
-      setCustomThumbnailUrl('');
-      setThumbnailFile(null);
-    }
-    setErrorMessage('');
-  }, [item, isOpen]);
 
   const handleUrlChange = (newUrl: string) => {
     setVideoUrl(newUrl);
@@ -118,8 +116,9 @@ export function EcoEnzymeVideoModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!title.trim()) {
       setErrorMessage('Judul video edukasi wajib diisi.');
@@ -139,6 +138,8 @@ export function EcoEnzymeVideoModal({
     formData.append('description', description.trim());
     formData.append('category', category.trim());
     formData.append('aspect', aspect);
+    formData.append('tags', tagsInput);
+    formData.append('isActive', String(isActive));
     formData.append('sortOrder', String(sortOrder));
 
     if (thumbnailFile) {
@@ -147,10 +148,15 @@ export function EcoEnzymeVideoModal({
       formData.append('thumbnail', customThumbnailUrl);
     }
 
-    onSubmit(formData);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } catch {
+      // Parent handles error toast and keeps modal open
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
@@ -287,6 +293,42 @@ export function EcoEnzymeVideoModal({
             </div>
           </div>
 
+          {/* Tags & Visibilitas Publik */}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-stone-700">
+                  Tags / Label (Opsional)
+                </label>
+                <span className="text-[11px] text-stone-400">Pisahkan dengan koma</span>
+              </div>
+              <input
+                type="text"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="cth: Pembersih Alami, Pupuk Organik, Ramah Lingkungan"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 transition-all text-stone-900 font-medium placeholder:text-stone-400"
+              />
+            </div>
+
+            <label className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-stone-50/60 px-3.5 py-2.5 cursor-pointer">
+              <div>
+                <span className="block text-xs font-bold text-stone-800">
+                  Tampilkan di Halaman Publik
+                </span>
+                <span className="block text-[11px] text-stone-500">
+                  Nonaktifkan jika ingin menyembunyikan video ini dari halaman publik.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="h-4 w-4 rounded border-stone-300 text-[#012D1D] focus:ring-emerald-500 shrink-0"
+              />
+            </label>
+          </div>
+
           {/* Deskripsi */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-stone-700">Deskripsi Singkat Video</label>
@@ -363,15 +405,17 @@ export function EcoEnzymeVideoModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-bold transition-colors"
+              disabled={isSubmitting}
+              className="px-4 py-2.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-bold transition-colors disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {item ? 'Simpan Perubahan' : 'Tambah Video'}
+              {isSubmitting ? 'Menyimpan...' : item ? 'Simpan Perubahan' : 'Tambah Video'}
             </button>
           </div>
         </form>

@@ -7,7 +7,7 @@ import { EcoEnzymeController } from "./eco-enzyme.controller";
 import { EcoEnzymeVideoRepository } from "./eco-enzyme-video.repository";
 import { EcoEnzymeVideoService } from "./eco-enzyme-video.service";
 import { EcoEnzymeVideoController } from "./eco-enzyme-video.controller";
-import { authenticate } from "@/middlewares/auth.middleware";
+import { authenticate, optionalAuthenticate } from "@/middlewares/auth.middleware";
 import { createUpload } from "@/middlewares/upload.middleware";
 
 const router: Router = Router();
@@ -61,10 +61,10 @@ router.delete("/videos/:id", authenticate, (req, res, next) => {
 // Publik
 router.get("/public/:code", publicCodeLimiter, controller.getByPublicCode);
 router.get("/stats", controller.getStats);
-router.get("/batches", (req, res, next) => {
+router.get("/batches", optionalAuthenticate, (req, res, next) => {
   controller.getAll(req as any, res, next);
 });
-router.get("/batches/:id", controller.getById);
+router.get("/batches/:id", optionalAuthenticate, controller.getById);
 
 // Admin (Membutuhkan autentikasi)
 router.get("/products", authenticate, controller.getProducts);

@@ -1,4 +1,5 @@
-import { Category, Prisma } from "@prisma/client";
+import crypto from "node:crypto";
+import { Category, Prisma, StockLabel } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest } from "@/lib/server/auth";
 import { AppError, handleApiError } from "@/lib/server/error";
@@ -7,22 +8,30 @@ import { parseProductPayload } from "@/lib/server/product-payload";
 import { resolveOrCreateQrCode } from "@/lib/server/qr-code-service";
 import { apiError, apiPaginated, apiSuccess } from "@/lib/server/response";
 
-async function generateUniqueProductCode(category: Category): Promise<string> {
+const VALID_CATEGORIES = new Set<string>(Object.values(Category));
+const VALID_STOCK_LABELS = new Set<string>(Object.values(StockLabel));
+const MAX_PRODUCT_CODE_RETRIES = 5;
+
+async function generateUniqueProductCode(category: Category, attempt: number = 0): Promise<string> {
   const prefixMap: Record<Category, string> = {
     UPCYCLED_GOODS: "UP",
     ORGANIC: "OR",
     ZERO_WASTE: "ZW",
   };
   const prefix = prefixMap[category] || "GN";
-  const count = await prisma.product.count({ where: { category } });
 
-  for (let offset = 1; offset <= 15; offset++) {
-    const candidate = `TP-${prefix}-${String(count + offset).padStart(3, "0")}`;
-    const existing = await prisma.product.findUnique({ where: { productCode: candidate } });
-    if (!existing) return candidate;
+  if (attempt < 3) {
+    const count = await prisma.product.count({ where: { category } });
+
+    for (let offset = 1 + attempt; offset <= 15 + attempt; offset++) {
+      const candidate = `TP-${prefix}-${String(count + offset).padStart(3, "0")}`;
+      const existing = await prisma.product.findUnique({ where: { productCode: candidate } });
+      if (!existing) return candidate;
+    }
   }
 
-  return `TP-${prefix}-${Date.now().toString(36).toUpperCase()}`;
+  const randomSuffix = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `TP-${prefix}-${Date.now().toString(36).toUpperCase()}-${randomSuffix}`;
 }
 
 export async function GET(req: Request) {
@@ -40,10 +49,22 @@ export async function GET(req: Request) {
 
     const andConditions: Prisma.ProductWhereInput[] = [];
     if (category && category !== "ALL") {
+      if (!VALID_CATEGORIES.has(category)) {
+        throw new AppError(
+          "Kategori produk tidak valid. Pilih: UPCYCLED_GOODS, ORGANIC, atau ZERO_WASTE",
+          400
+        );
+      }
       andConditions.push({ category: category as Category });
     }
     if (stockLabel && stockLabel !== "ALL") {
-      andConditions.push({ stockLabel: stockLabel as Prisma.EnumStockLabelFilter<"Product"> });
+      if (!VALID_STOCK_LABELS.has(stockLabel)) {
+        throw new AppError(
+          "Label stok tidak valid. Pilih: IN_STOCK, BULK_AVAILABLE, atau OUT_OF_STOCK",
+          400
+        );
+      }
+      andConditions.push({ stockLabel: stockLabel as StockLabel });
     }
     if (codeParam) {
       andConditions.push({
@@ -101,38 +122,62 @@ export async function POST(req: Request) {
       throw new AppError("Harga produk wajib diisi", 400);
     }
 
-    const productCode = payload.productCode || (await generateUniqueProductCode(payload.category));
+    const hasCustomCode = Boolean(payload.productCode);
 
-    const existingByCode = await prisma.product.findUnique({ where: { productCode } });
-    if (existingByCode) {
-      throw new AppError(`Kode produk '${productCode}' sudah digunakan`, 409);
+    for (let attempt = 0; attempt < MAX_PRODUCT_CODE_RETRIES; attempt++) {
+      const productCode =
+        payload.productCode || (await generateUniqueProductCode(payload.category, attempt));
+
+      if (hasCustomCode) {
+        const existingByCode = await prisma.product.findUnique({ where: { productCode } });
+        if (existingByCode) {
+          throw new AppError(`Kode produk '${productCode}' sudah digunakan`, 409);
+        }
+      }
+
+      try {
+        const { qrCode } = await resolveOrCreateQrCode({
+          entityType: "PRODUCT",
+          entityKey: productCode,
+          entityName: payload.name,
+          pathPrefix: "/p",
+        });
+
+        const product = await prisma.product.create({
+          data: {
+            productCode,
+            name: payload.name,
+            category: payload.category,
+            description: payload.description ?? null,
+            image: payload.image ?? null,
+            price: payload.price,
+            priceUnit: payload.priceUnit ?? null,
+            stock: payload.stock ?? 0,
+            stockLabel: payload.stockLabel ?? "IN_STOCK",
+            whatsappLink: payload.whatsappLink ?? null,
+            qrCodeId: qrCode.id,
+          },
+          include: { qrCode: true },
+        });
+
+        return apiSuccess(product, "Produk berhasil dibuat", 201);
+      } catch (error) {
+        const isUniqueConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+
+        if (isUniqueConflict) {
+          if (hasCustomCode) {
+            throw new AppError(`Kode produk '${productCode}' sudah digunakan`, 409);
+          }
+          if (attempt < MAX_PRODUCT_CODE_RETRIES - 1) {
+            continue;
+          }
+        }
+        throw error;
+      }
     }
 
-    const { qrCode } = await resolveOrCreateQrCode({
-      entityType: "PRODUCT",
-      entityKey: productCode,
-      entityName: payload.name,
-      pathPrefix: "/p",
-    });
-
-    const product = await prisma.product.create({
-      data: {
-        productCode,
-        name: payload.name,
-        category: payload.category,
-        description: payload.description ?? null,
-        image: payload.image ?? null,
-        price: payload.price,
-        priceUnit: payload.priceUnit ?? null,
-        stock: payload.stock ?? 0,
-        stockLabel: payload.stockLabel ?? "IN_STOCK",
-        whatsappLink: payload.whatsappLink ?? null,
-        qrCodeId: qrCode.id,
-      },
-      include: { qrCode: true },
-    });
-
-    return apiSuccess(product, "Produk berhasil dibuat", 201);
+    throw new AppError("Gagal menghasilkan kode produk unik setelah beberapa percobaan", 409);
   } catch (error) {
     return handleApiError(error);
   }

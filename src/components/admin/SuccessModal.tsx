@@ -9,6 +9,7 @@ interface SuccessModalProps {
   title?: string;
   message?: React.ReactNode;
   buttonText?: string;
+  redirectTo?: string;
 }
 
 export function SuccessModal({
@@ -16,17 +17,18 @@ export function SuccessModal({
   onClose,
   title = "Berhasil!",
   message = "Tindakan Anda telah berhasil diselesaikan. Kerja Bagus!",
-  buttonText = "Kembali ke Beranda"
+  buttonText = "Tutup",
+  redirectTo,
 }: SuccessModalProps) {
   const router = useRouter();
 
   if (!isOpen) return null;
 
   const handleButtonClick = () => {
-    if (buttonText === 'Go Home' || buttonText === 'Kembali ke Beranda') {
-      router.push('/admin');
-    }
     onClose();
+    if (redirectTo) {
+      router.push(redirectTo);
+    }
   };
 
   return (
@@ -51,9 +53,9 @@ export function SuccessModal({
             </svg>
           </div>
           <h3 className="mb-1.5 sm:mb-2 text-lg sm:text-[20px] font-bold text-[#1a1c19]">{title}</h3>
-          <p className="text-xs sm:text-[14px] leading-relaxed text-[#72796E]">
+          <div className="text-xs sm:text-[14px] leading-relaxed text-[#72796E]">
             {message}
-          </p>
+          </div>
         </div>
 
         {/* ACTIONS */}

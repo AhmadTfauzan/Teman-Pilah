@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Container } from '@/components/layout/Container';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { ConcentricCircles, OutlineLeaf } from '@/components/ui/DecorativeElements';
 
 interface ProgramData {
@@ -108,17 +108,11 @@ export function Programs({ programs }: ProgramsProps) {
             >
               {/* Card Image (Figma: 389px x 240px) */}
               <div className="relative h-[105px] sm:h-[220px] lg:h-[240px] w-full bg-gray-100 overflow-hidden flex items-center justify-center">
-                <img
+                <SafeImage
                   src={item.image || `/activity/Pengmas (${(idx % 10) + 1}).jpeg`}
+                  fallbackSrc={`/activity/Pengmas (${(idx % 10) + 1}).jpeg`}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    const fallback = `/activity/Pengmas (${(idx % 10) + 1}).jpeg`;
-                    if (target.src !== fallback) {
-                      target.src = fallback;
-                    }
-                  }}
                 />
               </div>
 

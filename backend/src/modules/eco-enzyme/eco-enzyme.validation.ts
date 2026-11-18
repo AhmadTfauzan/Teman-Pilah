@@ -8,8 +8,20 @@ export const createBatchSchema = z.object({
   organicWasteKg: z.coerce.number().positive("Berat sampah organik harus lebih dari 0"),
   waterLiter: z.coerce.number().positive("Volume air harus lebih dari 0"),
   organicWasteTypes: z.string().optional().default("Kulit Buah Campur"),
-  startDate: z.string().min(1, "Tanggal mulai wajib diisi"),
-  harvestEstimate: z.string().optional(),
+  startDate: z
+    .string()
+    .min(1, "Tanggal mulai wajib diisi")
+    .refine(
+      (val) => !isNaN(new Date(val).getTime()),
+      "Format tanggal mulai tidak valid",
+    ),
+  harvestEstimate: z
+    .string()
+    .refine(
+      (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
+      "Format tanggal panen tidak valid",
+    )
+    .optional(),
   photoUrl: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   previousBatchId: z.string().nullable().optional(),
@@ -23,8 +35,20 @@ export const updateBatchSchema = z.object({
   organicWasteKg: z.coerce.number().positive().optional(),
   waterLiter: z.coerce.number().positive().optional(),
   organicWasteTypes: z.string().optional(),
-  startDate: z.string().optional(),
-  harvestEstimate: z.string().optional(),
+  startDate: z
+    .string()
+    .refine(
+      (val) => val.trim() !== "" && !isNaN(new Date(val).getTime()),
+      "Format tanggal mulai tidak valid",
+    )
+    .optional(),
+  harvestEstimate: z
+    .string()
+    .refine(
+      (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
+      "Format tanggal panen tidak valid",
+    )
+    .optional(),
   photoUrl: z.string().nullable().optional(),
   status: z.enum(["IN_PROGRESS", "HARVESTED", "FAILED"]).optional(),
   failureReason: z.enum(["KONTAMINASI_JAMUR_HITAM", "AROMA_BUSUK_MENYENGAT", "WADAH_BOCOR_RUSAK", "LAINNYA"]).nullable().optional(),
@@ -34,7 +58,13 @@ export const updateBatchSchema = z.object({
 });
 
 export const harvestBatchSchema = z.object({
-  actualHarvestDate: z.string().optional(),
+  actualHarvestDate: z
+    .string()
+    .refine(
+      (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
+      "Format tanggal panen tidak valid",
+    )
+    .optional(),
   harvestLiter: z.coerce.number().positive("Hasil panen harus lebih dari 0 liter"),
   residueUsage: z.enum(["KOMPOS_PADAT", "PUPUK_ORGANIK", "STARTER_BATCH_BARU", "PENGHARUM_TOILET"]).optional(),
   residueNotes: z.string().nullable().optional(),
@@ -45,7 +75,13 @@ export const harvestBatchSchema = z.object({
 
 export const createLogSchema = z.object({
   dayNumber: z.coerce.number().int().positive().optional().default(7),
-  logDate: z.string().optional(),
+  logDate: z
+    .string()
+    .refine(
+      (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
+      "Format tanggal log tidak valid",
+    )
+    .optional(),
   phLevel: z.coerce.number().min(0).max(14).nullable().optional(),
   aromaStatus: z.string().nullable().optional(),
   fungusColor: z.string().nullable().optional(),

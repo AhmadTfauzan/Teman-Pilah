@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createVideoSchema = z.object({
+const videoBaseSchema = z.object({
   title: z
     .string()
     .min(1, "Judul video wajib diisi")
@@ -8,17 +8,30 @@ export const createVideoSchema = z.object({
     .trim(),
   videoUrl: z
     .string()
+    .trim()
     .min(1, "Link video wajib diisi")
-    .url("Format link video tidak valid")
     .max(500, "Link video maksimal 500 karakter")
-    .trim(),
+    .url("Format link video tidak valid")
+    .refine(
+      (val) => /^https?:\/\//i.test(val),
+      "URL harus diawali http:// atau https://",
+    ),
   platform: z
     .enum(["YouTube", "TikTok", "Instagram"])
     .optional(),
   thumbnail: z
     .string()
-    .max(500)
     .trim()
+    .max(500)
+    .refine(
+      (val) =>
+        val === "" ||
+        !/^(?:javascript|vbscript|data\s*:\s*text\/html)\s*:/i.test(
+          val.replace(/[\u0000-\u0020]+/g, ""),
+        ),
+      "URL thumbnail tidak aman",
+    )
+    .nullable()
     .optional(),
   duration: z
     .string()
@@ -38,6 +51,20 @@ export const createVideoSchema = z.object({
   aspect: z
     .enum(["wide", "tall"])
     .optional(),
+  date: z
+    .string()
+    .max(50, "Tanggal maksimal 50 karakter")
+    .trim()
+    .nullable()
+    .optional(),
+  sortOrder: z
+    .coerce
+    .number()
+    .int()
+    .optional(),
+});
+
+export const createVideoSchema = videoBaseSchema.extend({
   sortOrder: z
     .coerce
     .number()
@@ -46,7 +73,7 @@ export const createVideoSchema = z.object({
     .default(0),
 });
 
-export const updateVideoSchema = createVideoSchema.partial();
+export const updateVideoSchema = videoBaseSchema.partial();
 
 export const videoQuerySchema = z.object({
   page: z
@@ -65,7 +92,8 @@ export const videoQuerySchema = z.object({
     .trim()
     .optional(),
   platform: z
-    .enum(["YouTube", "TikTok", "Instagram"])
+    .string()
+    .trim()
     .optional(),
   category: z
     .string()

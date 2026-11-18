@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { EducationRepository } from "./education.repository";
 import { EducationService } from "./education.service";
 import { EducationController } from "./education.controller";
-import { authenticate } from "@/middlewares/auth.middleware";
+import { authenticate, optionalAuthenticate } from "@/middlewares/auth.middleware";
 import { createUpload } from "@/middlewares/upload.middleware";
 
 const upload = createUpload("education", "education");
@@ -14,11 +14,13 @@ const educationRepository = new EducationRepository(prisma);
 const educationService = new EducationService(educationRepository);
 const educationController = new EducationController(educationService);
 
-router.get("/", (req, res, next) => {
+router.get("/", optionalAuthenticate, (req, res, next) => {
   educationController.getAll(req as any, res, next);
 });
 
-router.get("/:id", educationController.getById);
+router.get("/slug/:slug", optionalAuthenticate, educationController.getBySlug);
+
+router.get("/:id", optionalAuthenticate, educationController.getById);
 
 router.post(
   "/",

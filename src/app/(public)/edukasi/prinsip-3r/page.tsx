@@ -1,7 +1,28 @@
 import React from 'react';
-import { CalendarDays, Link as LinkIcon, Download } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import Image from 'next/image';
+import { CalendarDays, Link as LinkIcon } from 'lucide-react';
+import { DownloadPdfButton } from '@/components/landing/DownloadPdfButton';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
+
+const PRINSIP_3R_CONTENT = {
+  title: 'Prinsip 3R: Kunci Gaya Hidup Berkelanjutan',
+  slug: 'prinsip-3r',
+  overview:
+    'Prinsip 3R (Reduce, Reuse, Recycle) adalah landasan utama dalam pengelolaan sampah yang efektif dan berkelanjutan untuk menjaga kelestarian ekosistem bumi kita.',
+  description: `
+    <h2>Mengurangi Jejak dari Akar Permasalahan</h2>
+    <p>Strategi pertama dan paling fundamental dalam menjaga kelestarian bumi adalah melalui pengurangan konsumsi atau <strong>Reduce</strong>. Pendekatan ini dianggap sebagai pilar terpenting karena ia memotong masalah langsung dari akarnya. Overkonsumsi global saat ini telah menyebabkan eksploitasi sumber daya alam yang masif, emisi karbon tinggi dari proses produksi yang tak henti, serta penumpukan sampah yang semakin sulit dikelola. Dengan secara sadar mengurangi apa yang kita beli dan gunakan, kita secara langsung menurunkan jejak karbon individu kita sebelum sampah itu sendiri tercipta.</p>
+    <p>Dalam praktik sehari-hari, langkah pengurangan nyata dapat dimulai dengan memilih produk dengan kemasan minimalis atau yang dapat dikomposkan guna menghindari plastik berlapis-lapis. Selain itu, beralih ke botol minum reusable dan mendigitalisasi dokumen penting bukan hanya sekadar tren, melainkan aksi nyata untuk menghemat ribuan botol plastik dan sumber daya hutan setiap tahunnya. Kuncinya terletak pada mindful shopping: membiasakan diri untuk bertanya, &ldquo;Apakah saya benar-benar membutuhkannya?&rdquo; sebelum melakukan transaksi apa pun.</p>
+    <p>Setelah berupaya mengurangi konsumsi, langkah selanjutnya adalah memaksimalkan penggunaan barang yang sudah kita miliki melalui prinsip <strong>Reuse</strong>. Konsep ini bertujuan menggeser paradigma lama dari ekonomi linier yang bersifat &ldquo;ambil-pakai-buang&rdquo; menuju model Ekonomi Sirkular yang lebih berkelanjutan. Di sini, nilai sebuah barang tidak berakhir setelah fungsi utamanya selesai; sebaliknya, nilai tersebut dipertahankan selama mungkin melalui perawatan yang baik, perbaikan yang telaten, serta kreativitas tanpa batas.</p>
+    <p>Banyak cara kreatif untuk menghidupkan kembali barang lama di rumah kita. Misalnya, upcycling tekstil dengan mengubah kaos katun lama menjadi tas belanja ramah lingkungan, atau membersihkan toples kaca bekas selai untuk dijadikan wadah bumbu dapur yang estetik. Bahkan untuk perangkat elektronik, perbaikan kecil seringkali lebih bijak daripada membeli yang baru. Jika suatu barang memang sudah tidak lagi kita butuhkan, menyalurkannya melalui platform donasi adalah cara mulia untuk memastikan barang tersebut tetap memiliki masa pakai yang panjang di tangan orang lain.</p>
+    <p><strong>Recycle</strong> atau daur ulang merupakan benteng pertahanan terakhir dalam hirarki pengelolaan sampah. Meskipun sangat krusial, daur ulang hanya akan efektif jika didukung oleh sistem pemilahan yang tepat sejak dari sumbernya—yaitu rumah tangga kita sendiri. Sampah yang tercampur antara organik dan anorganik akan sangat sulit, bahkan mustahil, untuk diproses secara industri dan akhirnya hanya akan berakhir menumpuk di Tempat Pemrosesan Akhir (TPA).</p>
+    <p>Menerapkan prinsip 3R bukan berarti kita harus sempurna dalam semalam. Perubahan besar dimulai dari tindakan-tindakan kecil yang dilakukan secara konsisten oleh banyak orang. Setiap botol yang tidak dibeli, setiap barang yang diperbaiki, dan setiap sampah yang dipilah adalah kontribusi nyata bagi bumi yang lebih hijau. Mari menjadi bagian dari solusi, bukan polusi.</p>
+  `,
+  publishDate: '2024-05-12T00:00:00.000Z',
+  tags: ['Daur Ulang', 'Edukasi', 'Lingkungan'],
+  thumbnail:
+    'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=2000',
+};
 
 export default function Prinsip3RDetail() {
   return (
@@ -15,10 +36,13 @@ export default function Prinsip3RDetail() {
       </div>
       {/* HERO IMAGE */}
       <div className="w-full h-[190px] sm:h-[250px] md:h-[450px] relative overflow-hidden bg-[#e0e5db]">
-        <img
-          src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=2000"
+        <Image
+          src={PRINSIP_3R_CONTENT.thumbnail}
           alt="Edukasi Lingkungan"
-          className="w-full h-full object-cover opacity-90"
+          fill
+          unoptimized
+          sizes="100vw"
+          className="object-cover opacity-90"
         />
         {/* Overlay pattern to simulate the screenshot's texture */}
         <div className="absolute inset-0 bg-black/10 mix-blend-multiply"></div>
@@ -60,7 +84,7 @@ export default function Prinsip3RDetail() {
         {/* QUOTE BOX */}
         <div className="bg-[#E8F5E9] border-l-[4px] sm:border-l-[6px] border-[#1a2f1d] p-4 sm:p-6 md:p-8 mb-8 sm:mb-12 rounded-r-2xl">
           <p className="text-[#1a2f1d] font-bold text-[15px] sm:text-[18px] md:text-[20px] leading-relaxed italic">
-            "Prinsip 3R (Reduce, Reuse, Recycle) adalah landasan utama dalam pengelolaan sampah yang efektif dan berkelanjutan untuk menjaga kelestarian ekosistem bumi kita."
+            &ldquo;Prinsip 3R (Reduce, Reuse, Recycle) adalah landasan utama dalam pengelolaan sampah yang efektif dan berkelanjutan untuk menjaga kelestarian ekosistem bumi kita.&rdquo;
           </p>
         </div>
 
@@ -76,11 +100,11 @@ export default function Prinsip3RDetail() {
           </p>
 
           <p>
-            Dalam praktik sehari-hari, langkah pengurangan nyata dapat dimulai dengan memilih produk dengan kemasan minimalis atau yang dapat dikomposkan guna menghindari plastik berlapis-lapis. Selain itu, beralih ke botol minum reusable dan mendigitalisasi dokumen penting bukan hanya sekadar tren, melainkan aksi nyata untuk menghemat ribuan botol plastik dan sumber daya hutan setiap tahunnya. Kuncinya terletak pada mindful shopping: membiasakan diri untuk bertanya, "Apakah saya benar-benar membutuhkannya?" sebelum melakukan transaksi apa pun.
+            Dalam praktik sehari-hari, langkah pengurangan nyata dapat dimulai dengan memilih produk dengan kemasan minimalis atau yang dapat dikomposkan guna menghindari plastik berlapis-lapis. Selain itu, beralih ke botol minum reusable dan mendigitalisasi dokumen penting bukan hanya sekadar tren, melainkan aksi nyata untuk menghemat ribuan botol plastik dan sumber daya hutan setiap tahunnya. Kuncinya terletak pada mindful shopping: membiasakan diri untuk bertanya, &ldquo;Apakah saya benar-benar membutuhkannya?&rdquo; sebelum melakukan transaksi apa pun.
           </p>
 
           <p>
-            Setelah berupaya mengurangi konsumsi, langkah selanjutnya adalah memaksimalkan penggunaan barang yang sudah kita miliki melalui prinsip <strong className="text-[#1a2f1d] font-bold">Reuse</strong>. Konsep ini bertujuan menggeser paradigma lama dari ekonomi linier yang bersifat "ambil-pakai-buang" menuju model Ekonomi Sirkular yang lebih berkelanjutan. Di sini, nilai sebuah barang tidak berakhir setelah fungsi utamanya selesai; sebaliknya, nilai tersebut dipertahankan selama mungkin melalui perawatan yang baik, perbaikan yang telaten, serta kreativitas tanpa batas.
+            Setelah berupaya mengurangi konsumsi, langkah selanjutnya adalah memaksimalkan penggunaan barang yang sudah kita miliki melalui prinsip <strong className="text-[#1a2f1d] font-bold">Reuse</strong>. Konsep ini bertujuan menggeser paradigma lama dari ekonomi linier yang bersifat &ldquo;ambil-pakai-buang&rdquo; menuju model Ekonomi Sirkular yang lebih berkelanjutan. Di sini, nilai sebuah barang tidak berakhir setelah fungsi utamanya selesai; sebaliknya, nilai tersebut dipertahankan selama mungkin melalui perawatan yang baik, perbaikan yang telaten, serta kreativitas tanpa batas.
           </p>
 
           <p>
@@ -98,10 +122,7 @@ export default function Prinsip3RDetail() {
 
         {/* BOTTOM BUTTON */}
         <div className="mt-8 sm:mt-14 mb-4 sm:mb-8">
-          <Button className="bg-[#1a2f1d] hover:bg-[#234926] text-white rounded-full px-5 py-4 sm:px-7 sm:py-[26px] text-xs sm:text-[15px] font-bold flex items-center gap-2.5 sm:gap-3 transition-all hover:scale-105 active:scale-95 shadow-md">
-            <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-            Download Materi Edukasi Lengkap
-          </Button>
+          <DownloadPdfButton content={PRINSIP_3R_CONTENT} />
         </div>
 
       </div>

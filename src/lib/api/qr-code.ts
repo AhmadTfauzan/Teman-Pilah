@@ -1,16 +1,11 @@
 import { getBaseUrl } from '../api-config';
+import { getAuthHeader } from './auth-session';
 import { QrCodeRecord } from '@/types';
 
 interface ApiResponse<T> {
   status: string;
   message: string;
   data: T;
-}
-
-function authHeader(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('token') ?? '';
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -37,7 +32,7 @@ export const qrCodeApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeader(),
+        ...getAuthHeader(),
       },
       body: JSON.stringify({
         action: 'resolve',
@@ -62,7 +57,7 @@ export const qrCodeApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeader(),
+        ...getAuthHeader(),
       },
       body: JSON.stringify({
         action: 'save-image',

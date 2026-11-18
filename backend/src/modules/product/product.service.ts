@@ -1,11 +1,13 @@
 import { Product } from "../../../generated/prisma";
-import fs from "fs";
-import path from "path";
 import {
   buildPaginationMeta,
   parsePagination,
   PaginationMeta,
 } from "../../utils/pagination";
+import {
+  cleanupFailedUpload,
+  deleteStoredUploadFile,
+} from "../../utils/file";
 import { ProductRepository } from "./product.repository";
 import {
   CreateProductInput,
@@ -27,10 +29,7 @@ export class ProductService {
   }
 
   private deleteImageFile(imagePath: string): void {
-    const fullPath: string = path.join(process.cwd(), imagePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    deleteStoredUploadFile(imagePath);
   }
 
   /**
@@ -90,12 +89,18 @@ export class ProductService {
       ? `uploads/products/${file.filename}`
       : undefined;
 
-    return this.productRepository.create(data, imagePath);
+    try {
+      return await this.productRepository.create(data, imagePath);
+    } catch (error) {
+      cleanupFailedUpload(file, "products");
+      throw error;
+    }
   }
 
   /**
    * Mengupdate produk berdasarkan ID.
-   * Jika ada gambar baru yang diupload, gambar lama akan otomatis dihapus dari disk.
+   * Jika ada gambar baru yang diupload, gambar lama akan otomatis dihapus dari disk
+   * setelah pembaruan database berhasil.
    * Melempar error 404 jika produk tidak ditemukan.
    *
    * @param id - ID produk yang akan diupdate
@@ -109,24 +114,33 @@ export class ProductService {
     data: UpdateProductInput,
     file?: Express.Multer.File,
   ): Promise<Product> {
-    const existingProduct: Product = await this.getProductById(id);
+    try {
+      const existingProduct: Product = await this.getProductById(id);
 
-    let imagePath: string | undefined;
+      const imagePath: string | undefined = file
+        ? `uploads/products/${file.filename}`
+        : undefined;
 
-    if (file) {
-      // Hapus gambar lama dari disk sebelum replace dengan yang baru
-      if (existingProduct.image) {
+      const updatedProduct = await this.productRepository.update(
+        id,
+        data,
+        imagePath,
+      );
+
+      if (file && existingProduct.image && existingProduct.image !== imagePath) {
         this.deleteImageFile(existingProduct.image);
       }
-      imagePath = `uploads/products/${file.filename}`;
-    }
 
-    return this.productRepository.update(id, data, imagePath);
+      return updatedProduct;
+    } catch (error) {
+      cleanupFailedUpload(file, "products");
+      throw error;
+    }
   }
 
   /**
    * Menghapus produk berdasarkan ID secara permanen.
-   * Gambar produk di disk juga ikut dihapus jika ada.
+   * Gambar produk di disk juga ikut dihapus jika ada setelah penghapusan DB berhasil.
    * Melempar error 404 jika produk tidak ditemukan.
    *
    * @param id - ID produk yang akan dihapus
@@ -136,10 +150,10 @@ export class ProductService {
   async deleteProduct(id: string): Promise<void> {
     const existingProduct: Product = await this.getProductById(id);
 
+    await this.productRepository.delete(id);
+
     if (existingProduct.image) {
       this.deleteImageFile(existingProduct.image);
     }
-
-    await this.productRepository.delete(id);
   }
 }

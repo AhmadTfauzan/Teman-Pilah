@@ -1,11 +1,13 @@
 import { EcoEnzymeVideo } from "../../../generated/prisma";
-import fs from "fs";
-import path from "path";
 import {
   buildPaginationMeta,
   parsePagination,
   PaginationMeta,
 } from "../../utils/pagination";
+import {
+  cleanupFailedUpload,
+  deleteStoredUploadFile,
+} from "../../utils/file";
 import { EcoEnzymeVideoRepository } from "./eco-enzyme-video.repository";
 import {
   CreateEcoEnzymeVideoInput,
@@ -21,6 +23,8 @@ interface VideoListResult {
 
 export class EcoEnzymeVideoService {
   private readonly repository: EcoEnzymeVideoRepository;
+  private hasCheckedInitialSeed = false;
+  private seedPromise: Promise<void> | null = null;
 
   constructor(repository: EcoEnzymeVideoRepository) {
     this.repository = repository;
@@ -48,61 +52,69 @@ export class EcoEnzymeVideoService {
 
   public extractYouTubeId(url: string): string | null {
     const match = url.match(
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
     );
     return match ? match[1] : null;
   }
 
   private deleteThumbnailFile(thumbnailPath?: string | null): void {
-    if (!thumbnailPath || thumbnailPath.startsWith("http://") || thumbnailPath.startsWith("https://")) {
-      return;
-    }
-    const fullPath = path.join(process.cwd(), thumbnailPath);
-    if (fs.existsSync(fullPath)) {
-      try {
-        fs.unlinkSync(fullPath);
-      } catch (err) {
-        console.error("Gagal menghapus file thumbnail lama:", err);
-      }
-    }
+    deleteStoredUploadFile(thumbnailPath);
   }
 
   /**
-   * Seed otomatis 2 video default jika tabel masih kosong
+   * Seed otomatis 2 video default jika tabel masih kosong pada cold-start pertama.
+   * Menggunakan lock promise in-flight agar request paralel tidak menanam duplikat.
    */
   private async ensureDefaultVideos(): Promise<void> {
-    try {
-      const count = await this.repository.countAll();
-      if (count === 0) {
-        await this.repository.createMany([
-          {
-            title: "VIDIO MANFAAT ECO ENZYM",
-            videoUrl: "/videos/vidio-manfaat-eco-enzym.mp4",
-            platform: "Local",
-            duration: "01:46",
-            description:
-              "Mengenal ragam manfaat luar biasa cairan fermentasi Eco Enzyme untuk pembersih alami serbaguna, pupuk penyubur tanaman, pengusir hama ramah lingkungan, dan pembersih udara.",
-            category: "Manfaat & Khasiat",
-            aspect: "tall",
-            sortOrder: 1,
-          },
-          {
-            title: "VIDIO PEMBUATAN ECO ENZYM",
-            videoUrl: "/videos/vidio-pembuatan-eco-enzym.mp4",
-            platform: "Local",
-            duration: "01:12",
-            description:
-              "Panduan lengkap step-by-step membuat Eco Enzyme di rumah menggunakan formula emas 1 : 3 : 10 (Gula : Sampah Organik : Air) dengan hasil fermentasi optimal.",
-            category: "Panduan Pembuatan",
-            aspect: "tall",
-            sortOrder: 2,
-          },
-        ]);
-        console.log("Inisialisasi 2 video edukasi default Eco Enzyme berhasil.");
-      }
-    } catch (e) {
-      console.error("Gagal inisialisasi default video Eco Enzyme:", e);
+    if (this.hasCheckedInitialSeed) {
+      return;
     }
+
+    if (!this.seedPromise) {
+      this.seedPromise = (async () => {
+        try {
+          const count = await this.repository.countAll();
+          if (count === 0) {
+            await this.repository.createMany([
+              {
+                title: "VIDIO MANFAAT ECO ENZYM",
+                videoUrl: "/videos/vidio-manfaat-eco-enzym.mp4",
+                platform: "Local",
+                duration: "01:46",
+                description:
+                  "Mengenal ragam manfaat luar biasa cairan fermentasi Eco Enzyme untuk pembersih alami serbaguna, pupuk penyubur tanaman, pengusir hama ramah lingkungan, dan pembersih udara.",
+                category: "Manfaat & Khasiat",
+                aspect: "tall",
+                tags: ["Pembersih Alami", "Pupuk Organik", "Ramah Lingkungan"],
+                isActive: true,
+                sortOrder: 1,
+              },
+              {
+                title: "VIDIO PEMBUATAN ECO ENZYM",
+                videoUrl: "/videos/vidio-pembuatan-eco-enzym.mp4",
+                platform: "Local",
+                duration: "01:12",
+                description:
+                  "Panduan lengkap step-by-step membuat Eco Enzyme di rumah menggunakan formula emas 1 : 3 : 10 (Gula : Sampah Organik : Air) dengan hasil fermentasi optimal.",
+                category: "Panduan Pembuatan",
+                aspect: "tall",
+                tags: ["Takaran Rumus 1:3:10", "Kulit Buah Segar", "Fermentasi 90 Hari"],
+                isActive: true,
+                sortOrder: 2,
+              },
+            ]);
+            console.log("Inisialisasi 2 video edukasi default Eco Enzyme berhasil.");
+          }
+          this.hasCheckedInitialSeed = true;
+        } catch (e) {
+          console.error("Gagal inisialisasi default video Eco Enzyme:", e);
+        } finally {
+          this.seedPromise = null;
+        }
+      })();
+    }
+
+    await this.seedPromise;
   }
 
   async getAllVideos(query: EcoEnzymeVideoQueryInput): Promise<VideoListResult> {
@@ -116,6 +128,7 @@ export class EcoEnzymeVideoService {
       search: query.search,
       platform: query.platform,
       category: query.category,
+      isActive: query.isActive,
     });
 
     return {
@@ -136,31 +149,38 @@ export class EcoEnzymeVideoService {
     data: CreateEcoEnzymeVideoInput,
     file?: Express.Multer.File
   ): Promise<EcoEnzymeVideo> {
-    const platform = data.platform || this.detectPlatform(data.videoUrl);
+    try {
+      const platform = data.platform || this.detectPlatform(data.videoUrl);
 
-    let thumbnail = data.thumbnail;
-    if (file) {
-      thumbnail = `uploads/videos/${file.filename}`;
-    } else if (!thumbnail) {
-      const ytId = this.extractYouTubeId(data.videoUrl);
-      if (ytId) {
-        thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      let thumbnail = data.thumbnail;
+      if (file) {
+        thumbnail = `uploads/videos/${file.filename}`;
+      } else if (!thumbnail) {
+        const ytId = this.extractYouTubeId(data.videoUrl);
+        if (ytId) {
+          thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+        }
       }
+
+      const aspect = data.aspect || (platform === "YouTube" ? "wide" : "tall");
+
+      return await this.repository.create({
+        title: data.title,
+        videoUrl: data.videoUrl,
+        platform,
+        thumbnail: thumbnail || null,
+        duration: data.duration || null,
+        description: data.description || null,
+        category: data.category || null,
+        aspect,
+        tags: data.tags ?? [],
+        isActive: data.isActive ?? true,
+        sortOrder: data.sortOrder ?? 0,
+      });
+    } catch (error) {
+      cleanupFailedUpload(file, "videos");
+      throw error;
     }
-
-    const aspect = data.aspect || (platform === "YouTube" ? "wide" : "tall");
-
-    return this.repository.create({
-      title: data.title,
-      videoUrl: data.videoUrl,
-      platform,
-      thumbnail: thumbnail || null,
-      duration: data.duration || null,
-      description: data.description || null,
-      category: data.category || null,
-      aspect,
-      sortOrder: data.sortOrder ?? 0,
-    });
   }
 
   async updateVideo(
@@ -168,46 +188,65 @@ export class EcoEnzymeVideoService {
     data: UpdateEcoEnzymeVideoInput,
     file?: Express.Multer.File
   ): Promise<EcoEnzymeVideo> {
-    const existing = await this.getVideoById(id);
+    let existing: EcoEnzymeVideo;
+    let thumbnail: string | null | undefined;
 
-    const platform =
-      data.platform ||
-      (data.videoUrl ? this.detectPlatform(data.videoUrl) : (existing.platform as any));
+    try {
+      existing = await this.getVideoById(id);
 
-    let thumbnail = existing.thumbnail;
-    if (file) {
-      this.deleteThumbnailFile(existing.thumbnail);
-      thumbnail = `uploads/videos/${file.filename}`;
-    } else if (data.thumbnail !== undefined) {
-      thumbnail = data.thumbnail;
-    } else if (data.videoUrl && data.videoUrl !== existing.videoUrl) {
-      const ytId = this.extractYouTubeId(data.videoUrl);
-      if (ytId && (!existing.thumbnail || existing.thumbnail.includes("youtube.com"))) {
-        thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      const platform =
+        data.platform ||
+        (data.videoUrl ? this.detectPlatform(data.videoUrl) : (existing.platform as any));
+
+      thumbnail = existing.thumbnail;
+      if (file) {
+        thumbnail = `uploads/videos/${file.filename}`;
+      } else if (data.thumbnail !== undefined) {
+        thumbnail = data.thumbnail ? data.thumbnail : null;
+      } else if (data.videoUrl && data.videoUrl !== existing.videoUrl) {
+        const ytId = this.extractYouTubeId(data.videoUrl);
+        if (ytId && (!existing.thumbnail || existing.thumbnail.includes("youtube.com"))) {
+          thumbnail = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+        }
       }
+
+      const aspect =
+        data.aspect ||
+        (data.platform ? (data.platform === "YouTube" ? "wide" : "tall") : existing.aspect);
+
+      const updated = await this.repository.update(id, {
+        ...(data.title && { title: data.title }),
+        ...(data.videoUrl && { videoUrl: data.videoUrl }),
+        platform,
+        thumbnail,
+        duration: data.duration !== undefined ? data.duration : existing.duration,
+        description: data.description !== undefined ? data.description : existing.description,
+        category: data.category !== undefined ? data.category : existing.category,
+        aspect,
+        tags: data.tags !== undefined ? data.tags : existing.tags,
+        isActive: data.isActive !== undefined ? data.isActive : existing.isActive,
+        sortOrder: data.sortOrder !== undefined ? data.sortOrder : existing.sortOrder,
+      });
+
+      if (
+        existing.thumbnail &&
+        existing.thumbnail !== updated.thumbnail &&
+        (file || data.thumbnail !== undefined)
+      ) {
+        this.deleteThumbnailFile(existing.thumbnail);
+      }
+
+      return updated;
+    } catch (error) {
+      cleanupFailedUpload(file, "videos");
+      throw error;
     }
-
-    const aspect =
-      data.aspect ||
-      (data.platform ? (data.platform === "YouTube" ? "wide" : "tall") : existing.aspect);
-
-    return this.repository.update(id, {
-      ...(data.title && { title: data.title }),
-      ...(data.videoUrl && { videoUrl: data.videoUrl }),
-      platform,
-      thumbnail,
-      duration: data.duration !== undefined ? data.duration : existing.duration,
-      description: data.description !== undefined ? data.description : existing.description,
-      category: data.category !== undefined ? data.category : existing.category,
-      aspect,
-      sortOrder: data.sortOrder !== undefined ? data.sortOrder : existing.sortOrder,
-    });
   }
 
   async deleteVideo(id: string): Promise<void> {
     const existing = await this.getVideoById(id);
-    this.deleteThumbnailFile(existing.thumbnail);
     await this.repository.delete(id);
+    this.deleteThumbnailFile(existing.thumbnail);
   }
 }
 

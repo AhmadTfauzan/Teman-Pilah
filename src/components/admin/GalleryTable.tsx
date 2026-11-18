@@ -28,10 +28,11 @@ export function GalleryTable({ items, onEdit, onDelete }: GalleryTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
 
   const currentItems = items.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    (safePage - 1) * itemsPerPage,
+    safePage * itemsPerPage
   );
 
   return (
@@ -217,57 +218,57 @@ export function GalleryTable({ items, onEdit, onDelete }: GalleryTableProps) {
       </div>
 
       {/* FOOTER PAGINATION */}
-      {items.length > 0 && (
-        <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-2xl sm:rounded-b-[24px]">
-          <div className="flex items-center">
-            <p className="text-xs sm:text-[14px] font-medium text-[#72796E]">
-              Menampilkan {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, items.length)} dari {items.length} item galeri
-            </p>
-          </div>
-
-          <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* PREV */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white transition-colors ${
-                currentPage === 1 ? 'text-[#9CA3AF] cursor-not-allowed opacity-50' : 'text-[#4B5563] hover:bg-gray-50'
-              }`}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-
-            {/* PAGE NUMBERS */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                type="button"
-                onClick={() => setCurrentPage(page)}
-                className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] text-[13px] font-bold transition-colors ${
-                  currentPage === page
-                    ? 'bg-[#154212] text-white border border-[#154212]'
-                    : 'border border-[#E5E7EB] bg-white text-[#4B5563] hover:bg-gray-50'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            
-            {/* NEXT */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white transition-colors ${
-                currentPage === totalPages ? 'text-[#9CA3AF] cursor-not-allowed opacity-50' : 'text-[#4B5563] hover:bg-gray-50'
-              }`}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          </nav>
+      <div className="flex flex-col gap-3 sm:gap-4 border-t border-[#F0F2EB] bg-[#F9FAF8] px-4 sm:px-8 py-3.5 sm:py-5 lg:flex-row lg:items-center lg:justify-between rounded-b-2xl sm:rounded-b-[24px]">
+        <div className="flex items-center">
+          <p className="text-xs sm:text-[14px] font-medium text-[#72796E]">
+            {items.length === 0
+              ? 'Menampilkan 0 dari 0 item galeri'
+              : `Menampilkan ${(safePage - 1) * itemsPerPage + 1}-${Math.min(safePage * itemsPerPage, items.length)} dari ${items.length} item galeri`}
+          </p>
         </div>
-      )}
+
+        <nav aria-label="Pagination" className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* PREV */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.max(safePage - 1, 1))}
+            disabled={safePage === 1}
+            className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white transition-colors ${
+              safePage === 1 ? 'text-[#9CA3AF] cursor-not-allowed opacity-50' : 'text-[#4B5563] hover:bg-gray-50'
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+
+          {/* PAGE NUMBERS */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              type="button"
+              onClick={() => setCurrentPage(page)}
+              className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] text-[13px] font-bold transition-colors ${
+                safePage === page
+                  ? 'bg-[#154212] text-white border border-[#154212]'
+                  : 'border border-[#E5E7EB] bg-white text-[#4B5563] hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          
+          {/* NEXT */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.min(safePage + 1, totalPages))}
+            disabled={safePage === totalPages}
+            className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white transition-colors ${
+              safePage === totalPages ? 'text-[#9CA3AF] cursor-not-allowed opacity-50' : 'text-[#4B5563] hover:bg-gray-50'
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </nav>
+      </div>
     </div>
   );
 }

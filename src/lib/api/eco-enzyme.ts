@@ -1,4 +1,5 @@
 import { getBaseUrl } from "../api-config";
+import { getAuthHeader } from "./auth-session";
 import { EcoEnzymeBatch, EcoEnzymeLog, EcoEnzymeStats, Product } from "@/types";
 
 export const BASE_URL = getBaseUrl();
@@ -27,9 +28,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 function authHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("token") ?? "";
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return getAuthHeader();
 }
 
 export const ecoEnzymeApi = {
@@ -70,6 +69,7 @@ export const ecoEnzymeApi = {
     if (params?.includeArchived) query.append("includeArchived", "true");
 
     const res = await fetch(`${BASE_URL}/api/eco-enzyme/batches?${query.toString()}`, {
+      headers: authHeader(),
       cache: "no-store",
     });
     const body = await handleResponse<PaginatedResponse<EcoEnzymeBatch>>(res);
@@ -81,6 +81,7 @@ export const ecoEnzymeApi = {
    */
   async getById(id: string): Promise<EcoEnzymeBatch> {
     const res = await fetch(`${BASE_URL}/api/eco-enzyme/batches/${id}`, {
+      headers: authHeader(),
       cache: "no-store",
     });
     const body = await handleResponse<SingleResponse<EcoEnzymeBatch>>(res);

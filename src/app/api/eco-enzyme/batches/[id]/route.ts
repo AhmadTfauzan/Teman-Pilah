@@ -1,15 +1,25 @@
 import { getBatchById, updateBatch, deleteBatch } from "@/lib/server/eco-enzyme-service";
 import { authenticateRequest } from "@/lib/server/auth";
+import { redactPublicEcoEnzymeBatch } from "@/lib/server/form-payload";
 import { apiSuccess, apiError } from "@/lib/server/response";
 import { handleApiError } from "@/lib/server/error";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await authenticateRequest(req);
     const { id } = await params;
-    const batch = await getBatchById(id);
+    const batch = (await getBatchById(id)) as Record<string, unknown>;
+
+    if (!user) {
+      if (batch.archivedAt) {
+        return apiError("Batch Eco Enzyme tidak ditemukan", 404);
+      }
+      return apiSuccess(redactPublicEcoEnzymeBatch(batch));
+    }
+
     return apiSuccess(batch);
   } catch (error) {
     return handleApiError(error);

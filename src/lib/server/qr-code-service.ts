@@ -1,5 +1,6 @@
 import { Prisma, QrCode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isTemporaryBaseUrl } from "@/lib/batch-url";
 import { generatePublicBatchCode, normalizeBatchCode } from "./code";
 import { AppError } from "./error";
 
@@ -43,13 +44,12 @@ export interface FindQrInput {
 }
 
 const DEFAULT_CANONICAL_SITE_URL = "https://teman-pilahfe-main.vercel.app";
+const MAX_QR_TX_RETRIES = 5;
 
 export function getCanonicalSiteUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   const siteUrl =
-    envUrl &&
-    !envUrl.includes("trycloudflare.com") &&
-    !envUrl.includes("localhost")
+    envUrl && !isTemporaryBaseUrl(envUrl)
       ? envUrl
       : DEFAULT_CANONICAL_SITE_URL;
 
@@ -71,37 +71,52 @@ function normalizeEntityName(entityName?: string | null): string {
 }
 
 function buildTargetUrl(prefix: "/b" | "/p", code: string): string {
-  return `${getCanonicalSiteUrl()}${prefix}/${code}`;
+  return `${getCanonicalSiteUrl()}${prefix}/${encodeURIComponent(code)}`;
 }
 
-async function generateUniqueBatchQrCode(): Promise<string> {
+function isRetryableRaceError(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    (err.code === "P2002" || err.code === "P2034")
+  );
+}
+
+async function generateUniqueBatchQrCode(tx: Prisma.TransactionClient): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const candidate = generatePublicBatchCode();
-    const [existingQr, existingBatchCount] = await Promise.all([
-      prisma.qrCode.findUnique({ where: { code: candidate } }),
-      prisma.ecoEnzymeBatch.count({ where: { publicCode: candidate } }),
-    ]);
-    if (!existingQr && existingBatchCount === 0) {
+    const existingQr = await tx.qrCode.findUnique({ where: { code: candidate } });
+    if (existingQr) continue;
+
+    const existingBatchCount = await tx.ecoEnzymeBatch.count({ where: { publicCode: candidate } });
+    if (existingBatchCount === 0) {
       return candidate;
     }
   }
   throw new AppError("Gagal menghasilkan kode QR batch unik setelah 5 percobaan", 500);
 }
 
-async function generateUniqueProductQrCode(normalizedKey: string | null): Promise<string> {
+async function generateUniqueProductQrCode(
+  tx: Prisma.TransactionClient,
+  normalizedKey: string | null
+): Promise<string> {
   if (normalizedKey) {
-    const sanitizedKey = normalizedKey.replace(/\s+/g, "-");
-    const preferredCode = `PRD-${sanitizedKey}`;
-    const existingQr = await prisma.qrCode.findUnique({ where: { code: preferredCode } });
-    if (!existingQr) {
-      return preferredCode;
+    const sanitizedKey = normalizedKey
+      .replace(/[^A-Z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    if (sanitizedKey) {
+      const preferredCode = `PRD-${sanitizedKey}`;
+      const existingQr = await tx.qrCode.findUnique({ where: { code: preferredCode } });
+      if (!existingQr) {
+        return preferredCode;
+      }
     }
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const suffix = generatePublicBatchCode().replace(/^EE-/, "");
     const candidate = `PRD-${suffix}`;
-    const existingQr = await prisma.qrCode.findUnique({ where: { code: candidate } });
+    const existingQr = await tx.qrCode.findUnique({ where: { code: candidate } });
     if (!existingQr) {
       return candidate;
     }
@@ -111,6 +126,7 @@ async function generateUniqueProductQrCode(normalizedKey: string | null): Promis
 }
 
 async function linkQrCodeIfUnset(
+  tx: Prisma.TransactionClient,
   entityType: QrEntityType,
   entityId: string | null | undefined,
   qrCodeId: string,
@@ -119,12 +135,12 @@ async function linkQrCodeIfUnset(
   if (!entityId || alreadyLinkedId) return;
 
   if (entityType === "ECO_ENZYME_BATCH") {
-    await prisma.ecoEnzymeBatch.updateMany({
+    await tx.ecoEnzymeBatch.updateMany({
       where: { id: entityId, qrCodeId: null },
       data: { qrCodeId },
     });
   } else {
-    await prisma.product.updateMany({
+    await tx.product.updateMany({
       where: { id: entityId, qrCodeId: null },
       data: { qrCodeId },
     });
@@ -132,6 +148,7 @@ async function linkQrCodeIfUnset(
 }
 
 async function resolveFromLegacyBatch(
+  tx: Prisma.TransactionClient,
   batch: { id: string; publicCode: string; batchCode: string; containerName: string; qrCodeId: string | null },
   prefix: "/b" | "/p",
   fallbackKey: string | null,
@@ -139,16 +156,16 @@ async function resolveFromLegacyBatch(
   targetEntityId?: string | null
 ): Promise<QrCode> {
   const legacyCode = normalizeBatchCode(batch.publicCode);
-  const existingQr = await prisma.qrCode.findFirst({
+  const existingQr = await tx.qrCode.findFirst({
     where: { code: { equals: legacyCode, mode: "insensitive" } },
   });
   if (existingQr) {
-    await linkQrCodeIfUnset("ECO_ENZYME_BATCH", batch.id, existingQr.id, batch.qrCodeId);
-    await linkQrCodeIfUnset("ECO_ENZYME_BATCH", targetEntityId, existingQr.id);
+    await linkQrCodeIfUnset(tx, "ECO_ENZYME_BATCH", batch.id, existingQr.id, batch.qrCodeId);
+    await linkQrCodeIfUnset(tx, "ECO_ENZYME_BATCH", targetEntityId, existingQr.id);
     return existingQr;
   }
 
-  const created = await prisma.qrCode.create({
+  const created = await tx.qrCode.create({
     data: {
       code: legacyCode,
       entityType: "ECO_ENZYME_BATCH",
@@ -157,12 +174,127 @@ async function resolveFromLegacyBatch(
       targetUrl: buildTargetUrl(prefix, legacyCode),
     },
   });
-  await linkQrCodeIfUnset("ECO_ENZYME_BATCH", batch.id, created.id, batch.qrCodeId);
-  await linkQrCodeIfUnset("ECO_ENZYME_BATCH", targetEntityId, created.id);
+  await linkQrCodeIfUnset(tx, "ECO_ENZYME_BATCH", batch.id, created.id, batch.qrCodeId);
+  await linkQrCodeIfUnset(tx, "ECO_ENZYME_BATCH", targetEntityId, created.id);
   return created;
 }
 
-export async function resolveOrCreateQrCode(
+type QrClient = Prisma.TransactionClient | typeof prisma;
+
+async function findActiveOrLatestArchivedBatch<T extends Prisma.EcoEnzymeBatchInclude>(
+  db: QrClient,
+  where: Prisma.EcoEnzymeBatchWhereInput,
+  include: T
+): Promise<Prisma.EcoEnzymeBatchGetPayload<{ include: T }> | null> {
+  const active = await db.ecoEnzymeBatch.findFirst({
+    where: { AND: [where, { archivedAt: null }] },
+    include,
+    orderBy: { createdAt: "desc" },
+  });
+  if (active) {
+    return active as Prisma.EcoEnzymeBatchGetPayload<{ include: T }>;
+  }
+
+  const archived = await db.ecoEnzymeBatch.findFirst({
+    where: { AND: [where, { archivedAt: { not: null } }] },
+    include,
+    orderBy: [{ archivedAt: "desc" }, { createdAt: "desc" }],
+  });
+  return archived as Prisma.EcoEnzymeBatchGetPayload<{ include: T }> | null;
+}
+
+type QrCandidate = QrCode & {
+  products: Array<{ id: string; productCode: string }>;
+  batches: Array<{ id: string; batchCode: string }>;
+};
+
+function stripQrRelations(candidate: QrCandidate): QrCode {
+  return {
+    id: candidate.id,
+    code: candidate.code,
+    entityType: candidate.entityType,
+    primaryKey: candidate.primaryKey,
+    primaryName: candidate.primaryName,
+    targetUrl: candidate.targetUrl,
+    qrDataUrl: candidate.qrDataUrl,
+    createdAt: candidate.createdAt,
+    updatedAt: candidate.updatedAt,
+  };
+}
+
+function hasConflictingEntityKey(candidate: QrCandidate, normalizedKey: string): boolean {
+  const candidateKey = normalizeEntityKey(candidate.primaryKey);
+  if (candidateKey && candidateKey !== normalizedKey) {
+    return true;
+  }
+
+  const hasConflictingProduct = candidate.products.some((p) => {
+    const key = normalizeEntityKey(p.productCode);
+    return Boolean(key && key !== normalizedKey);
+  });
+  const hasConflictingBatch = candidate.batches.some((b) => {
+    const key = normalizeEntityKey(b.batchCode);
+    return Boolean(key && key !== normalizedKey);
+  });
+
+  return hasConflictingProduct || hasConflictingBatch;
+}
+
+async function findMatchingQrByName(
+  db: QrClient,
+  entityType: QrEntityType | null | undefined,
+  normalizedName: string,
+  normalizedKey: string | null,
+  backfillPrimaryKey: boolean
+): Promise<QrCode | null> {
+  const where: Prisma.QrCodeWhereInput = {
+    ...(entityType ? { entityType } : {}),
+    primaryName: { equals: normalizedName, mode: "insensitive" },
+    ...(normalizedKey
+      ? {
+          OR: [
+            { primaryKey: null },
+            { primaryKey: "" },
+            { primaryKey: { equals: normalizedKey, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const candidates = await db.qrCode.findMany({
+    where,
+    include: {
+      products: { select: { id: true, productCode: true } },
+      batches: {
+        select: { id: true, batchCode: true },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  for (const candidate of candidates) {
+    if (normalizedKey) {
+      if (hasConflictingEntityKey(candidate, normalizedKey)) {
+        continue;
+      }
+
+      if (backfillPrimaryKey && !normalizeEntityKey(candidate.primaryKey)) {
+        return db.qrCode.update({
+          where: { id: candidate.id },
+          data: { primaryKey: normalizedKey },
+        });
+      }
+    }
+
+    return stripQrRelations(candidate);
+  }
+
+  return null;
+}
+
+async function resolveOrCreateQrCodeInTx(
+  tx: Prisma.TransactionClient,
   input: ResolveOrCreateQrInput
 ): Promise<ResolveOrCreateQrResult> {
   const prefix = getDefaultPathPrefix(input.entityType, input.pathPrefix);
@@ -172,7 +304,7 @@ export async function resolveOrCreateQrCode(
   // 1) Check existing entity by entityId
   if (input.entityId) {
     if (input.entityType === "ECO_ENZYME_BATCH") {
-      const existingBatch = await prisma.ecoEnzymeBatch.findUnique({
+      const existingBatch = await tx.ecoEnzymeBatch.findUnique({
         where: { id: input.entityId },
         include: { qrCode: true },
       });
@@ -187,6 +319,7 @@ export async function resolveOrCreateQrCode(
 
         if (existingBatch.publicCode) {
           const qrCode = await resolveFromLegacyBatch(
+            tx,
             existingBatch,
             prefix,
             normalizedKey,
@@ -196,7 +329,7 @@ export async function resolveOrCreateQrCode(
         }
       }
     } else {
-      const existingProduct = await prisma.product.findUnique({
+      const existingProduct = await tx.product.findUnique({
         where: { id: input.entityId },
         include: { qrCode: true },
       });
@@ -214,18 +347,19 @@ export async function resolveOrCreateQrCode(
 
   // 2) Check previousEntityId for Eco Enzyme gallon succession
   if (input.previousEntityId && input.entityType === "ECO_ENZYME_BATCH") {
-    const previousBatch = await prisma.ecoEnzymeBatch.findUnique({
+    const previousBatch = await tx.ecoEnzymeBatch.findUnique({
       where: { id: input.previousEntityId },
       include: { qrCode: true },
     });
 
     if (previousBatch?.qrCode) {
-      await linkQrCodeIfUnset("ECO_ENZYME_BATCH", input.entityId, previousBatch.qrCode.id);
+      await linkQrCodeIfUnset(tx, "ECO_ENZYME_BATCH", input.entityId, previousBatch.qrCode.id);
       return { qrCode: previousBatch.qrCode, reused: true };
     }
 
     if (previousBatch?.publicCode) {
       const qrCode = await resolveFromLegacyBatch(
+        tx,
         previousBatch,
         prefix,
         normalizeEntityKey(previousBatch.batchCode) ?? normalizedKey,
@@ -236,9 +370,9 @@ export async function resolveOrCreateQrCode(
     }
   }
 
-  // 3) & 4) Check QrCode registry by primaryKey, then primaryName
+  // 3) Check QrCode registry by primaryKey
   if (normalizedKey) {
-    const existingByKey = await prisma.qrCode.findFirst({
+    const existingByKey = await tx.qrCode.findFirst({
       where: {
         entityType: input.entityType,
         primaryKey: { equals: normalizedKey, mode: "insensitive" },
@@ -246,48 +380,60 @@ export async function resolveOrCreateQrCode(
       orderBy: { createdAt: "asc" },
     });
     if (existingByKey) {
-      await linkQrCodeIfUnset(input.entityType, input.entityId, existingByKey.id);
+      await linkQrCodeIfUnset(tx, input.entityType, input.entityId, existingByKey.id);
       return { qrCode: existingByKey, reused: true };
     }
   }
 
+  // 4) Check QrCode registry by primaryName only when normalizedKey is empty
+  //    or when the target QrCode row has null/empty/matching primaryKey
   if (normalizedName) {
-    const existingByName = await prisma.qrCode.findFirst({
-      where: {
-        entityType: input.entityType,
-        primaryName: { equals: normalizedName, mode: "insensitive" },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const existingByName = await findMatchingQrByName(
+      tx,
+      input.entityType,
+      normalizedName,
+      normalizedKey,
+      true
+    );
     if (existingByName) {
-      await linkQrCodeIfUnset(input.entityType, input.entityId, existingByName.id);
+      await linkQrCodeIfUnset(tx, input.entityType, input.entityId, existingByName.id);
       return { qrCode: existingByName, reused: true };
     }
   }
 
-  // Fallback for legacy EcoEnzymeBatch rows matching batchCode/containerName without QrCode registry entry yet
+  // Fallback for legacy EcoEnzymeBatch rows without QrCode registry entry yet.
+  // When normalizedKey is set, only match batches with the same batchCode (never steal another batchCode by containerName).
   if (input.entityType === "ECO_ENZYME_BATCH" && (normalizedKey || normalizedName)) {
-    const legacyBatch = await prisma.ecoEnzymeBatch.findFirst({
-      where: {
-        OR: [
-          ...(normalizedKey ? [{ batchCode: { equals: normalizedKey, mode: "insensitive" as const } }] : []),
-          ...(normalizedName ? [{ containerName: { equals: normalizedName, mode: "insensitive" as const } }] : []),
-        ],
-      },
-      include: { qrCode: true },
-      orderBy: [
-        { archivedAt: { sort: "asc", nulls: "first" } },
-        { createdAt: "desc" },
-      ],
+    const legacyWhere: Prisma.EcoEnzymeBatchWhereInput = normalizedKey
+      ? {
+          OR: [
+            { batchCode: { equals: normalizedKey, mode: "insensitive" } },
+            ...(normalizedName
+              ? [
+                  {
+                    AND: [
+                      { batchCode: "" },
+                      { containerName: { equals: normalizedName, mode: "insensitive" as const } },
+                    ],
+                  },
+                ]
+              : []),
+          ],
+        }
+      : { containerName: { equals: normalizedName, mode: "insensitive" } };
+
+    const legacyBatch = await findActiveOrLatestArchivedBatch(tx, legacyWhere, {
+      qrCode: true,
     });
 
     if (legacyBatch?.qrCode) {
-      await linkQrCodeIfUnset("ECO_ENZYME_BATCH", input.entityId, legacyBatch.qrCode.id);
+      await linkQrCodeIfUnset(tx, "ECO_ENZYME_BATCH", input.entityId, legacyBatch.qrCode.id);
       return { qrCode: legacyBatch.qrCode, reused: true };
     }
 
     if (legacyBatch?.publicCode) {
       const qrCode = await resolveFromLegacyBatch(
+        tx,
         legacyBatch,
         prefix,
         normalizedKey,
@@ -301,34 +447,50 @@ export async function resolveOrCreateQrCode(
   // 5) None of 1-4 matched: generate a new unique code and persist in QrCode registry
   const code =
     input.entityType === "ECO_ENZYME_BATCH"
-      ? await generateUniqueBatchQrCode()
-      : await generateUniqueProductQrCode(normalizedKey);
+      ? await generateUniqueBatchQrCode(tx)
+      : await generateUniqueProductQrCode(tx, normalizedKey);
 
   const targetUrl = buildTargetUrl(prefix, code);
 
-  try {
-    const created = await prisma.qrCode.create({
-      data: {
-        code,
-        entityType: input.entityType,
-        primaryKey: normalizedKey,
-        primaryName: normalizedName || code.toLowerCase(),
-        targetUrl,
-      },
-    });
+  const created = await tx.qrCode.create({
+    data: {
+      code,
+      entityType: input.entityType,
+      primaryKey: normalizedKey,
+      primaryName: normalizedName || code.toLowerCase(),
+      targetUrl,
+    },
+  });
 
-    await linkQrCodeIfUnset(input.entityType, input.entityId, created.id);
-    return { qrCode: created, reused: false };
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      const raced = await prisma.qrCode.findUnique({ where: { code } });
-      if (raced) {
-        await linkQrCodeIfUnset(input.entityType, input.entityId, raced.id);
-        return { qrCode: raced, reused: true };
+  await linkQrCodeIfUnset(tx, input.entityType, input.entityId, created.id);
+  return { qrCode: created, reused: false };
+}
+
+export async function resolveOrCreateQrCode(
+  input: ResolveOrCreateQrInput
+): Promise<ResolveOrCreateQrResult> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < MAX_QR_TX_RETRIES; attempt++) {
+    try {
+      return await prisma.$transaction(
+        (tx) => resolveOrCreateQrCodeInTx(tx, input),
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 5000,
+          timeout: 10000,
+        }
+      );
+    } catch (err) {
+      if (isRetryableRaceError(err) && attempt < MAX_QR_TX_RETRIES - 1) {
+        lastError = err;
+        continue;
       }
+      throw err;
     }
-    throw err;
   }
+
+  throw lastError;
 }
 
 export async function findQrByCodeOrEntity(input: FindQrInput): Promise<QrCode | null> {
@@ -380,14 +542,13 @@ export async function findQrByCodeOrEntity(input: FindQrInput): Promise<QrCode |
 
   const normalizedName = normalizeEntityName(input.entityName);
   if (normalizedName) {
-    const byName = await prisma.qrCode.findFirst({
-      where: {
-        ...(input.entityType ? { entityType: input.entityType } : {}),
-        primaryName: { equals: normalizedName, mode: "insensitive" },
-      },
-      orderBy: { createdAt: "asc" },
-    });
-    if (byName) return byName;
+    return findMatchingQrByName(
+      prisma,
+      input.entityType,
+      normalizedName,
+      normalizedKey,
+      false
+    );
   }
 
   return null;
@@ -449,18 +610,15 @@ export async function getQrCodeDetailsByCode(code: string) {
   let product = null;
 
   if (qrCode.entityType === "ECO_ENZYME_BATCH") {
-    batch = await prisma.ecoEnzymeBatch.findFirst({
-      where: {
+    batch = await findActiveOrLatestArchivedBatch(
+      prisma,
+      {
         OR: [
           { qrCodeId: qrCode.id },
           { publicCode: { equals: qrCode.code, mode: "insensitive" } },
         ],
       },
-      orderBy: [
-        { archivedAt: { sort: "asc", nulls: "first" } },
-        { createdAt: "desc" },
-      ],
-      include: {
+      {
         _count: { select: { inspectionLogs: true } },
         allocatedProduct: {
           select: { id: true, productCode: true, name: true },
@@ -469,24 +627,25 @@ export async function getQrCodeDetailsByCode(code: string) {
           select: { id: true, publicCode: true, batchCode: true, containerName: true },
         },
         nextBatches: {
+          where: { archivedAt: null },
           select: { id: true, publicCode: true, batchCode: true, containerName: true },
           take: 1,
           orderBy: { createdAt: "desc" },
         },
-      },
-    });
+      }
+    );
   } else if (qrCode.entityType === "PRODUCT") {
     product = await prisma.product.findFirst({
-      where: {
-        OR: [
-          { qrCodeId: qrCode.id },
-          ...(qrCode.primaryKey
-            ? [{ productCode: { equals: qrCode.primaryKey, mode: "insensitive" as const } }]
-            : []),
-        ],
-      },
+      where: { qrCodeId: qrCode.id },
       orderBy: { createdAt: "desc" },
     });
+
+    if (!product && qrCode.primaryKey) {
+      product = await prisma.product.findFirst({
+        where: { productCode: { equals: qrCode.primaryKey, mode: "insensitive" } },
+        orderBy: { createdAt: "desc" },
+      });
+    }
   }
 
   return {

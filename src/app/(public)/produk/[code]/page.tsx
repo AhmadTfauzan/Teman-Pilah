@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { SafeImage } from '@/components/shared/SafeImage';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
 
 export const dynamic = 'force-dynamic';
@@ -39,14 +40,59 @@ async function findProductByCode(rawCode: string) {
 
   const normalized = identifier.toUpperCase();
 
-  return prisma.product.findFirst({
+  // 1) Prioritas utama: kecocokan tepat productCode (case-insensitive)
+  const byProductCode = await prisma.product.findFirst({
+    where: { productCode: { equals: normalized, mode: 'insensitive' } },
+    include: { qrCode: true },
+  });
+  if (byProductCode) return byProductCode;
+
+  // 2) Prioritas kedua: kecocokan tepat qrCode.code pada relasi produk
+  const byQrRelation = await prisma.product.findFirst({
+    where: { qrCode: { code: { equals: normalized, mode: 'insensitive' } } },
+    include: { qrCode: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (byQrRelation) return byQrRelation;
+
+  // 3) Prioritas ketiga: kecocokan tepat ID produk
+  const byId = await prisma.product.findUnique({
+    where: { id: identifier },
+    include: { qrCode: true },
+  });
+  if (byId) return byId;
+
+  // 4) Fallback via registry QrCode jika relasi qrCodeId pada produk belum terpasang
+  const qrRecord = await prisma.qrCode.findFirst({
     where: {
-      OR: [
-        { productCode: { equals: normalized, mode: 'insensitive' } },
-        { id: identifier },
-        { qrCode: { code: { equals: normalized, mode: 'insensitive' } } },
-      ],
+      entityType: 'PRODUCT',
+      code: { equals: normalized, mode: 'insensitive' },
     },
+  });
+  if (qrRecord) {
+    if (qrRecord.primaryKey) {
+      const byQrPrimaryKey = await prisma.product.findFirst({
+        where: { productCode: { equals: qrRecord.primaryKey, mode: 'insensitive' } },
+        include: { qrCode: true },
+      });
+      if (byQrPrimaryKey) {
+        return { ...byQrPrimaryKey, qrCode: byQrPrimaryKey.qrCode ?? qrRecord };
+      }
+    } else if (qrRecord.primaryName) {
+      const byQrPrimaryName = await prisma.product.findFirst({
+        where: { name: { equals: qrRecord.primaryName, mode: 'insensitive' } },
+        include: { qrCode: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (byQrPrimaryName) {
+        return { ...byQrPrimaryName, qrCode: byQrPrimaryName.qrCode ?? qrRecord };
+      }
+    }
+  }
+
+  // 5) Fallback terakhir: kecocokan nama produk secara eksplisit
+  return prisma.product.findFirst({
+    where: { name: { equals: identifier, mode: 'insensitive' } },
     include: { qrCode: true },
     orderBy: { createdAt: 'desc' },
   });
@@ -200,7 +246,7 @@ export default async function PublicProductDetailPage({ params }: PageProps) {
       <div className="max-w-4xl mx-auto relative z-10 space-y-4 sm:space-y-6">
         <div>
           <Link
-            href="/#products"
+            href="/#katalog"
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#4A5546] hover:text-[#012D1D] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -214,8 +260,9 @@ export default async function PublicProductDetailPage({ params }: PageProps) {
             <div className="bg-[#FAFBF9] border-b md:border-b-0 md:border-r border-[#E3E8DC] flex items-center justify-center p-4 sm:p-8 min-h-[210px] sm:min-h-[340px] md:min-h-[380px]">
               {imageSrc ? (
                 <div className="w-full h-full max-h-[260px] sm:max-h-[380px] rounded-xl sm:rounded-2xl overflow-hidden bg-white border border-stone-200 shadow-xs flex items-center justify-center">
-                  <img
+                  <SafeImage
                     src={imageSrc}
+                    fallbackSrc="/activity/Pengmas (11).jpeg"
                     alt={product.name}
                     className="w-full h-full object-cover max-h-[260px] sm:max-h-[380px]"
                   />
@@ -320,7 +367,7 @@ export default async function PublicProductDetailPage({ params }: PageProps) {
                     Produk Resmi Komunitas Teman Pilah
                   </span>
                   <Link
-                    href="/#products"
+                    href="/#katalog"
                     className="font-bold text-[#012D1D] hover:underline"
                   >
                     Lihat Produk Lain

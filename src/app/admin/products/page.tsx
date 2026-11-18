@@ -35,31 +35,6 @@ const SearchIcon = () => (
   </svg>
 );
 
-const PlusCircleIcon = () => (
-  <svg
-    aria-hidden="true"
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <circle cx="10" cy="10" r="7.5" stroke="white" strokeWidth="1.5" />
-    <path
-      d="M10 7V13"
-      stroke="white"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-    <path
-      d="M7 10H13"
-      stroke="white"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 const ChevronDownIcon = () => (
   <svg
     aria-hidden="true"
@@ -120,12 +95,19 @@ const SortIcon = () => (
   </svg>
 );
 
+type ProductSortOrder = 'newest' | 'name-asc' | 'stock-desc';
+type ProductWithTimestamps = Product & {
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState<ProductSortOrder>('newest');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeQrProduct, setActiveQrProduct] = useState<Product | null>(null);
@@ -139,6 +121,7 @@ export default function AdminProducts() {
     id: string;
     name: string;
   }>({ isOpen: false, id: '', name: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchProducts = async (silent = false) => {
     if (!silent) {
@@ -148,6 +131,7 @@ export default function AdminProducts() {
       const data = await productApi.getAll();
       setProducts(data);
     } catch (error) {
+      console.error('Fetch products error:', error);
       toast.error('Gagal mengambil data produk dari server');
     } finally {
       if (!silent) {
@@ -157,7 +141,28 @@ export default function AdminProducts() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await productApi.getAll();
+        if (!cancelled) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error('Fetch products error:', error);
+        if (!cancelled) {
+          toast.error('Gagal mengambil data produk dari server');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -180,8 +185,37 @@ export default function AdminProducts() {
       result = result.filter(item => item.stockLabel === statusFilter);
     }
 
+    if (sortOrder === 'newest') {
+      result.sort((a, b) => {
+        const tsA = (a as ProductWithTimestamps).updatedAt || (a as ProductWithTimestamps).createdAt;
+        const tsB = (b as ProductWithTimestamps).updatedAt || (b as ProductWithTimestamps).createdAt;
+        const timeA = tsA ? new Date(tsA).getTime() : 0;
+        const timeB = tsB ? new Date(tsB).getTime() : 0;
+        return timeB - timeA;
+      });
+    } else if (sortOrder === 'name-asc') {
+      result.sort((a, b) =>
+        a.name.localeCompare(b.name, 'id-ID', { sensitivity: 'base' })
+      );
+    } else if (sortOrder === 'stock-desc') {
+      result.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0));
+    }
+
     return result;
-  }, [products, searchTerm, categoryFilter, statusFilter]);
+  }, [products, searchTerm, categoryFilter, statusFilter, sortOrder]);
+
+  const handleCycleSort = () => {
+    setSortOrder((prev) =>
+      prev === 'newest' ? 'name-asc' : prev === 'name-asc' ? 'stock-desc' : 'newest'
+    );
+  };
+
+  const sortLabel =
+    sortOrder === 'newest'
+      ? 'Urutkan: Terbaru'
+      : sortOrder === 'name-asc'
+      ? 'Urutkan: Nama A-Z'
+      : 'Urutkan: Stok Tertinggi';
 
   const handleOpenModal = (product?: Product) => {
     setEditingProduct(product || null);
@@ -190,23 +224,21 @@ export default function AdminProducts() {
 
   const handleSubmit = async (data: FormData) => {
     try {
+      const isEditing = Boolean(editingProduct);
       if (editingProduct) {
         await productApi.update(editingProduct.id, data);
-        setSuccessModal({
-          isOpen: true,
-          title: 'Berhasil Memperbarui',
-          message: 'Produk berhasil diperbarui.'
-        });
       } else {
         await productApi.create(data);
-        setSuccessModal({
-          isOpen: true,
-          title: 'Berhasil Menambahkan',
-          message: 'Produk berhasil ditambahkan.'
-        });
       }
-      fetchProducts();
+
       setIsModalOpen(false);
+      setEditingProduct(null);
+      setSuccessModal({
+        isOpen: true,
+        title: isEditing ? 'Berhasil Memperbarui' : 'Berhasil Menambahkan',
+        message: isEditing ? 'Produk berhasil diperbarui.' : 'Produk berhasil ditambahkan.',
+      });
+      await fetchProducts(true);
     } catch (error: unknown) {
       const err = error as Error;
       toast.error(err.message || 'Gagal menyimpan produk');
@@ -223,19 +255,24 @@ export default function AdminProducts() {
   };
 
   const confirmDelete = async () => {
+    if (!deleteModal.id || isDeleting) return;
+    const targetId = deleteModal.id;
+    const targetName = deleteModal.name;
+    setIsDeleting(true);
     try {
-      await productApi.delete(deleteModal.id, deleteModal.name);
+      await productApi.delete(targetId, targetName);
+      setDeleteModal({ isOpen: false, id: '', name: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Berhasil Menghapus',
         message: 'Produk berhasil dihapus.'
       });
-      fetchProducts();
+      await fetchProducts(true);
     } catch (error: unknown) {
       const err = error as Error;
       toast.error(err.message || 'Gagal menghapus produk');
     } finally {
-      setDeleteModal({ isOpen: false, id: '', name: '' });
+      setIsDeleting(false);
     }
   };
 
@@ -296,7 +333,7 @@ export default function AdminProducts() {
 
           {/* FILTERS */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row">
-            <div className="relative w-full sm:w-[140px]">
+            <div className="relative w-full sm:w-[180px]">
               <select
                 className="h-9 sm:h-11 w-full appearance-none rounded-xl sm:rounded-[14px] bg-[#F9FAF8] border border-[#F0F2EB] px-3 sm:px-4 pr-8 sm:pr-10 text-xs sm:text-[13px] font-medium text-[#72796E] outline-none cursor-pointer"
                 value={statusFilter}
@@ -304,12 +341,13 @@ export default function AdminProducts() {
               >
                 <option value="all">Status: Semua</option>
                 <option value="IN_STOCK">Tersedia</option>
+                <option value="BULK_AVAILABLE">Stok Melimpah (Bulk)</option>
                 <option value="OUT_OF_STOCK">Habis</option>
               </select>
               <ChevronDownIcon />
             </div>
 
-            <div className="relative w-full sm:w-[140px]">
+            <div className="relative w-full sm:w-[155px]">
               <select
                 className="h-9 sm:h-11 w-full appearance-none rounded-xl sm:rounded-[14px] bg-[#F9FAF8] border border-[#F0F2EB] px-3 sm:px-4 pr-8 sm:pr-10 text-xs sm:text-[13px] font-medium text-[#72796E] outline-none cursor-pointer"
                 value={categoryFilter}
@@ -325,10 +363,14 @@ export default function AdminProducts() {
 
             <button
               type="button"
-              className="col-span-2 sm:col-auto inline-flex h-9 sm:h-11 items-center justify-center gap-2 rounded-xl sm:rounded-[14px] border border-[#F0F2EB] bg-white px-4 sm:px-5 hover:bg-gray-50 transition-colors"
+              onClick={handleCycleSort}
+              title="Ubah urutan produk (Terbaru, Nama A-Z, Stok Tertinggi)"
+              className="col-span-2 sm:col-auto inline-flex h-9 sm:h-11 items-center justify-center gap-2 rounded-xl sm:rounded-[14px] border border-[#F0F2EB] bg-white px-4 sm:px-5 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               <SortIcon />
-              <span className="text-xs sm:text-[13px] font-medium text-[#72796E]">Urutkan</span>
+              <span className="text-xs sm:text-[13px] font-medium text-[#72796E]">
+                {sortLabel}
+              </span>
             </button>
           </div>
         </div>
@@ -365,15 +407,19 @@ export default function AdminProducts() {
         onClose={() => setSuccessModal({ ...successModal, isOpen: false })}
         title={successModal.title}
         message={successModal.message}
+        buttonText="Tutup"
       />
 
       <DeleteModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        onClose={() => {
+          if (!isDeleting) setDeleteModal({ ...deleteModal, isOpen: false });
+        }}
         onConfirm={confirmDelete}
         title="Hapus Produk?"
         itemName={deleteModal.name}
         confirmText="Hapus Produk"
+        isDeleting={isDeleting}
       />
     </div>
   );

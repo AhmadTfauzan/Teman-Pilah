@@ -1,5 +1,5 @@
 import { AppError } from "@/middlewares/error.middleware";
-import { EducationContent, PrismaClient } from "../../../generated/prisma";
+import { EducationContent, Prisma, PrismaClient } from "../../../generated/prisma";
 import {
   ContentStatus,
   CreateEducationInput,
@@ -11,19 +11,12 @@ interface FindAllOptions {
   take: number;
   status?: ContentStatus;
   search?: string;
+  isAdmin?: boolean;
 }
 
 interface FindAllResult {
   data: EducationContent[];
   total: number;
-}
-
-interface EducationWhereClause {
-  status?: ContentStatus;
-  title?: {
-    contains: string;
-    mode: "insensitive";
-  };
 }
 
 export class EducationRepository {
@@ -34,14 +27,26 @@ export class EducationRepository {
   }
 
   async findAll(options: FindAllOptions): Promise<FindAllResult> {
-    const { skip, take, status, search } = options;
+    const { skip, take, status, search, isAdmin = false } = options;
 
-    const where: EducationWhereClause = {
-      ...(status && { status }),
-      ...(search && {
+    const andConditions: Prisma.EducationContentWhereInput[] = [];
+
+    if (!isAdmin) {
+      andConditions.push({ status: ContentStatus.PUBLISHED });
+    }
+
+    if (status) {
+      andConditions.push({ status });
+    }
+
+    if (search) {
+      andConditions.push({
         title: { contains: search, mode: "insensitive" as const },
-      }),
-    };
+      });
+    }
+
+    const where: Prisma.EducationContentWhereInput =
+      andConditions.length > 0 ? { AND: andConditions } : {};
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.educationContent.findMany({
@@ -95,6 +100,18 @@ export class EducationRepository {
     data: UpdateEducationInput,
     thumbnail?: string,
   ): Promise<EducationContent> {
+    if (data.slug !== undefined) {
+      const existingSlug = await this.prisma.educationContent.findFirst({
+        where: {
+          slug: data.slug,
+          NOT: { id },
+        },
+      });
+      if (existingSlug) {
+        throw new AppError("Slug sudah digunakan, gunakan slug lain", 409);
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (data.title !== undefined) updateData.title = data.title;

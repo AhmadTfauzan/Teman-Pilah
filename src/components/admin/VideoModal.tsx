@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { BankSampahVideoItem, VideoPlatform } from '@/types';
 import { getVideoThumbnailUrl } from '@/lib/api/video';
 import { ArrowLeft, Play, Upload, ExternalLink, Image as ImageIcon } from 'lucide-react';
@@ -10,24 +10,49 @@ interface VideoModalProps {
   item: BankSampahVideoItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: FormData) => void;
+  onSubmit: (data: FormData) => void | Promise<void>;
 }
 
 export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps) {
-  const [title, setTitle] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [platform, setPlatform] = useState<VideoPlatform>('YouTube');
-  const [duration, setDuration] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [aspect, setAspect] = useState<'wide' | 'tall'>('wide');
-  const [sortOrder, setSortOrder] = useState<number>(0);
+  if (!isOpen) return null;
+
+  return (
+    <VideoModalContent
+      key={item?.id ?? 'new'}
+      item={item}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function VideoModalContent({
+  item,
+  onClose,
+  onSubmit,
+}: Omit<VideoModalProps, 'isOpen'>) {
+  const [title, setTitle] = useState(item?.title || '');
+  const [videoUrl, setVideoUrl] = useState(item?.videoUrl || '');
+  const [platform, setPlatform] = useState<VideoPlatform>(item?.platform || 'YouTube');
+  const [duration, setDuration] = useState(item?.duration || '');
+  const [description, setDescription] = useState(item?.description || '');
+  const [category, setCategory] = useState(item ? item.category || '' : 'Penimbangan');
+  const [aspect, setAspect] = useState<'wide' | 'tall'>(
+    item?.aspect === 'tall' ? 'tall' : 'wide'
+  );
+  const [date, setDate] = useState(item?.date || '');
+  const [sortOrder, setSortOrder] = useState<number>(item?.sortOrder ?? 0);
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
-  const [customThumbnailUrl, setCustomThumbnailUrl] = useState('');
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>(() =>
+    item?.thumbnail ? getVideoThumbnailUrl(item.thumbnail) : ''
+  );
+  const [customThumbnailUrl, setCustomThumbnailUrl] = useState(
+    item?.thumbnail && item.thumbnail.startsWith('http') ? item.thumbnail : ''
+  );
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper untuk deteksi platform & YouTube ID
@@ -41,41 +66,10 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
 
   const extractYouTubeId = (url: string): string | null => {
     const match = url.match(
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
     );
     return match ? match[1] : null;
   };
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (item) {
-      setTitle(item.title || '');
-      setVideoUrl(item.videoUrl || '');
-      setPlatform(item.platform || 'YouTube');
-      setDuration(item.duration || '');
-      setDescription(item.description || '');
-      setCategory(item.category || '');
-      setAspect((item.aspect as any) === 'tall' ? 'tall' : 'wide');
-      setSortOrder(item.sortOrder ?? 0);
-      setThumbnailPreview(item.thumbnail ? getVideoThumbnailUrl(item.thumbnail) : '');
-      setCustomThumbnailUrl(item.thumbnail && item.thumbnail.startsWith('http') ? item.thumbnail : '');
-      setThumbnailFile(null);
-    } else {
-      setTitle('');
-      setVideoUrl('');
-      setPlatform('YouTube');
-      setDuration('');
-      setDescription('');
-      setCategory('Penimbangan');
-      setAspect('wide');
-      setSortOrder(0);
-      setThumbnailPreview('');
-      setCustomThumbnailUrl('');
-      setThumbnailFile(null);
-    }
-    setErrorMessage('');
-  }, [item, isOpen]);
 
   // Auto-detect platform and YouTube thumbnail saat link video berubah
   const handleUrlChange = (newUrl: string) => {
@@ -116,8 +110,9 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!title.trim()) {
       setErrorMessage('Judul video wajib diisi.');
@@ -137,6 +132,7 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
     formData.append('description', description.trim());
     formData.append('category', category.trim());
     formData.append('aspect', aspect);
+    formData.append('date', date.trim());
     formData.append('sortOrder', String(sortOrder));
 
     if (thumbnailFile) {
@@ -145,10 +141,15 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
       formData.append('thumbnail', customThumbnailUrl);
     }
 
-    onSubmit(formData);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } catch {
+      // Parent handles error notification and keeps modal open
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-2 sm:p-6 lg:p-8 flex items-center justify-center animate-in fade-in duration-200">
@@ -302,7 +303,7 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
                   </label>
                   <select
                     value={aspect}
-                    onChange={(e) => setAspect(e.target.value as any)}
+                    onChange={(e) => setAspect(e.target.value as 'wide' | 'tall')}
                     className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-[#3B9734] focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-all bg-white"
                   >
                     <option value="wide">Landscape 16:9 (YouTube standard)</option>
@@ -322,6 +323,24 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
                     className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-[#3B9734] focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-all"
                   />
                 </div>
+              </div>
+
+              {/* Tanggal Kegiatan (Opsional) */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5 font-['Poppins']">
+                  Tanggal Kegiatan (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={date}
+                  maxLength={50}
+                  onChange={(e) => setDate(e.target.value)}
+                  placeholder="Contoh: 12 Okt 2026"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-[#3B9734] focus:outline-none focus:ring-2 focus:ring-[#3B9734]/20 transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Kosongkan untuk menampilkan tanggal unggah otomatis.
+                </p>
               </div>
 
               {/* Deskripsi */}
@@ -453,15 +472,17 @@ export function VideoModal({ item, isOpen, onClose, onSubmit }: VideoModalProps)
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white text-sm font-bold shadow-lg shadow-[#012D1D]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white text-sm font-bold shadow-lg shadow-[#012D1D]/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {item ? 'Simpan Perubahan' : 'Tambah Video'}
+              {isSubmitting ? 'Menyimpan...' : item ? 'Simpan Perubahan' : 'Tambah Video'}
             </button>
           </div>
         </form>

@@ -21,7 +21,10 @@ export function Footer() {
   ];
 
   return (
-    <footer className="relative w-full bg-[#012D1D] pt-8 pb-6 sm:pt-20 sm:pb-8 text-[#C9D6CF] overflow-hidden">
+    <footer
+      id="kontak"
+      className="relative w-full bg-[#012D1D] pt-8 pb-6 sm:pt-20 sm:pb-8 text-[#C9D6CF] overflow-hidden scroll-mt-16 md:scroll-mt-20"
+    >
       {/* ─── DECORATIVE ACCENTS (Figma Frame 48) ─── */}
       <div className="hidden sm:block absolute -right-24 -bottom-24 opacity-20 pointer-events-none">
         <ConcentricCircles size={360} color="#0B4A31" />
@@ -75,6 +78,7 @@ export function Footer() {
                 <span>halo@temanpilah.com</span>
               </a>
 
+              {/* Synced with Navbar wa.me/6281234567890 placeholder */}
               <a
                 href="https://wa.me/6281234567890"
                 target="_blank"
@@ -82,7 +86,7 @@ export function Footer() {
                 className="flex items-center gap-2.5 sm:gap-3 hover:text-[#FC9634] transition-colors"
               >
                 <Phone className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-[#FC9634] shrink-0" />
-                <span>+62 000 0000 0000</span>
+                <span>+62 812-3456-7890</span>
               </a>
             </div>
           </div>
@@ -137,7 +141,7 @@ export function Footer() {
         {/* ─── BOTTOM BAR: COPYRIGHT & POLICIES ─── */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4 pt-4 sm:pt-6 border-t border-[#0B4A31] font-['Poppins'] text-[11px] sm:text-sm text-[#C9D6CF]">
           <p className="text-center sm:text-left">
-            © 2024 Teman Pilah. Melestarikan lingkungan bersama melalui aksi nyata.
+            © {new Date().getFullYear()} Teman Pilah. Melestarikan lingkungan bersama melalui aksi nyata.
           </p>
 
           <div className="flex items-center gap-5 sm:gap-8">

@@ -3,11 +3,13 @@
 import React from 'react';
 import { EcoEnzymeVideoItem, EcoEnzymeVideoPlatform } from '@/types';
 import { getEcoEnzymeVideoThumbnailUrl } from '@/lib/api/eco-enzyme-video';
-import { Edit2, Trash2, ExternalLink, Play, Clock, Film, Sparkles } from 'lucide-react';
+import { Edit2, Trash2, Play, Clock, Film, Sparkles, Search } from 'lucide-react';
 
 interface EcoEnzymeVideoTableProps {
   videos: EcoEnzymeVideoItem[];
   isLoading: boolean;
+  hasActiveFilter?: boolean;
+  onResetFilter?: () => void;
   onEdit: (video: EcoEnzymeVideoItem) => void;
   onDelete: (video: EcoEnzymeVideoItem) => void;
   onPreview: (video: EcoEnzymeVideoItem) => void;
@@ -17,6 +19,8 @@ interface EcoEnzymeVideoTableProps {
 export function EcoEnzymeVideoTable({
   videos,
   isLoading,
+  hasActiveFilter = false,
+  onResetFilter,
   onEdit,
   onDelete,
   onPreview,
@@ -69,6 +73,31 @@ export function EcoEnzymeVideoTable({
   }
 
   if (videos.length === 0) {
+    if (hasActiveFilter) {
+      return (
+        <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-stone-200 p-8 sm:p-12 text-center shadow-xs">
+          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center mb-4">
+            <Search className="w-6 h-6 sm:w-7 sm:h-7" />
+          </div>
+          <h3 className="font-['Poppins'] font-bold text-lg sm:text-xl text-stone-900">
+            Tidak ada video yang cocok
+          </h3>
+          <p className="text-xs sm:text-sm text-stone-500 mt-1 max-w-md mx-auto">
+            Coba ubah kata kunci pencarian atau pilih platform lain untuk melihat video edukasi Eco Enzyme.
+          </p>
+          {onResetFilter && (
+            <button
+              type="button"
+              onClick={onResetFilter}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold shadow-xs transition-all"
+            >
+              <span>Reset Filter</span>
+            </button>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-stone-200 p-8 sm:p-12 text-center shadow-xs">
         <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-50 text-[#012D1D] flex items-center justify-center mb-4">
@@ -81,6 +110,7 @@ export function EcoEnzymeVideoTable({
           Tambahkan video panduan manfaat atau cara pembuatan Eco Enzyme untuk ditampilkan di halaman utama Eco Enzyme.
         </p>
         <button
+          type="button"
           onClick={onAddNew}
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#012D1D] hover:bg-[#0B4A31] text-white px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95"
         >
@@ -278,6 +308,7 @@ export function EcoEnzymeVideoTable({
                 <td className="py-4 px-6 text-center whitespace-nowrap">
                   <div className="flex items-center justify-center gap-2">
                     <button
+                      type="button"
                       onClick={() => onPreview(video)}
                       className="p-2 rounded-xl text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                       title="Lihat Video"
@@ -285,6 +316,7 @@ export function EcoEnzymeVideoTable({
                       <Play className="w-4 h-4 fill-current" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => onEdit(video)}
                       className="p-2 rounded-xl text-stone-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                       title="Edit Video"
@@ -292,6 +324,7 @@ export function EcoEnzymeVideoTable({
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => onDelete(video)}
                       className="p-2 rounded-xl text-stone-500 hover:text-red-700 hover:bg-red-50 transition-colors"
                       title="Hapus Video"

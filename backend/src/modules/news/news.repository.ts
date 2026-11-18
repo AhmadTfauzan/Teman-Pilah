@@ -1,5 +1,5 @@
 import { AppError } from "@/middlewares/error.middleware";
-import { News, PrismaClient } from "../../../generated/prisma";
+import { News, Prisma, PrismaClient } from "../../../generated/prisma";
 import {
   NewsStatus,
   NewsVisibility,
@@ -14,21 +14,12 @@ interface FindAllOptions {
   status?: NewsStatus;
   visibility?: NewsVisibility;
   search?: string;
+  isAdmin?: boolean;
 }
 
 interface FindAllResult {
   data: News[];
   total: number;
-}
-
-interface NewsWhereClause {
-  category?: string;
-  status?: NewsStatus;
-  visibility?: NewsVisibility;
-  title?: {
-    contains: string;
-    mode: "insensitive";
-  };
 }
 
 export class NewsRepository {
@@ -39,16 +30,42 @@ export class NewsRepository {
   }
 
   async findAll(options: FindAllOptions): Promise<FindAllResult> {
-    const { skip, take, category, status, visibility, search } = options;
+    const {
+      skip,
+      take,
+      category,
+      status,
+      visibility,
+      search,
+      isAdmin = false,
+    } = options;
 
-    const where: NewsWhereClause = {
-      ...(category && { category }),
-      ...(status && { status }),
-      ...(visibility && { visibility }),
-      ...(search && {
+    const andConditions: Prisma.NewsWhereInput[] = [];
+
+    if (!isAdmin) {
+      andConditions.push({
+        status: NewsStatus.PUBLISHED,
+        visibility: NewsVisibility.PUBLIC,
+      });
+    }
+
+    if (category) {
+      andConditions.push({ category });
+    }
+    if (status) {
+      andConditions.push({ status });
+    }
+    if (visibility) {
+      andConditions.push({ visibility });
+    }
+    if (search) {
+      andConditions.push({
         title: { contains: search, mode: "insensitive" as const },
-      }),
-    };
+      });
+    }
+
+    const where: Prisma.NewsWhereInput =
+      andConditions.length > 0 ? { AND: andConditions } : {};
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.news.findMany({
@@ -104,6 +121,18 @@ export class NewsRepository {
     data: UpdateNewsInput,
     imageUrl?: string,
   ): Promise<News> {
+    if (data.slug !== undefined) {
+      const existingSlug = await this.prisma.news.findFirst({
+        where: {
+          slug: data.slug,
+          NOT: { id },
+        },
+      });
+      if (existingSlug) {
+        throw new AppError("Slug sudah digunakan, gunakan slug lain", 409);
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (data.title !== undefined) updateData.title = data.title;

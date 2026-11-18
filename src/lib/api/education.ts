@@ -2,6 +2,7 @@
 // Disesuaikan 100% dengan backend teman-pilah (port 2000)
 
 import { getBaseUrl } from '../api-config';
+import { getAuthHeader } from './auth-session';
 import { Education } from "@/types";
 import { logAdminActivity } from '@/lib/utils';
 
@@ -9,9 +10,19 @@ export const BASE_URL = getBaseUrl();
 
 // Helper to get full thumbnail URL
 export function getThumbnailUrl(imagePath?: string | null): string {
-  if (!imagePath) return "";
-  if (imagePath.startsWith("http")) return imagePath;
-  return `${BASE_URL}/${imagePath}`;
+  const path = imagePath?.trim();
+  if (!path) return "";
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("data:") ||
+    (path.startsWith("/") && !path.startsWith("//"))
+  ) {
+    return path;
+  }
+  const cleanPath = path.replace(/^\/+/, "");
+  const cleanBase = BASE_URL.replace(/\/+$/, "");
+  return cleanBase ? `${cleanBase}/${cleanPath}` : `/${cleanPath}`;
 }
 
 interface PaginatedResponse<T> {
@@ -38,9 +49,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 function authHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("token") ?? "";
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return getAuthHeader();
 }
 
 export const educationApi = {
