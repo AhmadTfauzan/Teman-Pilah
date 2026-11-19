@@ -1,5 +1,4 @@
 export * from './About';
-export * from './BottomNav';
 export * from './Education';
 export * from './Footer';
 export * from './Gallery';
