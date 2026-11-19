@@ -263,7 +263,7 @@ export default function BankSampahPage() {
               </a>
 
               <a
-                href="https://www.tiktok.com"
+                href="https://www.tiktok.com/@teman_pilah"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-sm font-medium text-white transition-all hover:scale-105"
