@@ -1,6 +1,65 @@
 export const FERMENTATION_DAYS = 90;
 export const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export const ENZYME_TYPES = ["ECO_ENZYME", "CLASSIC_ENZYME"] as const;
+export const ENZYME_SWEETENER_TYPES = ["MOLASE", "GULA", "MADU"] as const;
+
+export type EnzymeTypeValue = (typeof ENZYME_TYPES)[number];
+export type EnzymeSweetenerTypeValue = (typeof ENZYME_SWEETENER_TYPES)[number];
+
+export const ALLOWED_SWEETENERS_BY_ENZYME: Record<
+  EnzymeTypeValue,
+  readonly EnzymeSweetenerTypeValue[]
+> = {
+  ECO_ENZYME: ["MOLASE", "GULA"],
+  CLASSIC_ENZYME: ["MADU", "GULA"],
+};
+
+export const DEFAULT_SWEETENER_BY_ENZYME: Record<
+  EnzymeTypeValue,
+  EnzymeSweetenerTypeValue
+> = {
+  ECO_ENZYME: "MOLASE",
+  CLASSIC_ENZYME: "MADU",
+};
+
+export const DEFAULT_WASTE_TYPES_BY_ENZYME: Record<EnzymeTypeValue, string> = {
+  ECO_ENZYME: "Kulit Buah Campur",
+  CLASSIC_ENZYME: "Buah Segar Pilihan",
+};
+
+/**
+ * Mengembalikan pemanis default sesuai jenis enzim.
+ */
+export function getDefaultSweetenerForEnzyme(
+  enzymeType: EnzymeTypeValue,
+): EnzymeSweetenerTypeValue {
+  return DEFAULT_SWEETENER_BY_ENZYME[enzymeType];
+}
+
+/**
+ * Memeriksa apakah kombinasi jenis enzim dan pemanis diperbolehkan.
+ */
+export function isSweetenerAllowedForEnzyme(
+  enzymeType: EnzymeTypeValue,
+  sweetenerType: EnzymeSweetenerTypeValue,
+): boolean {
+  return ALLOWED_SWEETENERS_BY_ENZYME[enzymeType].includes(sweetenerType);
+}
+
+/**
+ * Menghasilkan pesan error validasi kombinasi enzim dan pemanis.
+ */
+export function getSweetenerValidationErrorMessage(
+  enzymeType: EnzymeTypeValue,
+  sweetenerType: EnzymeSweetenerTypeValue,
+): string {
+  if (enzymeType === "CLASSIC_ENZYME") {
+    return `Classic Enzyme hanya dapat menggunakan pemanis MADU atau GULA (tidak diperbolehkan: ${sweetenerType})`;
+  }
+  return `Eco Enzyme hanya dapat menggunakan pemanis MOLASE atau GULA (tidak diperbolehkan: ${sweetenerType})`;
+}
+
 /**
  * Menghitung batas cutoff tanggal mulai (startDate) untuk status READY_TO_HARVEST.
  * Karena startDate dihitung sebagai Hari ke-1, Hari ke-90 tercapai setelah

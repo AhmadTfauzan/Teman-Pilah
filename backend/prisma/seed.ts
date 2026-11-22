@@ -129,6 +129,8 @@ async function main() {
   const batch1 = await upsertEcoEnzymeBatchByCode("EE-202609-001", {
     publicCode: "EE-2609-X7K9P2",
     batchCode: "EE-202609-001",
+    enzymeType: "ECO_ENZYME",
+    sweetenerType: "MOLASE",
     containerName: "Drum Biru A1 (60L)",
     containerCapacityLiter: 60.0,
     molassesKg: 3.0,
@@ -173,6 +175,8 @@ async function main() {
   const batch2 = await upsertEcoEnzymeBatchByCode("EE-202607-002", {
     publicCode: "EE-2607-M3N8R5",
     batchCode: "EE-202607-002",
+    enzymeType: "ECO_ENZYME",
+    sweetenerType: "MOLASE",
     containerName: "Drum Kuning B2 (100L)",
     containerCapacityLiter: 100.0,
     molassesKg: 5.0,
@@ -195,6 +199,8 @@ async function main() {
   const batch3 = await upsertEcoEnzymeBatchByCode("EE-202606-003", {
     publicCode: "EE-2606-B4T6W9",
     batchCode: "EE-202606-003",
+    enzymeType: "ECO_ENZYME",
+    sweetenerType: "MOLASE",
     containerName: "Jerigen Hijau C1 (40L)",
     containerCapacityLiter: 40.0,
     molassesKg: 2.5,

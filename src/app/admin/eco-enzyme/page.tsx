@@ -19,13 +19,21 @@ import {
   ExternalLink,
   ChevronDown,
 } from 'lucide-react';
-import { EcoEnzymeBatch, EcoEnzymeVideoItem, EcoEnzymeVideoPlatform } from '@/types';
+import {
+  EcoEnzymeBatch,
+  EcoEnzymeVideoItem,
+  EcoEnzymeVideoPlatform,
+  EnzymeType,
+} from '@/types';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
 import { ecoEnzymeVideoApi, getEcoEnzymeVideoThumbnailUrl } from '@/lib/api/eco-enzyme-video';
 import {
   getDaysRemaining,
   getFermentationProgress,
   getDayPassed,
+  getEnzymeTypeMeta,
+  getSweetenerMeta,
+  normalizeEnzymeType,
   parseOrganicWasteTypes,
 } from '@/lib/eco-enzyme';
 import { EcoEnzymeModal, EcoEnzymeModalSubmitData } from '@/components/admin/EcoEnzymeModal';
@@ -121,6 +129,7 @@ export default function AdminEcoEnzymePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [enzymeTypeFilter, setEnzymeTypeFilter] = useState<'ALL' | EnzymeType>('ALL');
 
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<EcoEnzymeBatch | null>(null);
@@ -238,7 +247,7 @@ export default function AdminEcoEnzymePage() {
     };
   }, []);
 
-  // Filter pencarian & status galon
+  // Filter pencarian, jenis enzim & status galon
   const filteredBatches = useMemo(() => {
     return batches.filter((b) => {
       const q = searchTerm.toLowerCase().trim();
@@ -251,6 +260,10 @@ export default function AdminEcoEnzymePage() {
 
       if (!matchSearch) return false;
 
+      if (enzymeTypeFilter !== 'ALL' && normalizeEnzymeType(b.enzymeType) !== enzymeTypeFilter) {
+        return false;
+      }
+
       const isArchived = Boolean(b.archivedAt || b.status === 'ARCHIVED');
 
       if (statusFilter === 'ARCHIVED') return isArchived;
@@ -260,7 +273,11 @@ export default function AdminEcoEnzymePage() {
       const currentStatus = b.displayStatus || b.status;
       return currentStatus === statusFilter;
     });
-  }, [batches, searchTerm, statusFilter]);
+  }, [batches, searchTerm, statusFilter, enzymeTypeFilter]);
+
+  const hasActiveBatchFilter = Boolean(
+    searchTerm.trim() || statusFilter !== 'ALL' || enzymeTypeFilter !== 'ALL'
+  );
 
   // Filter video edukasi
   const filteredVideos = useMemo(() => {
@@ -492,10 +509,28 @@ export default function AdminEcoEnzymePage() {
                 )}
               </div>
 
+              <div className="relative w-full sm:w-[170px]">
+                <select
+                  value={enzymeTypeFilter}
+                  onChange={(e) => setEnzymeTypeFilter(e.target.value as 'ALL' | EnzymeType)}
+                  aria-label="Filter jenis enzim"
+                  className="w-full h-9 sm:h-10 appearance-none bg-[#FAFBF9] border border-stone-200 rounded-xl pl-3 sm:pl-3.5 pr-9 text-xs font-semibold text-stone-700 focus:outline-none focus:border-[#012D1D] cursor-pointer"
+                >
+                  <option value="ALL">Semua Jenis</option>
+                  <option value="ECO_ENZYME">Eco Enzyme</option>
+                  <option value="CLASSIC_ENZYME">Classic Enzyme</option>
+                </select>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="pointer-events-none w-4 h-4 text-stone-500 absolute right-3 top-1/2 -translate-y-1/2"
+                />
+              </div>
+
               <div className="relative w-full sm:w-[185px]">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
+                  aria-label="Filter status galon"
                   className="w-full h-9 sm:h-10 appearance-none bg-[#FAFBF9] border border-stone-200 rounded-xl pl-3 sm:pl-3.5 pr-9 text-xs font-semibold text-stone-700 focus:outline-none focus:border-[#012D1D] cursor-pointer"
                 >
                   <option value="ALL">Semua Galon</option>
@@ -532,8 +567,24 @@ export default function AdminEcoEnzymePage() {
               <div className="text-center py-12 sm:py-16 px-4 text-stone-500">
                 <p className="text-xs font-semibold text-stone-700">Tidak ada galon yang ditemukan.</p>
                 <p className="text-[11px] text-stone-400 mt-0.5">
-                  {searchTerm ? 'Coba ubah kata kunci pencarian.' : 'Silakan klik "Input Galon Baru" untuk mencatat galon.'}
+                  {hasActiveBatchFilter
+                    ? 'Coba ubah kata kunci pencarian atau reset filter jenis & status galon.'
+                    : 'Silakan klik "Input Galon Baru" untuk mencatat galon.'}
                 </p>
+                {hasActiveBatchFilter && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setStatusFilter('ALL');
+                      setEnzymeTypeFilter('ALL');
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset Filter
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -549,6 +600,10 @@ export default function AdminEcoEnzymePage() {
                       isFailed,
                       isReady,
                     } = getBatchDisplayState(batch);
+                    const enzymeType = normalizeEnzymeType(batch.enzymeType);
+                    const enzymeMeta = getEnzymeTypeMeta(enzymeType);
+                    const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, enzymeType);
+                    const isClassic = enzymeType === 'CLASSIC_ENZYME';
 
                     return (
                       <div
@@ -583,9 +638,30 @@ export default function AdminEcoEnzymePage() {
                             )}
                           </div>
 
+                          <span
+                            className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                              isClassic
+                                ? 'bg-amber-50 text-amber-900 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            }`}
+                          >
+                            {enzymeMeta.label}
+                          </span>
+
                           <h3 className="font-bold text-stone-900 text-xs leading-snug line-clamp-2">
                             {batch.containerName}
                           </h3>
+
+                          <div className="text-[10px] text-stone-600 space-y-0.5 pt-0.5">
+                            <div className="truncate">
+                              {sweetenerMeta.label}:{' '}
+                              <strong className="text-amber-800">{formatWeight(batch.molassesKg)}</strong>
+                            </div>
+                            <div className="truncate">
+                              {enzymeMeta.materialShortLabel}:{' '}
+                              <strong className="text-emerald-800">{formatWeight(batch.organicWasteKg)}</strong>
+                            </div>
+                          </div>
                         </div>
 
                         {!isArchived && !isHarvested && !isFailed && !isReady ? (
@@ -738,22 +814,35 @@ export default function AdminEcoEnzymePage() {
                         isFailed,
                         isReady,
                       } = getBatchDisplayState(batch);
-                      const fruits = parseOrganicWasteTypes(batch.organicWasteTypes);
+                      const enzymeType = normalizeEnzymeType(batch.enzymeType);
+                      const enzymeMeta = getEnzymeTypeMeta(enzymeType);
+                      const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, enzymeType);
+                      const isClassic = enzymeType === 'CLASSIC_ENZYME';
+                      const fruits = parseOrganicWasteTypes(batch.organicWasteTypes, enzymeType);
 
                       return (
                         <tr key={batch.id} className="hover:bg-stone-50/70 transition-colors">
                           <td className="py-4 px-6 align-middle">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono text-xs font-black bg-[#012D1D] text-white px-2 py-0.5 rounded-md">
                                 {batch.batchCode || 'GL-01'}
                               </span>
                               <span className="font-bold text-stone-900 text-sm">
                                 {batch.containerName}
                               </span>
+                              <span
+                                className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  isClassic
+                                    ? 'bg-amber-50 text-amber-900 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                {enzymeMeta.label}
+                              </span>
                             </div>
                             {batch.organicWasteTypes && (
-                              <p className="text-[11px] text-stone-500 mt-1 max-w-[240px] truncate" title={batch.organicWasteTypes}>
-                                BO: {fruits.join(', ')}
+                              <p className="text-[11px] text-stone-500 mt-1 max-w-[260px] truncate" title={batch.organicWasteTypes}>
+                                {enzymeMeta.materialShortLabel}: {fruits.join(', ')}
                               </p>
                             )}
                           </td>
@@ -761,8 +850,8 @@ export default function AdminEcoEnzymePage() {
                           <td className="py-4 px-4 align-middle whitespace-nowrap text-stone-700">
                             <div className="space-y-0.5 text-[11px]">
                               <div>Air: <strong>{Number(batch.waterLiter)} L</strong></div>
-                              <div>Pemanis: <strong className="text-amber-800">{formatWeight(batch.molassesKg)}</strong></div>
-                              <div>BO: <strong className="text-emerald-800">{formatWeight(batch.organicWasteKg)}</strong></div>
+                              <div>{sweetenerMeta.label}: <strong className="text-amber-800">{formatWeight(batch.molassesKg)}</strong></div>
+                              <div>{enzymeMeta.materialShortLabel}: <strong className="text-emerald-800">{formatWeight(batch.organicWasteKg)}</strong></div>
                             </div>
                           </td>
 

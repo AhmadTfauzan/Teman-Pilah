@@ -1,61 +1,105 @@
 import { z } from "zod";
+import {
+  ENZYME_SWEETENER_TYPES,
+  ENZYME_TYPES,
+  getSweetenerValidationErrorMessage,
+  isSweetenerAllowedForEnzyme,
+} from "./eco-enzyme.utils";
 
-export const createBatchSchema = z.object({
-  batchCode: z.string().optional(),
-  containerName: z.string().min(1, "Nama wadah/drum wajib diisi"),
-  containerCapacityLiter: z.coerce.number().positive("Kapasitas wadah harus lebih dari 0").optional().default(50),
-  molassesKg: z.coerce.number().positive("Berat gula/molase harus lebih dari 0"),
-  organicWasteKg: z.coerce.number().positive("Berat sampah organik harus lebih dari 0"),
-  waterLiter: z.coerce.number().positive("Volume air harus lebih dari 0"),
-  organicWasteTypes: z.string().optional().default("Kulit Buah Campur"),
-  startDate: z
-    .string()
-    .min(1, "Tanggal mulai wajib diisi")
-    .refine(
-      (val) => !isNaN(new Date(val).getTime()),
-      "Format tanggal mulai tidak valid",
-    ),
-  harvestEstimate: z
-    .string()
-    .refine(
-      (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
-      "Format tanggal panen tidak valid",
-    )
-    .optional(),
-  photoUrl: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  previousBatchId: z.string().nullable().optional(),
-  // publicCode sengaja dihilangkan/dilarang agar tidak bisa ditentukan atau di-inject via API
-});
+export const createBatchSchema = z
+  .object({
+    batchCode: z.string().optional(),
+    enzymeType: z.enum(ENZYME_TYPES).optional().default("ECO_ENZYME"),
+    sweetenerType: z.enum(ENZYME_SWEETENER_TYPES).optional(),
+    containerName: z.string().min(1, "Nama wadah/drum wajib diisi"),
+    containerCapacityLiter: z.coerce.number().positive("Kapasitas wadah harus lebih dari 0").optional().default(50),
+    molassesKg: z.coerce.number().positive("Berat gula/molase harus lebih dari 0"),
+    organicWasteKg: z.coerce.number().positive("Berat sampah organik harus lebih dari 0"),
+    waterLiter: z.coerce.number().positive("Volume air harus lebih dari 0"),
+    organicWasteTypes: z.string().optional(),
+    startDate: z
+      .string()
+      .min(1, "Tanggal mulai wajib diisi")
+      .refine(
+        (val) => !isNaN(new Date(val).getTime()),
+        "Format tanggal mulai tidak valid",
+      ),
+    harvestEstimate: z
+      .string()
+      .refine(
+        (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
+        "Format tanggal panen tidak valid",
+      )
+      .optional(),
+    photoUrl: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    previousBatchId: z.string().nullable().optional(),
+    // publicCode sengaja dihilangkan/dilarang agar tidak bisa ditentukan atau di-inject via API
+  })
+  .superRefine((data, ctx) => {
+    const enzymeType = data.enzymeType ?? "ECO_ENZYME";
+    if (
+      data.sweetenerType !== undefined &&
+      !isSweetenerAllowedForEnzyme(enzymeType, data.sweetenerType)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sweetenerType"],
+        message: getSweetenerValidationErrorMessage(
+          enzymeType,
+          data.sweetenerType,
+        ),
+      });
+    }
+  });
 
-export const updateBatchSchema = z.object({
-  containerName: z.string().min(1).optional(),
-  containerCapacityLiter: z.coerce.number().positive().optional(),
-  molassesKg: z.coerce.number().positive().optional(),
-  organicWasteKg: z.coerce.number().positive().optional(),
-  waterLiter: z.coerce.number().positive().optional(),
-  organicWasteTypes: z.string().optional(),
-  startDate: z
-    .string()
-    .refine(
-      (val) => val.trim() !== "" && !isNaN(new Date(val).getTime()),
-      "Format tanggal mulai tidak valid",
-    )
-    .optional(),
-  harvestEstimate: z
-    .string()
-    .refine(
-      (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
-      "Format tanggal panen tidak valid",
-    )
-    .optional(),
-  photoUrl: z.string().nullable().optional(),
-  status: z.enum(["IN_PROGRESS", "HARVESTED", "FAILED"]).optional(),
-  failureReason: z.enum(["KONTAMINASI_JAMUR_HITAM", "AROMA_BUSUK_MENYENGAT", "WADAH_BOCOR_RUSAK", "LAINNYA"]).nullable().optional(),
-  failureNotes: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  // publicCode sengaja dilarang agar tidak dapat diubah pada operasi update
-});
+export const updateBatchSchema = z
+  .object({
+    enzymeType: z.enum(ENZYME_TYPES).optional(),
+    sweetenerType: z.enum(ENZYME_SWEETENER_TYPES).optional(),
+    containerName: z.string().min(1).optional(),
+    containerCapacityLiter: z.coerce.number().positive().optional(),
+    molassesKg: z.coerce.number().positive().optional(),
+    organicWasteKg: z.coerce.number().positive().optional(),
+    waterLiter: z.coerce.number().positive().optional(),
+    organicWasteTypes: z.string().optional(),
+    startDate: z
+      .string()
+      .refine(
+        (val) => val.trim() !== "" && !isNaN(new Date(val).getTime()),
+        "Format tanggal mulai tidak valid",
+      )
+      .optional(),
+    harvestEstimate: z
+      .string()
+      .refine(
+        (val) => val.trim() === "" || !isNaN(new Date(val).getTime()),
+        "Format tanggal panen tidak valid",
+      )
+      .optional(),
+    photoUrl: z.string().nullable().optional(),
+    status: z.enum(["IN_PROGRESS", "HARVESTED", "FAILED"]).optional(),
+    failureReason: z.enum(["KONTAMINASI_JAMUR_HITAM", "AROMA_BUSUK_MENYENGAT", "WADAH_BOCOR_RUSAK", "LAINNYA"]).nullable().optional(),
+    failureNotes: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    // publicCode sengaja dilarang agar tidak dapat diubah pada operasi update
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.enzymeType !== undefined &&
+      data.sweetenerType !== undefined &&
+      !isSweetenerAllowedForEnzyme(data.enzymeType, data.sweetenerType)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sweetenerType"],
+        message: getSweetenerValidationErrorMessage(
+          data.enzymeType,
+          data.sweetenerType,
+        ),
+      });
+    }
+  });
 
 export const harvestBatchSchema = z.object({
   actualHarvestDate: z
@@ -92,6 +136,7 @@ export const createLogSchema = z.object({
 
 export const batchQuerySchema = z.object({
   status: z.enum(["ALL", "IN_PROGRESS", "FERMENTING", "READY_TO_HARVEST", "HARVESTED", "FAILED", "ARCHIVED"]).optional(),
+  enzymeType: z.enum(["ALL", "ECO_ENZYME", "CLASSIC_ENZYME"]).optional(),
   search: z.string().optional(),
   includeArchived: z
     .preprocess((val) => val === "true" || val === true || val === "1", z.boolean())

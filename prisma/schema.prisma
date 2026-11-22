@@ -195,10 +195,23 @@ enum EnzymeFailureReason {
   LAINNYA
 }
 
+enum EnzymeType {
+  ECO_ENZYME
+  CLASSIC_ENZYME
+}
+
+enum EnzymeSweetenerType {
+  MOLASE
+  GULA
+  MADU
+}
+
 model EcoEnzymeBatch {
   id                     String               @id @default(cuid())
   publicCode             String
   batchCode              String
+  enzymeType             EnzymeType           @default(ECO_ENZYME)
+  sweetenerType          EnzymeSweetenerType  @default(MOLASE)
   containerName          String
   containerCapacityLiter Decimal              @default(50) @db.Decimal(8, 2)
 
@@ -253,6 +266,7 @@ model EcoEnzymeBatch {
 
   @@index([publicCode])
   @@index([batchCode])
+  @@index([enzymeType])
   @@index([containerName])
   @@index([qrCodeId])
 }

@@ -9,6 +9,7 @@ export async function GET(req: Request) {
     const user = await authenticateRequest(req);
     const { searchParams } = new URL(req.url);
     const rawStatus = searchParams.get("status");
+    const enzymeType = searchParams.get("enzymeType");
     const search = searchParams.get("search");
     const rawIncludeArchived = searchParams.get("includeArchived") === "true";
     const page = searchParams.get("page");
@@ -19,6 +20,7 @@ export async function GET(req: Request) {
 
     const result = await getAllBatches({
       status,
+      enzymeType,
       search,
       includeArchived,
       page,

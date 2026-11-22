@@ -22,6 +22,7 @@ import {
   BookOpen,
   ShoppingBag,
   Archive,
+  Leaf,
 } from 'lucide-react';
 import { EcoEnzymeBatch } from '@/types';
 import { toast } from 'sonner';
@@ -29,7 +30,10 @@ import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElemen
 import {
   getDayPassed,
   getDaysRemaining,
+  getEnzymeTypeMeta,
   getFermentationProgress,
+  getSweetenerMeta,
+  normalizeEnzymeType,
   parseOrganicWasteTypes,
 } from '@/lib/eco-enzyme';
 import { buildBatchPath, buildBatchUrl, isTemporaryBaseUrl } from '@/lib/batch-url';
@@ -49,9 +53,14 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
   const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const enzymeType = normalizeEnzymeType(batch.enzymeType);
+  const enzymeMeta = getEnzymeTypeMeta(enzymeType);
+  const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, enzymeType);
+  const isClassicEnzyme = enzymeType === 'CLASSIC_ENZYME';
+
   const ingredients = React.useMemo(
-    () => parseOrganicWasteTypes(batch.organicWasteTypes),
-    [batch.organicWasteTypes]
+    () => parseOrganicWasteTypes(batch.organicWasteTypes, batch.enzymeType),
+    [batch.organicWasteTypes, batch.enzymeType]
   );
 
   const displayedIngredients = showAllIngredients
@@ -98,8 +107,8 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: `Batch Eco Enzyme ${batch.publicCode} - Teman Pilah`,
-          text: `Cek detail fermentasi Eco Enzyme (${batch.containerName}) di Teman Pilah!`,
+          title: `Batch ${enzymeMeta.label} ${batch.publicCode} - Teman Pilah`,
+          text: `Cek detail fermentasi ${enzymeMeta.label} (${batch.containerName}) di Teman Pilah!`,
           url,
         });
       } catch {
@@ -225,6 +234,22 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                 </span>
               )}
 
+              {/* ENZYME TYPE BADGE */}
+              <span
+                className={`inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full border ${
+                  isClassicEnzyme
+                    ? 'bg-orange-50 text-orange-800 border-orange-200'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                }`}
+              >
+                {isClassicEnzyme ? (
+                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-600" />
+                ) : (
+                  <Leaf className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600" />
+                )}
+                {enzymeMeta.label}
+              </span>
+
               {/* DYNAMIC STATUS BADGE */}
               {displayStatus === 'ARCHIVED' && (
                 <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-stone-100 text-stone-800 border border-stone-300">
@@ -259,9 +284,13 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                 {batch.containerName}
               </h1>
               <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-[#586154]">
-                <span className="flex items-center gap-1.5">
-                  <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2C5F2D] shrink-0" />
-                  Galon fermentasi Eco Enzyme Teman Pilah
+                <span className="flex items-start sm:items-center gap-1.5 leading-snug">
+                  <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2C5F2D] shrink-0 mt-0.5 sm:mt-0" />
+                  <span>
+                    {isClassicEnzyme
+                      ? `Classic Enzyme — Dibuat dari buah segar pilihan & ${sweetenerMeta.label.toLowerCase()} berkualitas untuk dikonsumsi/diminum`
+                      : `Eco Enzyme — Dibuat dari sampah organik (kulit buah/sayur) & ${sweetenerMeta.label.toLowerCase()} (untuk kebersihan & pupuk alami)`}
+                  </span>
                 </span>
                 <span className="hidden sm:inline text-stone-300">•</span>
                 <span className="flex items-center gap-1 text-[10px] sm:text-[11px] text-stone-500">
@@ -421,7 +450,9 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2 text-xs">
               <div className="bg-amber-50/70 px-2 py-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border border-amber-200 flex sm:flex-col items-center justify-between sm:justify-center sm:text-center gap-1">
-                <span className="text-[10px] text-amber-800 font-semibold">Pemanis / Gula</span>
+                <span className="text-[10px] text-amber-800 font-semibold">
+                  Pemanis ({sweetenerMeta.label})
+                </span>
                 <span className="text-xs sm:text-base font-black text-amber-900 whitespace-nowrap">
                   {Number(batch.molassesKg) < 1
                     ? `${Math.round(Number(batch.molassesKg) * 1000)} gr`
@@ -429,7 +460,9 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                 </span>
               </div>
               <div className="bg-emerald-50/70 px-2 py-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border border-emerald-200 flex sm:flex-col items-center justify-between sm:justify-center sm:text-center gap-1">
-                <span className="text-[10px] text-emerald-800 font-semibold">Sampah BO</span>
+                <span className="text-[10px] text-emerald-800 font-semibold">
+                  {enzymeMeta.materialShortLabel}
+                </span>
                 <span className="text-xs sm:text-base font-black text-emerald-900 whitespace-nowrap">
                   {Number(batch.organicWasteKg) < 1
                     ? `${Math.round(Number(batch.organicWasteKg) * 1000)} gr`
@@ -450,13 +483,17 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
         <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-[#E3E8DC] shadow-sm space-y-3 sm:space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-[#2C5F2D] uppercase tracking-wider">
-              <Apple className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Komponen Bahan Organik ({ingredients.length} Jenis)
+              <Apple className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> {enzymeMeta.ingredientsTitle} ({ingredients.length} Jenis)
             </div>
-            <span className="text-[10px] sm:text-[11px] text-stone-500 font-medium">Bahan Kulit Buah Segar</span>
+            <span className="text-[10px] sm:text-[11px] text-stone-500 font-medium">
+              {enzymeMeta.ingredientsSubtitle}
+            </span>
           </div>
 
           <p className="text-[11px] sm:text-xs text-[#586154] leading-relaxed">
-            Kombinasi aneka kulit buah manis dan asam segar memperkaya variasi enzim proteolitik, amilase, dan aroma harum alami.
+            {isClassicEnzyme
+              ? 'Kombinasi buah segar pilihan berkualitas untuk dikonsumsi/diminum, menghasilkan cita rasa alami, aroma segar, dan kandungan enzim yang kaya.'
+              : 'Kombinasi aneka kulit buah dan sisa sayur organik memperkaya variasi enzim proteolitik, amilase, dan aroma alami untuk kebersihan & pupuk.'}
           </p>
 
           {/* CHIP LIST */}
@@ -488,7 +525,8 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
               ) : (
                 <>
                   <ChevronDown className="w-4 h-4" />
-                  Lihat Semua ({ingredients.length} Jenis Kulit Buah)
+                  Lihat Semua ({ingredients.length}{' '}
+                  {isClassicEnzyme ? 'Jenis Buah Segar' : 'Jenis Kulit Buah/Sayur'})
                 </>
               )}
             </button>
@@ -574,10 +612,12 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
               Gerakan Peduli Lingkungan Teman Pilah
             </span>
             <h3 className="text-lg sm:text-2xl font-black mt-1">
-              Ingin Membuat Eco Enzyme Sendiri?
+              Ingin Membuat {enzymeMeta.label} Sendiri?
             </h3>
             <p className="text-xs sm:text-sm text-white/80 mt-1 leading-relaxed">
-              Mulai dari dapur Anda! Cukup pilah sampah kulit buah dan ikuti kalkulator perbandingan 1 : 3 : 10 gratis kami.
+              {isClassicEnzyme
+                ? 'Mulai dari rumah Anda! Pilih buah segar berkualitas dengan madu/gula dan ikuti kalkulator perbandingan 1 : 3 : 10 gratis kami.'
+                : 'Mulai dari dapur Anda! Cukup pilah sampah kulit buah/sayur dan ikuti kalkulator perbandingan 1 : 3 : 10 gratis kami.'}
             </p>
           </div>
 
@@ -587,7 +627,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
               className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-[#2C5F2D] hover:bg-[#387639] text-white text-xs font-bold rounded-xl shadow-md transition-all"
             >
               <BookOpen className="w-4 h-4 shrink-0" />
-              Pelajari cara membuat Eco Enzyme
+              Pelajari cara membuat {enzymeMeta.label}
             </Link>
 
             <Link
@@ -602,7 +642,7 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
           <div className="pt-2 border-t border-white/10 flex justify-center">
             <a
               href={`https://wa.me/${COMMUNITY_WHATSAPP}?text=${encodeURIComponent(
-                `Halo komunitas Teman Pilah, saya memindai QR Code batch ${batch.publicCode} (${batch.containerName}) dan ingin bertanya tentang program Eco Enzyme.`
+                `Halo komunitas Teman Pilah, saya memindai QR Code batch ${batch.publicCode} (${batch.containerName}) dan ingin bertanya tentang program ${enzymeMeta.label}.`
               )}`}
               target="_blank"
               rel="noopener noreferrer"

@@ -187,6 +187,10 @@ export interface EcoEnzymeVideoItem {
   updatedAt?: string;
 }
 
+export type EnzymeType = 'ECO_ENZYME' | 'CLASSIC_ENZYME';
+
+export type EnzymeSweetenerType = 'MOLASE' | 'GULA' | 'MADU';
+
 export type EcoEnzymeBatchStatus =
   | 'IN_PROGRESS'
   | 'HARVESTED'
@@ -230,6 +234,8 @@ export interface EcoEnzymeBatch {
   id: string;
   publicCode: string;
   batchCode: string;
+  enzymeType?: EnzymeType;
+  sweetenerType?: EnzymeSweetenerType;
   containerName: string;
   containerCapacityLiter: number;
   molassesKg: number;

@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getBatchByPublicCode } from '@/lib/server/eco-enzyme-service';
 import { AppError } from '@/lib/server/error';
+import { getEnzymeTypeMeta, getSweetenerMeta } from '@/lib/eco-enzyme';
 import { EcoEnzymeBatch } from '@/types';
 import { BatchDetailClient } from './BatchDetailClient';
 
@@ -44,10 +45,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const enzymeMeta = getEnzymeTypeMeta(batch.enzymeType);
+  const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, batch.enzymeType);
   const isArchived = Boolean(batch.archivedAt || batch.status === 'ARCHIVED');
   const prefix = isArchived ? '[Diarsipkan] ' : '';
-  const title = `${prefix}Batch ${batch.publicCode} (${batch.containerName}) | Teman Pilah Eco Enzyme`;
-  const description = `Pantau proses fermentasi Eco Enzyme untuk wadah ${batch.containerName}. Rasio 1:3:10 dengan komposisi: ${batch.organicWasteTypes}.`;
+  const title = `${prefix}Batch ${batch.publicCode} (${batch.containerName}) | Teman Pilah ${enzymeMeta.label}`;
+  const description = `Pantau proses fermentasi ${enzymeMeta.label} untuk wadah ${batch.containerName}. Rasio 1:3:10 (${sweetenerMeta.label}) dengan komposisi: ${batch.organicWasteTypes}.`;
 
   return {
     title,

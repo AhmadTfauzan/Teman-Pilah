@@ -17,8 +17,14 @@ import {
 import { generatePublicBatchCode, normalizeBatchCode } from "../../utils/code";
 import {
   computeBatchDayPassed,
+  DEFAULT_WASTE_TYPES_BY_ENZYME,
+  EnzymeSweetenerTypeValue,
+  EnzymeTypeValue,
   FERMENTATION_DAYS,
+  getDefaultSweetenerForEnzyme,
+  getSweetenerValidationErrorMessage,
   isBatchReadyToHarvest,
+  isSweetenerAllowedForEnzyme,
   redactPublicEcoEnzymeBatch,
 } from "./eco-enzyme.utils";
 
@@ -140,6 +146,7 @@ export class EcoEnzymeService {
       skip,
       take,
       status: query.status,
+      enzymeType: query.enzymeType,
       search: query.search,
       includeArchived: isAdmin ? query.includeArchived : false,
       includeNotesSearch: isAdmin,
@@ -206,6 +213,8 @@ export class EcoEnzymeService {
       id: enriched.id,
       publicCode: enriched.publicCode,
       batchCode: enriched.batchCode,
+      enzymeType: enriched.enzymeType,
+      sweetenerType: enriched.sweetenerType,
       containerName: enriched.containerName,
       startDate: enriched.startDate,
       harvestEstimate: enriched.harvestEstimate,
@@ -336,6 +345,17 @@ export class EcoEnzymeService {
   }
 
   async createBatch(input: CreateBatchInput): Promise<EcoEnzymeBatch & { reusedQr?: boolean }> {
+    const enzymeType: EnzymeTypeValue = input.enzymeType ?? "ECO_ENZYME";
+    const sweetenerType: EnzymeSweetenerTypeValue =
+      input.sweetenerType ?? getDefaultSweetenerForEnzyme(enzymeType);
+
+    if (!isSweetenerAllowedForEnzyme(enzymeType, sweetenerType)) {
+      throw new AppError(
+        getSweetenerValidationErrorMessage(enzymeType, sweetenerType),
+        400,
+      );
+    }
+
     const startDate = new Date(input.startDate);
     if (isNaN(startDate.getTime())) {
       throw new AppError("Format tanggal mulai tidak valid", 400);
@@ -363,15 +383,21 @@ export class EcoEnzymeService {
       startDate,
     });
 
+    const organicWasteTypes =
+      input.organicWasteTypes?.trim() ||
+      DEFAULT_WASTE_TYPES_BY_ENZYME[enzymeType];
+
     const created = await this.ecoEnzymeRepository.create({
       publicCode: qrCode.code,
       batchCode,
+      enzymeType,
+      sweetenerType,
       containerName: input.containerName,
       containerCapacityLiter: input.containerCapacityLiter ?? 50,
       molassesKg: input.molassesKg,
       organicWasteKg: input.organicWasteKg,
       waterLiter: input.waterLiter,
-      organicWasteTypes: input.organicWasteTypes ?? "Kulit Buah Campur",
+      organicWasteTypes,
       startDate,
       harvestEstimate,
       photoUrl: input.photoUrl,
@@ -408,6 +434,22 @@ export class EcoEnzymeService {
       );
     }
 
+    // Validasi kombinasi enzymeType dan sweetenerType terhadap nilai baru maupun nilai existing
+    const nextEnzymeType: EnzymeTypeValue =
+      input.enzymeType ?? existing.enzymeType;
+    const nextSweetenerType: EnzymeSweetenerTypeValue =
+      input.sweetenerType ?? existing.sweetenerType;
+
+    if (
+      (input.enzymeType !== undefined || input.sweetenerType !== undefined) &&
+      !isSweetenerAllowedForEnzyme(nextEnzymeType, nextSweetenerType)
+    ) {
+      throw new AppError(
+        getSweetenerValidationErrorMessage(nextEnzymeType, nextSweetenerType),
+        400,
+      );
+    }
+
     // Aturan bisnis: batch yang sudah HARVESTED terkunci dari perubahan formula dan tanggal mulai
     if (existing.status === "HARVESTED") {
       if (
@@ -422,6 +464,8 @@ export class EcoEnzymeService {
 
     const updateData: any = {};
 
+    if (input.enzymeType !== undefined) updateData.enzymeType = input.enzymeType;
+    if (input.sweetenerType !== undefined) updateData.sweetenerType = input.sweetenerType;
     if (input.containerName !== undefined) updateData.containerName = input.containerName;
     if (input.containerCapacityLiter !== undefined) updateData.containerCapacityLiter = input.containerCapacityLiter;
     if (input.molassesKg !== undefined) updateData.molassesKg = input.molassesKg;

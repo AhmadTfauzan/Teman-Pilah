@@ -1,6 +1,13 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_FERMENTATION_DAYS, formatDateInputWib } from "@/lib/eco-enzyme";
+import {
+  DEFAULT_FERMENTATION_DAYS,
+  formatDateInputWib,
+  getDefaultSweetenerForEnzyme,
+  getEnzymeTypeMeta,
+  getSweetenerMeta,
+  isSweetenerAllowedForEnzyme,
+} from "@/lib/eco-enzyme";
 import { AppError } from "./error";
 import { parsePagination, buildPaginationMeta } from "./pagination";
 import { normalizeBatchCode } from "./code";
@@ -9,6 +16,8 @@ import {
   EnzymeBatchStatus,
   EnzymeFailureReason,
   EnzymeResidueUsage,
+  EnzymeSweetenerType,
+  EnzymeType,
   Prisma,
   StockLabel,
 } from "@prisma/client";
@@ -16,6 +25,50 @@ import {
 const MS_PER_DAY = 86_400_000;
 const VALID_BATCH_STATUSES = new Set<string>(Object.values(EnzymeBatchStatus));
 const VALID_FAILURE_REASONS = new Set<string>(Object.values(EnzymeFailureReason));
+const VALID_ENZYME_TYPES = new Set<string>(Object.values(EnzymeType));
+const VALID_SWEETENER_TYPES = new Set<string>(Object.values(EnzymeSweetenerType));
+
+function parseStrictEnzymeType(value: unknown): EnzymeType {
+  if (typeof value !== "string") {
+    throw new AppError("Jenis enzim tidak valid", 400);
+  }
+  const normalized = value.trim().toUpperCase();
+  if (!VALID_ENZYME_TYPES.has(normalized)) {
+    throw new AppError(
+      "Jenis enzim tidak valid. Pilih ECO_ENZYME atau CLASSIC_ENZYME",
+      400
+    );
+  }
+  return normalized as EnzymeType;
+}
+
+function parseStrictSweetenerType(value: unknown): EnzymeSweetenerType {
+  if (typeof value !== "string") {
+    throw new AppError("Jenis pemanis tidak valid", 400);
+  }
+  const normalized = value.trim().toUpperCase();
+  if (!VALID_SWEETENER_TYPES.has(normalized)) {
+    throw new AppError(
+      "Jenis pemanis tidak valid. Pilih MOLASE, GULA, atau MADU",
+      400
+    );
+  }
+  return normalized as EnzymeSweetenerType;
+}
+
+function assertSweetenerAllowed(
+  enzymeType: EnzymeType,
+  sweetenerType: EnzymeSweetenerType
+): void {
+  if (!isSweetenerAllowedForEnzyme(enzymeType, sweetenerType)) {
+    throw new AppError(
+      enzymeType === EnzymeType.CLASSIC_ENZYME
+        ? "Classic Enzyme hanya mendukung pemanis Madu atau Gula"
+        : "Eco Enzyme hanya mendukung pemanis Molase atau Gula",
+      400
+    );
+  }
+}
 
 const ACTIVE_NEXT_BATCHES_INCLUDE = {
   where: { archivedAt: null },
@@ -159,6 +212,7 @@ export function enrichBatchDynamicStatus<T extends BatchDynamicStatusTarget>(
 
 export async function getAllBatches(params: {
   status?: string | null;
+  enzymeType?: string | null;
   search?: string | null;
   includeArchived?: boolean | null;
   page?: string | null;
@@ -168,6 +222,17 @@ export async function getAllBatches(params: {
   const now = new Date();
   const cutoffDate = getReadyCutoffDate(now);
   const andConditions: Prisma.EcoEnzymeBatchWhereInput[] = [];
+
+  const normalizedEnzymeType =
+    typeof params.enzymeType === "string"
+      ? params.enzymeType.trim().toUpperCase()
+      : "";
+  if (
+    normalizedEnzymeType === EnzymeType.ECO_ENZYME ||
+    normalizedEnzymeType === EnzymeType.CLASSIC_ENZYME
+  ) {
+    andConditions.push({ enzymeType: normalizedEnzymeType as EnzymeType });
+  }
 
   if (params.status === "ARCHIVED") {
     andConditions.push({ archivedAt: { not: null } });
@@ -319,6 +384,8 @@ export async function getBatchByPublicCode(publicCode: string) {
     id: enriched.id,
     publicCode: enriched.publicCode,
     batchCode: enriched.batchCode,
+    enzymeType: enriched.enzymeType,
+    sweetenerType: enriched.sweetenerType,
     containerName: enriched.containerName,
     startDate: enriched.startDate,
     harvestEstimate: enriched.harvestEstimate,
@@ -355,6 +422,8 @@ export async function getBatchByPublicCode(publicCode: string) {
 
 export async function createBatch(input: {
   batchCode?: string;
+  enzymeType?: string;
+  sweetenerType?: string;
   containerName: string;
   containerCapacityLiter?: number;
   molassesKg: number;
@@ -373,13 +442,47 @@ export async function createBatch(input: {
     throw new AppError("Nama wadah wajib diisi", 400);
   }
 
-  const molassesKg = parsePositiveNumber(input.molassesKg, "Takaran pemanis (molassesKg)");
-  const organicWasteKg = parsePositiveNumber(input.organicWasteKg, "Takaran bahan organik (organicWasteKg)");
+  const enzymeType =
+    input.enzymeType !== undefined && input.enzymeType !== null
+      ? parseStrictEnzymeType(input.enzymeType)
+      : EnzymeType.ECO_ENZYME;
+
+  const sweetenerType =
+    input.sweetenerType !== undefined && input.sweetenerType !== null
+      ? parseStrictSweetenerType(input.sweetenerType)
+      : getDefaultSweetenerForEnzyme(enzymeType);
+
+  assertSweetenerAllowed(enzymeType, sweetenerType);
+
+  const enzymeMeta = getEnzymeTypeMeta(enzymeType);
+  const sweetenerMeta = getSweetenerMeta(sweetenerType, enzymeType);
+
+  const molassesKg = parsePositiveNumber(
+    input.molassesKg,
+    `Takaran pemanis ${sweetenerMeta.label} (molassesKg)`
+  );
+  const organicWasteKg = parsePositiveNumber(
+    input.organicWasteKg,
+    `Takaran ${enzymeMeta.materialShortLabel} (organicWasteKg)`
+  );
   const waterLiter = parsePositiveNumber(input.waterLiter, "Takaran air (waterLiter)");
   const containerCapacityLiter =
     input.containerCapacityLiter !== undefined && input.containerCapacityLiter !== null
       ? parsePositiveNumber(input.containerCapacityLiter, "Kapasitas wadah")
       : 50;
+
+  if (
+    input.organicWasteTypes !== undefined &&
+    input.organicWasteTypes !== null &&
+    typeof input.organicWasteTypes !== "string"
+  ) {
+    throw new AppError("Komposisi bahan organik harus berupa teks", 400);
+  }
+  const trimmedOrganicWasteTypes =
+    typeof input.organicWasteTypes === "string"
+      ? input.organicWasteTypes.trim()
+      : "";
+  const organicWasteTypes = trimmedOrganicWasteTypes || enzymeMeta.defaultIngredients;
 
   const startDate = parseRequiredDate(input.startDate, "Format tanggal mulai tidak valid");
 
@@ -424,12 +527,14 @@ export async function createBatch(input: {
     data: {
       publicCode: qrCode.code,
       batchCode,
+      enzymeType,
+      sweetenerType,
       containerName,
       containerCapacityLiter,
       molassesKg,
       organicWasteKg,
       waterLiter,
-      organicWasteTypes: input.organicWasteTypes ?? "Kulit Buah Campur",
+      organicWasteTypes,
       startDate,
       harvestEstimate,
       photoUrl: input.photoUrl,
@@ -488,13 +593,44 @@ export async function updateBatch(id: string, input: Record<string, unknown>) {
     );
   }
 
+  const parsedEnzymeType =
+    input.enzymeType !== undefined
+      ? parseStrictEnzymeType(input.enzymeType)
+      : undefined;
+  const nextEnzymeType: EnzymeType = parsedEnzymeType ?? existing.enzymeType;
+
+  const parsedSweetenerType =
+    input.sweetenerType !== undefined
+      ? parseStrictSweetenerType(input.sweetenerType)
+      : undefined;
+
+  let nextSweetenerType: EnzymeSweetenerType = existing.sweetenerType;
+  if (parsedSweetenerType !== undefined) {
+    assertSweetenerAllowed(nextEnzymeType, parsedSweetenerType);
+    nextSweetenerType = parsedSweetenerType;
+  } else if (
+    parsedEnzymeType !== undefined &&
+    !isSweetenerAllowedForEnzyme(nextEnzymeType, existing.sweetenerType)
+  ) {
+    nextSweetenerType = getDefaultSweetenerForEnzyme(nextEnzymeType);
+  }
+
+  const nextEnzymeMeta = getEnzymeTypeMeta(nextEnzymeType);
+  const nextSweetenerMeta = getSweetenerMeta(nextSweetenerType, nextEnzymeType);
+
   const parsedMolassesKg =
     input.molassesKg !== undefined
-      ? parsePositiveNumber(input.molassesKg, "Takaran pemanis (molassesKg)")
+      ? parsePositiveNumber(
+          input.molassesKg,
+          `Takaran pemanis ${nextSweetenerMeta.label} (molassesKg)`
+        )
       : undefined;
   const parsedOrganicWasteKg =
     input.organicWasteKg !== undefined
-      ? parsePositiveNumber(input.organicWasteKg, "Takaran bahan organik (organicWasteKg)")
+      ? parsePositiveNumber(
+          input.organicWasteKg,
+          `Takaran ${nextEnzymeMeta.materialShortLabel} (organicWasteKg)`
+        )
       : undefined;
   const parsedWaterLiter =
     input.waterLiter !== undefined
@@ -511,6 +647,9 @@ export async function updateBatch(id: string, input: Record<string, unknown>) {
       ? parseRequiredDate(input.harvestEstimate, "Format tanggal panen tidak valid")
       : undefined;
 
+  const enzymeTypeChanged = nextEnzymeType !== existing.enzymeType;
+  const sweetenerTypeChanged = nextSweetenerType !== existing.sweetenerType;
+
   if (existing.status === "HARVESTED") {
     const molassesChanged =
       parsedMolassesKg !== undefined && parsedMolassesKg !== Number(existing.molassesKg);
@@ -523,14 +662,25 @@ export async function updateBatch(id: string, input: Record<string, unknown>) {
       parsedStartDate !== undefined &&
       parsedStartDate.getTime() !== existing.startDate.getTime();
 
-    if (molassesChanged || wasteChanged || waterChanged || startDateChanged) {
+    if (
+      molassesChanged ||
+      wasteChanged ||
+      waterChanged ||
+      startDateChanged ||
+      enzymeTypeChanged ||
+      sweetenerTypeChanged
+    ) {
       throw new AppError(
-        "Formula dan tanggal mulai batch yang sudah dipanen tidak dapat diubah",
+        "Formula, jenis enzim/pemanis, dan tanggal mulai batch yang sudah dipanen tidak dapat diubah",
         400
       );
     }
   }
 
+  if (parsedEnzymeType !== undefined) updateData.enzymeType = nextEnzymeType;
+  if (parsedSweetenerType !== undefined || sweetenerTypeChanged) {
+    updateData.sweetenerType = nextSweetenerType;
+  }
   if (parsedMolassesKg !== undefined) updateData.molassesKg = parsedMolassesKg;
   if (parsedOrganicWasteKg !== undefined) updateData.organicWasteKg = parsedOrganicWasteKg;
   if (parsedWaterLiter !== undefined) updateData.waterLiter = parsedWaterLiter;

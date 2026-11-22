@@ -2,10 +2,160 @@
  * Shared Eco Enzyme helpers used by the public hub tracker,
  * admin forms, and the QR batch detail page so progress and WIB date math stay in one place.
  */
+import type { EnzymeSweetenerType, EnzymeType } from '@/types';
 
 export const DEFAULT_FERMENTATION_DAYS = 90;
 const WIB_TIMEZONE = 'Asia/Jakarta';
 const MS_PER_DAY = 86_400_000;
+
+export interface EnzymeTypeMeta {
+  value: EnzymeType;
+  label: string;
+  shortDescription: string;
+  badgeText: string;
+  materialLabel: string;
+  materialShortLabel: string;
+  ingredientsTitle: string;
+  ingredientsSubtitle: string;
+  ingredientsPlaceholder: string;
+  ingredientsHelper: string;
+  defaultIngredients: string;
+}
+
+export interface EnzymeSweetenerMeta {
+  value: EnzymeSweetenerType;
+  label: string;
+  description: string;
+}
+
+const ALLOWED_SWEETENERS_BY_ENZYME: Record<EnzymeType, readonly EnzymeSweetenerType[]> = {
+  ECO_ENZYME: ['MOLASE', 'GULA'],
+  CLASSIC_ENZYME: ['MADU', 'GULA'],
+};
+
+const DEFAULT_SWEETENER_BY_ENZYME: Record<EnzymeType, EnzymeSweetenerType> = {
+  ECO_ENZYME: 'MOLASE',
+  CLASSIC_ENZYME: 'MADU',
+};
+
+const FALLBACK_INGREDIENT_BY_ENZYME: Record<EnzymeType, string> = {
+  ECO_ENZYME: 'Kulit Buah Campur',
+  CLASSIC_ENZYME: 'Buah Segar Pilihan',
+};
+
+const ENZYME_TYPE_META: Record<EnzymeType, EnzymeTypeMeta> = {
+  ECO_ENZYME: {
+    value: 'ECO_ENZYME',
+    label: 'Eco Enzyme',
+    shortDescription: 'Dibuat dari sampah organik (kulit buah/sayur)',
+    badgeText: 'Eco Enzyme (Non-Konsumsi)',
+    materialLabel: 'Sampah Organik (BO)',
+    materialShortLabel: 'Sampah BO',
+    ingredientsTitle: 'Komponen Bahan Organik',
+    ingredientsSubtitle: 'Bahan Kulit Buah & Sayur',
+    ingredientsPlaceholder: 'cth. Kulit Jeruk, Kulit Nanas, Kulit Pepaya, Sisa Sayuran',
+    ingredientsHelper:
+      'Catat jenis sampah organik (kulit buah atau sisa sayuran) yang digunakan, pisahkan dengan koma.',
+    defaultIngredients: 'Kulit Jeruk, Kulit Nanas, Kulit Pepaya, Kulit Semangka',
+  },
+  CLASSIC_ENZYME: {
+    value: 'CLASSIC_ENZYME',
+    label: 'Classic Enzyme',
+    shortDescription:
+      'Dibuat dari buah segar pilihan & madu/gula berkualitas (untuk dikonsumsi/diminum)',
+    badgeText: 'Classic Enzyme (Konsumsi / Diminum)',
+    materialLabel: 'Buah Segar Pilihan',
+    materialShortLabel: 'Buah Segar',
+    ingredientsTitle: 'Komponen Buah Segar Pilihan',
+    ingredientsSubtitle: 'Buah Segar Pilihan Berkualitas',
+    ingredientsPlaceholder: 'cth. Semangka, Melon, Nanas, Pepaya, Mangga',
+    ingredientsHelper:
+      'Catat jenis buah segar pilihan berkualitas yang digunakan untuk konsumsi/diminum, pisahkan dengan koma.',
+    defaultIngredients: 'Semangka, Melon, Nanas, Pepaya, Mangga',
+  },
+};
+
+const SWEETENER_META: Record<EnzymeSweetenerType, EnzymeSweetenerMeta> = {
+  MOLASE: {
+    value: 'MOLASE',
+    label: 'Molase',
+    description: 'Tetes tebu/molase untuk fermentasi Eco Enzyme non-konsumsi.',
+  },
+  GULA: {
+    value: 'GULA',
+    label: 'Gula',
+    description: 'Gula merah/gula tebu sebagai sumber karbon fermentasi.',
+  },
+  MADU: {
+    value: 'MADU',
+    label: 'Madu',
+    description: 'Madu murni berkualitas untuk fermentasi Classic Enzyme siap konsumsi.',
+  },
+};
+
+export function normalizeEnzymeType(value?: string | null): EnzymeType {
+  if (typeof value === 'string' && value.trim().toUpperCase() === 'CLASSIC_ENZYME') {
+    return 'CLASSIC_ENZYME';
+  }
+  return 'ECO_ENZYME';
+}
+
+export function getAllowedSweetenersForEnzyme(
+  enzymeType?: EnzymeType | string | null
+): EnzymeSweetenerType[] {
+  const normalized = normalizeEnzymeType(enzymeType);
+  return [...ALLOWED_SWEETENERS_BY_ENZYME[normalized]];
+}
+
+export function getDefaultSweetenerForEnzyme(
+  enzymeType?: EnzymeType | string | null
+): EnzymeSweetenerType {
+  return DEFAULT_SWEETENER_BY_ENZYME[normalizeEnzymeType(enzymeType)];
+}
+
+export function isSweetenerAllowedForEnzyme(
+  enzymeType?: EnzymeType | string | null,
+  sweetenerType?: EnzymeSweetenerType | string | null
+): boolean {
+  if (typeof sweetenerType !== 'string') return false;
+  const candidate = sweetenerType.trim().toUpperCase();
+  return ALLOWED_SWEETENERS_BY_ENZYME[normalizeEnzymeType(enzymeType)].includes(
+    candidate as EnzymeSweetenerType
+  );
+}
+
+export function normalizeSweetenerForEnzyme(
+  sweetenerType?: string | null,
+  enzymeType?: EnzymeType | string | null
+): EnzymeSweetenerType {
+  if (typeof sweetenerType === 'string') {
+    const candidate = sweetenerType.trim().toUpperCase();
+    if (isSweetenerAllowedForEnzyme(enzymeType, candidate)) {
+      return candidate as EnzymeSweetenerType;
+    }
+  }
+  return getDefaultSweetenerForEnzyme(enzymeType);
+}
+
+export function getEnzymeTypeMeta(enzymeType?: EnzymeType | string | null): EnzymeTypeMeta {
+  return ENZYME_TYPE_META[normalizeEnzymeType(enzymeType)];
+}
+
+export function getSweetenerMeta(
+  sweetenerType?: EnzymeSweetenerType | string | null,
+  enzymeType?: EnzymeType | string | null
+): EnzymeSweetenerMeta {
+  if (enzymeType != null) {
+    return SWEETENER_META[normalizeSweetenerForEnzyme(sweetenerType, enzymeType)];
+  }
+  if (typeof sweetenerType === 'string') {
+    const candidate = sweetenerType.trim().toUpperCase() as EnzymeSweetenerType;
+    if (candidate in SWEETENER_META) {
+      return SWEETENER_META[candidate];
+    }
+  }
+  return SWEETENER_META[getDefaultSweetenerForEnzyme(enzymeType)];
+}
 
 const wibDateFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: WIB_TIMEZONE,
@@ -14,13 +164,17 @@ const wibDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
 });
 
-export function parseOrganicWasteTypes(value?: string | null): string[] {
-  if (!value) return ['Kulit Buah Campur'];
+export function parseOrganicWasteTypes(
+  value?: string | null,
+  enzymeType?: EnzymeType | string | null
+): string[] {
+  const fallback = FALLBACK_INGREDIENT_BY_ENZYME[normalizeEnzymeType(enzymeType)];
+  if (!value) return [fallback];
   const items = value
     .split(/[,;\n]+/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
-  return items.length > 0 ? items : ['Kulit Buah Campur'];
+  return items.length > 0 ? items : [fallback];
 }
 
 export function getFermentationProgress(

@@ -19,7 +19,12 @@ import { EcoEnzymeBatch, QrCodeRecord } from '@/types';
 import { getSiteUrl } from '@/lib/api-config';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
 import { buildBatchUrl, isTemporaryBaseUrl } from '@/lib/batch-url';
-import { parseOrganicWasteTypes } from '@/lib/eco-enzyme';
+import {
+  getEnzymeTypeMeta,
+  getSweetenerMeta,
+  normalizeEnzymeType,
+  parseOrganicWasteTypes,
+} from '@/lib/eco-enzyme';
 import { PersistentQrCode } from '@/components/shared/PersistentQrCode';
 import { toast } from 'sonner';
 
@@ -296,9 +301,19 @@ function EcoEnzymeQrModalContent({
     baseUrl: isPublicView ? publicBaseUrl : effectiveCustomBaseUrl || undefined,
   });
 
-  const organicItems = parseOrganicWasteTypes(batch.organicWasteTypes);
+  const enzymeType = normalizeEnzymeType(batch.enzymeType);
+  const enzymeMeta = getEnzymeTypeMeta(enzymeType);
+  const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, enzymeType);
+  const isClassicEnzyme = enzymeType === 'CLASSIC_ENZYME';
+  const consumptionHint = isClassicEnzyme ? 'Konsumsi / Minum' : 'Non-Konsumsi';
+  const labelHeadline = isClassicEnzyme
+    ? 'CLASSIC ENZYME FERMENTASI'
+    : 'ECO ENZYME FERMENTASI';
+  const badgeLabel = isClassicEnzyme ? 'CLASSIC ENZYME' : 'ECO ENZYME';
 
-  // Format Gula/Madu (gr jika < 1 kg, kg jika >= 1 kg)
+  const organicItems = parseOrganicWasteTypes(batch.organicWasteTypes, enzymeType);
+
+  // Format Pemanis (gr jika < 1 kg, kg jika >= 1 kg)
   const molassesDisplay =
     Number(batch.molassesKg) < 1
       ? `${Math.round(Number(batch.molassesKg) * 1000)} gr`
@@ -375,8 +390,8 @@ function EcoEnzymeQrModalContent({
         3
       );
 
-      const boxY = 336;
-      const wadahStartY = 360;
+      const boxY = 360;
+      const wadahStartY = 384;
       const afterWadahY = wadahStartY + Math.max(0, containerLines.length - 1) * 17;
       const startDateY = afterWadahY + 24;
       const harvestDateY = startDateY + 22;
@@ -390,7 +405,7 @@ function EcoEnzymeQrModalContent({
       const boxHeight = Math.max(252, afterBoY - boxY + 22);
       const footerY1 = boxY + boxHeight + 27;
       const footerY2 = footerY1 + 20;
-      const height = Math.max(670, footerY2 + 35);
+      const height = Math.max(694, footerY2 + 35);
 
       exportCanvas.width = width * scale;
       exportCanvas.height = height * scale;
@@ -422,9 +437,9 @@ function EcoEnzymeQrModalContent({
       ctx.textAlign = 'center';
       ctx.fillText('TEMAN PILAH', width / 2, 42, 240);
 
-      ctx.fillStyle = '#2C5F2D';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('ECO ENZYME FERMENTASI', width / 2, 62, 240);
+      ctx.fillStyle = isClassicEnzyme ? '#B45309' : '#2C5F2D';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(labelHeadline, width / 2, 62, 240);
 
       // Gambar Logo Telkom di Kanan
       if (telkomLogo) {
@@ -441,24 +456,35 @@ function EcoEnzymeQrModalContent({
       ctx.lineTo(width - 26, 78);
       ctx.stroke();
 
+      // Enzyme Type Pill Badge
+      ctx.fillStyle = isClassicEnzyme ? '#FEF3C7' : '#ECFDF5';
+      ctx.fillRect(40, 86, width - 80, 22);
+      ctx.strokeStyle = isClassicEnzyme ? '#F59E0B' : '#10B981';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(40, 86, width - 80, 22);
+
+      ctx.fillStyle = isClassicEnzyme ? '#92400E' : '#065F46';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(`${badgeLabel} • ${consumptionHint}`, width / 2, 101, width - 96);
+
       // Kode Galon Badge
       ctx.fillStyle = '#EBF4E9';
-      ctx.fillRect(40, 90, width - 80, 34);
+      ctx.fillRect(40, 114, width - 80, 34);
       ctx.strokeStyle = '#2C5F2D';
       ctx.lineWidth = 1;
-      ctx.strokeRect(40, 90, width - 80, 34);
+      ctx.strokeRect(40, 114, width - 80, 34);
 
       ctx.fillStyle = '#012D1D';
       ctx.font = 'bold 16px monospace';
-      ctx.fillText(gallonBadgeText, width / 2, 113, width - 104);
+      ctx.fillText(gallonBadgeText, width / 2, 137, width - 104);
 
       // Render QR Code di tengah (170x170 px)
-      ctx.drawImage(canvas, (width - 170) / 2, 136, 170, 170);
+      ctx.drawImage(canvas, (width - 170) / 2, 160, 170, 170);
 
       // Public code text
       ctx.fillStyle = '#666666';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(publicCodeText, width / 2, 322, width - 80);
+      ctx.fillText(publicCodeText, width / 2, 346, width - 80);
 
       // Box Detail Bahan & Tanggal
       ctx.fillStyle = '#FAFBF9';
@@ -504,8 +530,18 @@ function EcoEnzymeQrModalContent({
       ctx.font = '12px sans-serif';
       ctx.fillStyle = '#222222';
       ctx.fillText(`- Air       = ${Number(batch.waterLiter)} L`, 50, airY, boMaxWidth);
-      ctx.fillText(`- Pemanis = ${molassesDisplay} (Gula/Madu)`, 50, pemanisY, boMaxWidth);
-      ctx.fillText(`- BO (${wasteDisplay}) :`, 50, boHeaderY, boMaxWidth);
+      ctx.fillText(
+        `- ${sweetenerMeta.label} = ${molassesDisplay}`,
+        50,
+        pemanisY,
+        boMaxWidth
+      );
+      ctx.fillText(
+        `- ${enzymeMeta.materialShortLabel} (${wasteDisplay}) :`,
+        50,
+        boHeaderY,
+        boMaxWidth
+      );
 
       // List BO
       ctx.font = '11px sans-serif';
@@ -621,7 +657,7 @@ function EcoEnzymeQrModalContent({
                   Teman Pilah
                 </span>
                 <h4 className="text-xs sm:text-sm font-black text-[#012D1D] tracking-tight leading-tight">
-                  ECO ENZYME FERMENTASI
+                  {labelHeadline}
                 </h4>
               </div>
 
@@ -631,6 +667,19 @@ function EcoEnzymeQrModalContent({
                 alt="Logo Universitas Telkom"
                 className="h-9 sm:h-11 w-auto max-w-[38px] sm:max-w-[44px] object-contain flex-shrink-0"
               />
+            </div>
+
+            {/* BADGE JENIS ENZIM */}
+            <div
+              className={`mb-2 w-full py-1 px-2.5 rounded-lg border text-[10px] font-extrabold tracking-wide flex items-center justify-center gap-1.5 ${
+                isClassicEnzyme
+                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                  : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+              }`}
+            >
+              <span>{badgeLabel}</span>
+              <span className="opacity-60">•</span>
+              <span className="font-semibold">{consumptionHint}</span>
             </div>
 
             {/* KODE GALON BESAR */}
@@ -698,8 +747,8 @@ function EcoEnzymeQrModalContent({
                 <div className="font-bold text-stone-800">Bahan:</div>
                 <div className="text-stone-700 pl-2 space-y-0.5">
                   <div>• Air = <strong>{Number(batch.waterLiter)} L</strong></div>
-                  <div>• Gula/Madu = <strong>{molassesDisplay}</strong></div>
-                  <div>• BO ({wasteDisplay}) :</div>
+                  <div>• {sweetenerMeta.label} = <strong>{molassesDisplay}</strong></div>
+                  <div>• {enzymeMeta.materialShortLabel} ({wasteDisplay}) :</div>
                   <div className="pl-3 text-stone-600 font-medium">
                     {organicItems.slice(0, 5).map((item, i) => (
                       <span key={i} className="inline-block mr-1.5">

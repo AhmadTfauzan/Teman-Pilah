@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, Product, QrCode } from "../../../generated/prisma";
+import { Prisma, PrismaClient, EcoEnzymeBatch, EcoEnzymeLog, EnzymeBatchStatus, EnzymeResidueUsage, EnzymeFailureReason, EnzymeType, EnzymeSweetenerType, Product, QrCode } from "../../../generated/prisma";
 import { AppError } from "@/middlewares/error.middleware";
 import { normalizeBatchCode } from "../../utils/code";
 import {
@@ -10,6 +10,7 @@ export interface FindAllBatchesOptions {
   skip: number;
   take: number;
   status?: string;
+  enzymeType?: string;
   search?: string;
   includeArchived?: boolean;
   includeNotesSearch?: boolean;
@@ -27,6 +28,7 @@ export class EcoEnzymeRepository {
     skip,
     take,
     status,
+    enzymeType,
     search,
     includeArchived,
     includeNotesSearch = true,
@@ -44,6 +46,10 @@ export class EcoEnzymeRepository {
     const currentTime = now ?? new Date();
     const readyCutoffDate = getReadyToHarvestCutoffDate(currentTime);
     const andConditions: Prisma.EcoEnzymeBatchWhereInput[] = [];
+
+    if (enzymeType === "ECO_ENZYME" || enzymeType === "CLASSIC_ENZYME") {
+      andConditions.push({ enzymeType });
+    }
 
     // Penanganan Soft Delete (Archived) & status dinamis di database sebelum skip/take & count
     if (status === "ARCHIVED") {
@@ -228,6 +234,8 @@ export class EcoEnzymeRepository {
         id: true,
         publicCode: true,
         batchCode: true,
+        enzymeType: true,
+        sweetenerType: true,
         containerName: true,
         startDate: true,
         harvestEstimate: true,
@@ -345,6 +353,8 @@ export class EcoEnzymeRepository {
   async create(data: {
     publicCode: string;
     batchCode: string;
+    enzymeType: EnzymeType;
+    sweetenerType: EnzymeSweetenerType;
     containerName: string;
     containerCapacityLiter: number;
     molassesKg: number;
@@ -362,6 +372,8 @@ export class EcoEnzymeRepository {
       data: {
         publicCode: data.publicCode,
         batchCode: data.batchCode,
+        enzymeType: data.enzymeType,
+        sweetenerType: data.sweetenerType,
         containerName: data.containerName,
         containerCapacityLiter: data.containerCapacityLiter,
         molassesKg: data.molassesKg,
@@ -385,6 +397,8 @@ export class EcoEnzymeRepository {
   async update(
     id: string,
     data: Partial<{
+      enzymeType: EnzymeType;
+      sweetenerType: EnzymeSweetenerType;
       containerName: string;
       containerCapacityLiter: number;
       molassesKg: number;

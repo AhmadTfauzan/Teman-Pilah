@@ -27,23 +27,33 @@ import { EcoEnzymeQrModal } from '@/components/admin/EcoEnzymeQrModal';
 import { SafeImage } from '@/components/shared/SafeImage';
 import { ecoEnzymeApi } from '@/lib/api/eco-enzyme';
 import { ecoEnzymeVideoApi, getEcoEnzymeVideoThumbnailUrl } from '@/lib/api/eco-enzyme-video';
-import { EcoEnzymeBatch, EcoEnzymeVideoItem } from '@/types';
+import { EcoEnzymeBatch, EcoEnzymeVideoItem, EnzymeType } from '@/types';
 import {
   getDaysRemaining,
   getFermentationProgress,
   getDayPassed,
+  getEnzymeTypeMeta,
+  getSweetenerMeta,
+  normalizeEnzymeType,
   parseOrganicWasteTypes,
 } from '@/lib/eco-enzyme';
 import { buildBatchPath } from '@/lib/batch-url';
 import { OutlineLeaf, ConcentricCircles } from '@/components/ui/DecorativeElements';
 
 type BatchStatusFilter = 'ALL' | 'FERMENTING' | 'READY' | 'HARVESTED';
+type BatchTypeFilter = 'ALL' | EnzymeType;
 
 const STATUS_FILTER_TABS: ReadonlyArray<{ id: BatchStatusFilter; label: string }> = [
   { id: 'ALL', label: 'Semua' },
   { id: 'FERMENTING', label: 'Fermentasi' },
   { id: 'READY', label: 'Siap Panen' },
   { id: 'HARVESTED', label: 'Dipanen' },
+];
+
+const TYPE_FILTER_TABS: ReadonlyArray<{ id: BatchTypeFilter; label: string }> = [
+  { id: 'ALL', label: 'Semua Jenis' },
+  { id: 'ECO_ENZYME', label: 'Eco Enzyme' },
+  { id: 'CLASSIC_ENZYME', label: 'Classic Enzyme' },
 ];
 
 function isLocalVideoSource(videoUrl?: string | null, platform?: string | null): boolean {
@@ -160,8 +170,10 @@ export default function EcoEnzymePublicPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BatchStatusFilter>('ALL');
+  const [typeFilter, setTypeFilter] = useState<BatchTypeFilter>('ALL');
   const [selectedBatchForLabel, setSelectedBatchForLabel] = useState<EcoEnzymeBatch | null>(null);
   const [educationVideos, setEducationVideos] = useState<EcoEnzymeVideoItem[]>(DEFAULT_EDUCATION_VIDEOS);
+  const [calcEnzymeType, setCalcEnzymeType] = useState<EnzymeType>('ECO_ENZYME');
   const [calcMode, setCalcMode] = useState<'capacity' | 'waste'>('capacity');
   const [calcInput, setCalcInput] = useState<string>('15');
   const inlineVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -291,21 +303,28 @@ export default function EcoEnzymePublicPage() {
     setCalcMode(nextMode);
   };
 
-  // Filter galon berdasarkan pencarian dan status
+  // Filter galon berdasarkan pencarian, jenis enzyme, dan status
   const filteredBatches = useMemo(() => {
     return batches.filter((b) => {
+      const batchEnzymeType = normalizeEnzymeType(b.enzymeType);
+      if (typeFilter !== 'ALL' && batchEnzymeType !== typeFilter) return false;
+
       const q = searchQuery.toLowerCase().trim();
       const code = (b.batchCode || '').toLowerCase();
       const pub = (b.publicCode || '').toLowerCase();
       const name = (b.containerName || '').toLowerCase();
       const fruits = (b.organicWasteTypes || '').toLowerCase();
+      const enzymeLabel = getEnzymeTypeMeta(batchEnzymeType).label.toLowerCase();
+      const sweetenerLabel = getSweetenerMeta(b.sweetenerType, batchEnzymeType).label.toLowerCase();
 
       const matchSearch =
         !q ||
         code.includes(q) ||
         pub.includes(q) ||
         name.includes(q) ||
-        fruits.includes(q);
+        fruits.includes(q) ||
+        enzymeLabel.includes(q) ||
+        sweetenerLabel.includes(q);
 
       if (!matchSearch) return false;
 
@@ -325,7 +344,7 @@ export default function EcoEnzymePublicPage() {
 
       return true;
     });
-  }, [batches, searchQuery, statusFilter]);
+  }, [batches, searchQuery, statusFilter, typeFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,11 +391,11 @@ export default function EcoEnzymePublicPage() {
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
-            Pemantauan Fermentasi <span className="text-[#FC9634]">Eco Enzyme</span>
+            Pemantauan Fermentasi <span className="text-[#FC9634]">Eco &amp; Classic Enzyme</span>
           </h1>
 
           <p className="text-xs sm:text-base text-stone-200/90 max-w-2xl mx-auto leading-relaxed">
-            Pantau langsung bahan yang difermentasi, takaran air, madu/gula, dan komposisi kulit buah pada setiap galon.
+            Pantau langsung fermentasi <strong>Eco Enzyme</strong> (sampah organik kulit buah/sayur + Molase/Gula untuk kebersihan &amp; lingkungan) maupun <strong>Classic Enzyme</strong> (buah segar pilihan + Madu/Gula berkualitas untuk dikonsumsi/diminum) pada setiap galon.
             Pindai barcode pada fisik galon atau masukkan kodenya di bawah ini.
           </p>
 
@@ -417,16 +436,57 @@ export default function EcoEnzymePublicPage() {
         className="max-w-5xl mx-auto px-3 sm:px-6 -mt-6 sm:-mt-8 relative z-20 scroll-mt-20"
       >
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xl border border-stone-200/80 space-y-4 sm:space-y-5">
+          {/* Toggle Eco Enzyme vs Classic Enzyme */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3.5 border-b border-stone-200/70">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-stone-600">
+              <span className="font-bold text-stone-800">Pilih Jenis Enzim:</span>
+              <span className="text-stone-500">
+                {calcEnzymeType === 'ECO_ENZYME'
+                  ? 'Sampah Organik + Molase/Gula (Non-Konsumsi)'
+                  : 'Buah Segar Pilihan + Madu/Gula (Konsumsi / Diminum)'}
+              </span>
+            </div>
+
+            <div className="inline-flex rounded-xl bg-stone-100 p-1 border border-stone-200/80 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCalcEnzymeType('ECO_ENZYME')}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+                  calcEnzymeType === 'ECO_ENZYME'
+                    ? 'bg-[#012D1D] text-white shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                <Leaf className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                Eco Enzyme
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalcEnzymeType('CLASSIC_ENZYME')}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+                  calcEnzymeType === 'CLASSIC_ENZYME'
+                    ? 'bg-[#B45309] text-white shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                Classic Enzyme
+              </button>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 sm:gap-5">
             <div className="space-y-1 text-center md:text-left">
               <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[#3B9734] block">
-                Standar Rumus Alami
+                Standar Rumus Alami • {calcEnzymeType === 'ECO_ENZYME' ? 'Eco Enzyme' : 'Classic Enzyme'}
               </span>
               <h3 className="text-sm sm:text-lg font-black text-stone-900">
                 Formula Emas 1 : 3 : 10 (90 Hari)
               </h3>
               <p className="text-[11px] sm:text-xs text-stone-500 max-w-sm leading-relaxed">
-                Keseimbangan takaran fermentasi alami untuk menghasilkan enzim aktif berkualitas.
+                {calcEnzymeType === 'ECO_ENZYME'
+                  ? 'Menggunakan sampah organik (kulit buah/sayur) & Molase/Gula untuk kebersihan, lingkungan, dan pertanian (bukan untuk diminum).'
+                  : 'Menggunakan buah segar pilihan & Madu/Gula berkualitas untuk fermentasi enzim alami siap dikonsumsi/diminum.'}
               </p>
             </div>
 
@@ -434,19 +494,27 @@ export default function EcoEnzymePublicPage() {
               <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
                 <div className="text-xs sm:text-lg font-black text-[#B45309] whitespace-nowrap">1 Bagian</div>
                 <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Pemanis</div>
-                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Gula / Madu</div>
+                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">
+                  {calcEnzymeType === 'ECO_ENZYME' ? 'Molase / Gula' : 'Madu / Gula'}
+                </div>
               </div>
 
               <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
                 <div className="text-xs sm:text-lg font-black text-[#2C5F2D] whitespace-nowrap">3 Bagian</div>
-                <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Bahan BO</div>
-                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Kulit Buah</div>
+                <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">
+                  {calcEnzymeType === 'ECO_ENZYME' ? 'Sampah Organik' : 'Buah Segar Pilihan'}
+                </div>
+                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">
+                  {calcEnzymeType === 'ECO_ENZYME' ? '(Kulit Buah/Sayur)' : '(Konsumsi/Diminum)'}
+                </div>
               </div>
 
               <div className="bg-[#F0F7FC] border border-[#CEE3F5] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
                 <div className="text-xs sm:text-lg font-black text-[#0369A1] whitespace-nowrap">10 Bagian</div>
                 <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">Air Bersih</div>
-                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">Air Sumur/AC</div>
+                <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">
+                  {calcEnzymeType === 'ECO_ENZYME' ? 'Air Sumur/AC' : 'Air Matang/Mineral'}
+                </div>
               </div>
             </div>
           </div>
@@ -460,10 +528,12 @@ export default function EcoEnzymePublicPage() {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-black text-stone-900">
-                    Kalkulator Takaran Eco Enzyme
+                    Kalkulator Takaran {calcEnzymeType === 'ECO_ENZYME' ? 'Eco Enzyme' : 'Classic Enzyme'}
                   </h4>
                   <p className="text-[10px] sm:text-[11px] text-stone-500">
-                    Hitung otomatis kebutuhan Gula/Molase, Sampah Organik, dan Air.
+                    {calcEnzymeType === 'ECO_ENZYME'
+                      ? 'Hitung otomatis kebutuhan Molase / Gula, Sampah Organik (Kulit Buah/Sayur), dan Air.'
+                      : 'Hitung otomatis kebutuhan Madu / Gula, Buah Segar Pilihan (Konsumsi/Diminum), dan Air.'}
                   </p>
                 </div>
               </div>
@@ -489,7 +559,7 @@ export default function EcoEnzymePublicPage() {
                       : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  Berat Sampah (Kg)
+                  {calcEnzymeType === 'ECO_ENZYME' ? 'Berat Sampah (Kg)' : 'Berat Buah (Kg)'}
                 </button>
               </div>
             </div>
@@ -503,7 +573,9 @@ export default function EcoEnzymePublicPage() {
                 >
                   {calcMode === 'capacity'
                     ? 'Masukkan Kapasitas Wadah / Galon (Liter)'
-                    : 'Masukkan Berat Sampah Organik / BO (Kg)'}
+                    : calcEnzymeType === 'ECO_ENZYME'
+                    ? 'Masukkan Berat Sampah Organik / Kulit Buah/Sayur (Kg)'
+                    : 'Masukkan Berat Buah Segar Pilihan (Kg)'}
                 </label>
 
                 <div className="flex items-center">
@@ -551,7 +623,7 @@ export default function EcoEnzymePublicPage() {
               <div className="lg:col-span-7 grid grid-cols-3 gap-2 sm:gap-3">
                 <div className="bg-[#FFF8F0] border border-[#FDE3C7] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center">
                   <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#B45309] block">
-                    Gula / Molase
+                    {calcEnzymeType === 'ECO_ENZYME' ? 'Molase / Gula' : 'Madu / Gula'}
                   </span>
                   <div className="text-sm sm:text-xl font-black text-stone-900 mt-1">
                     {formatEcoWeight(calcResult.molassesKg)}
@@ -562,14 +634,16 @@ export default function EcoEnzymePublicPage() {
                 </div>
 
                 <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center">
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#2C5F2D] block">
-                    Sampah Organik
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#2C5F2D] block leading-tight">
+                    {calcEnzymeType === 'ECO_ENZYME'
+                      ? 'Sampah Organik (Kulit Buah/Sayur)'
+                      : 'Buah Segar Pilihan (Konsumsi/Diminum)'}
                   </span>
                   <div className="text-sm sm:text-xl font-black text-stone-900 mt-1">
                     {formatEcoWeight(calcResult.organicWasteKg)}
                   </div>
                   <span className="text-[9px] sm:text-[10px] text-stone-500 block mt-0.5">
-                    3 Bagian (BO)
+                    {calcEnzymeType === 'ECO_ENZYME' ? '3 Bagian (BO)' : '3 Bagian (Buah Segar)'}
                   </span>
                 </div>
 
@@ -780,32 +854,52 @@ export default function EcoEnzymePublicPage() {
       >
         
         {/* Top Control Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2 border-b border-stone-200">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 sm:gap-4 pb-3 border-b border-stone-200">
           <div>
             <h2 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">
-              Manajemen <span className="text-[#2C5F2D]">Eco Enzyme</span>
+              Manajemen <span className="text-[#2C5F2D]">Eco &amp; Classic Enzyme</span>
             </h2>
             <p className="text-xs sm:text-sm text-stone-500 mt-1">
-              Daftar seluruh galon yang sedang aktif difermentasi maupun yang telah dipanen oleh warga.
+              Daftar seluruh galon Eco Enzyme maupun Classic Enzyme yang sedang aktif difermentasi maupun telah dipanen.
             </p>
           </div>
 
-          {/* Filter Status Tabs */}
-          <div className="flex items-center gap-1 sm:gap-1.5 bg-stone-200/60 p-1 rounded-2xl self-start sm:self-center max-w-full overflow-x-auto no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {STATUS_FILTER_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setStatusFilter(tab.id)}
-                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
-                  statusFilter === tab.id
-                    ? 'bg-white text-stone-900 shadow-xs'
-                    : 'text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row lg:flex-col lg:items-end gap-2 max-w-full">
+            {/* Filter Jenis Enzim */}
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-emerald-950/5 border border-emerald-900/10 p-1 rounded-2xl self-start lg:self-end max-w-full overflow-x-auto no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {TYPE_FILTER_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTypeFilter(tab.id)}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                    typeFilter === tab.id
+                      ? 'bg-[#012D1D] text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter Status Tabs */}
+            <div className="flex items-center gap-1 sm:gap-1.5 bg-stone-200/60 p-1 rounded-2xl self-start lg:self-end max-w-full overflow-x-auto no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {STATUS_FILTER_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                    statusFilter === tab.id
+                      ? 'bg-white text-stone-900 shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -824,17 +918,18 @@ export default function EcoEnzymePublicPage() {
             <h3 className="text-sm font-bold text-stone-800">Tidak ada galon yang sesuai</h3>
             <p className="text-xs text-stone-500 max-w-sm mx-auto">
               {searchQuery.trim()
-                ? `Tidak ditemukan galon dengan kata kunci "${searchQuery.trim()}". Coba periksa kembali kode galon atau filter status.`
-                : statusFilter !== 'ALL'
-                ? 'Tidak ditemukan galon pada status fermentasi yang dipilih.'
+                ? `Tidak ditemukan galon dengan kata kunci "${searchQuery.trim()}". Coba periksa kembali kode galon atau filter jenis/status.`
+                : typeFilter !== 'ALL' || statusFilter !== 'ALL'
+                ? 'Tidak ditemukan galon pada jenis atau status fermentasi yang dipilih.'
                 : 'Belum ada data galon fermentasi yang terdaftar.'}
             </p>
-            {(searchQuery.trim() !== '' || statusFilter !== 'ALL') && (
+            {(searchQuery.trim() !== '' || statusFilter !== 'ALL' || typeFilter !== 'ALL') && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
+                  setTypeFilter('ALL');
                 }}
                 className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-800 transition-colors"
               >
@@ -848,9 +943,13 @@ export default function EcoEnzymePublicPage() {
         {!loading && filteredBatches.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-5">
             {filteredBatches.map((batch) => {
+              const enzymeType = normalizeEnzymeType(batch.enzymeType);
+              const enzymeMeta = getEnzymeTypeMeta(enzymeType);
+              const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, enzymeType);
+              const isClassic = enzymeType === 'CLASSIC_ENZYME';
               const dayPassed = getDayPassed(batch.startDate);
               const daysLeft = getDaysRemaining(batch.harvestEstimate);
-              const fruits = parseOrganicWasteTypes(batch.organicWasteTypes);
+              const fruits = parseOrganicWasteTypes(batch.organicWasteTypes, enzymeType);
 
               const isFailed =
                 batch.status === 'FAILED' || batch.displayStatus === 'FAILED';
@@ -909,8 +1008,24 @@ export default function EcoEnzymePublicPage() {
                       )}
                     </div>
 
-                    {/* Nama Wadah */}
+                    {/* Nama Wadah & Badge Jenis Enzim */}
                     <div>
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mb-1">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                            isClassic
+                              ? 'bg-orange-50 text-orange-800 border-orange-200'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          }`}
+                        >
+                          {isClassic ? (
+                            <Sparkles className="w-2.5 h-2.5 text-orange-600 shrink-0" />
+                          ) : (
+                            <Leaf className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                          )}
+                          {enzymeMeta.label}
+                        </span>
+                      </div>
                       <h3 className="text-xs sm:text-base font-bold text-stone-900 group-hover:text-emerald-800 transition-colors line-clamp-1">
                         {batch.containerName}
                       </h3>
@@ -1011,17 +1126,17 @@ export default function EcoEnzymePublicPage() {
 
                         <div className="bg-amber-50/70 border border-amber-100 rounded-lg sm:rounded-xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-amber-950 flex items-center gap-1.5 min-w-0">
                           <Scale className="hidden sm:block w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                          <span className="leading-tight">
-                            Pemanis: <strong className="whitespace-nowrap">{molassesDisplay}</strong>
+                          <span className="leading-tight truncate">
+                            {sweetenerMeta.label}: <strong className="whitespace-nowrap">{molassesDisplay}</strong>
                           </span>
                         </div>
                       </div>
 
-                      {/* Kulit Buah / BO Tags */}
+                      {/* Kulit Buah / Bahan Organik / Buah Segar Tags */}
                       <div className="bg-stone-50 border border-stone-200/80 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 space-y-1 sm:space-y-1.5">
                         <span className="text-[9px] sm:text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
                           <Apple className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-700 shrink-0" />
-                          BO ({wasteDisplay}):
+                          {enzymeMeta.materialShortLabel} ({wasteDisplay}):
                         </span>
                         <div className="columns-1 sm:columns-2 gap-1.5 space-y-1">
                           {fruits.slice(0, 6).map((item, idx) => (

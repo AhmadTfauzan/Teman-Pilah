@@ -1,6 +1,13 @@
 import { getBaseUrl } from "../api-config";
 import { getAuthHeader } from "./auth-session";
-import { EcoEnzymeBatch, EcoEnzymeLog, EcoEnzymeStats, Product } from "@/types";
+import {
+  EcoEnzymeBatch,
+  EcoEnzymeLog,
+  EcoEnzymeStats,
+  EnzymeSweetenerType,
+  EnzymeType,
+  Product,
+} from "@/types";
 
 export const BASE_URL = getBaseUrl();
 
@@ -60,11 +67,15 @@ export const ecoEnzymeApi = {
    */
   async getAll(params?: {
     status?: string;
+    enzymeType?: EnzymeType | string;
     search?: string;
     includeArchived?: boolean;
   }): Promise<EcoEnzymeBatch[]> {
     const query = new URLSearchParams({ limit: "100" });
     if (params?.status) query.append("status", params.status);
+    if (params?.enzymeType && params.enzymeType !== "ALL") {
+      query.append("enzymeType", params.enzymeType);
+    }
     if (params?.search) query.append("search", params.search);
     if (params?.includeArchived) query.append("includeArchived", "true");
 
@@ -104,6 +115,8 @@ export const ecoEnzymeApi = {
    */
   async create(data: {
     batchCode?: string;
+    enzymeType?: EnzymeType;
+    sweetenerType?: EnzymeSweetenerType;
     containerName: string;
     containerCapacityLiter?: number;
     molassesKg: number;
