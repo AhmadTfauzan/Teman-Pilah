@@ -305,7 +305,6 @@ function EcoEnzymeQrModalContent({
   const enzymeMeta = getEnzymeTypeMeta(enzymeType);
   const sweetenerMeta = getSweetenerMeta(batch.sweetenerType, enzymeType);
   const isClassicEnzyme = enzymeType === 'CLASSIC_ENZYME';
-  const consumptionHint = isClassicEnzyme ? 'Konsumsi / Minum' : 'Non-Konsumsi';
   const labelHeadline = isClassicEnzyme
     ? 'CLASSIC ENZYME FERMENTASI'
     : 'ECO ENZYME FERMENTASI';
@@ -465,7 +464,7 @@ function EcoEnzymeQrModalContent({
 
       ctx.fillStyle = isClassicEnzyme ? '#92400E' : '#065F46';
       ctx.font = 'bold 10px sans-serif';
-      ctx.fillText(`${badgeLabel} • ${consumptionHint}`, width / 2, 101, width - 96);
+      ctx.fillText(badgeLabel, width / 2, 101, width - 96);
 
       // Kode Galon Badge
       ctx.fillStyle = '#EBF4E9';
@@ -678,8 +677,6 @@ function EcoEnzymeQrModalContent({
               }`}
             >
               <span>{badgeLabel}</span>
-              <span className="opacity-60">•</span>
-              <span className="font-semibold">{consumptionHint}</span>
             </div>
 
             {/* KODE GALON BESAR */}

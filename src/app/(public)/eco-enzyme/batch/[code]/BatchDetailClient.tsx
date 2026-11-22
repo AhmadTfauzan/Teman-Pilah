@@ -288,8 +288,8 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
                   <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2C5F2D] shrink-0 mt-0.5 sm:mt-0" />
                   <span>
                     {isClassicEnzyme
-                      ? `Classic Enzyme — Dibuat dari buah segar pilihan & ${sweetenerMeta.label.toLowerCase()} berkualitas untuk dikonsumsi/diminum`
-                      : `Eco Enzyme — Dibuat dari sampah organik (kulit buah/sayur) & ${sweetenerMeta.label.toLowerCase()} (untuk kebersihan & pupuk alami)`}
+                      ? `Classic Enzyme — Dibuat dari buah segar pilihan dan berkualitas dengan pemanis ${sweetenerMeta.label.toLowerCase()}`
+                      : `Eco Enzyme — Dibuat dari bahan organik seperti kulit buah pilihan dengan pemanis ${sweetenerMeta.label.toLowerCase()}`}
                   </span>
                 </span>
                 <span className="hidden sm:inline text-stone-300">•</span>
@@ -492,8 +492,8 @@ export function BatchDetailClient({ batch }: BatchDetailClientProps) {
 
           <p className="text-[11px] sm:text-xs text-[#586154] leading-relaxed">
             {isClassicEnzyme
-              ? 'Kombinasi buah segar pilihan berkualitas untuk dikonsumsi/diminum, menghasilkan cita rasa alami, aroma segar, dan kandungan enzim yang kaya.'
-              : 'Kombinasi aneka kulit buah dan sisa sayur organik memperkaya variasi enzim proteolitik, amilase, dan aroma alami untuk kebersihan & pupuk.'}
+              ? 'Kombinasi buah segar pilihan dan berkualitas menghasilkan aroma alami serta kandungan enzim yang kaya.'
+              : 'Kombinasi bahan organik seperti kulit buah pilihan memperkaya variasi enzim proteolitik, amilase, dan aroma alami.'}
           </p>
 
           {/* CHIP LIST */}

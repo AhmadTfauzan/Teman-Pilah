@@ -47,30 +47,29 @@ const ENZYME_TYPE_META: Record<EnzymeType, EnzymeTypeMeta> = {
   ECO_ENZYME: {
     value: 'ECO_ENZYME',
     label: 'Eco Enzyme',
-    shortDescription: 'Dibuat dari sampah organik (kulit buah/sayur)',
-    badgeText: 'Eco Enzyme (Non-Konsumsi)',
+    shortDescription: 'Dibuat dari bahan organik seperti kulit buah pilihan',
+    badgeText: 'Eco Enzyme',
     materialLabel: 'Sampah Organik (BO)',
     materialShortLabel: 'Sampah BO',
     ingredientsTitle: 'Komponen Bahan Organik',
     ingredientsSubtitle: 'Bahan Kulit Buah & Sayur',
     ingredientsPlaceholder: 'cth. Kulit Jeruk, Kulit Nanas, Kulit Pepaya, Sisa Sayuran',
     ingredientsHelper:
-      'Catat jenis sampah organik (kulit buah atau sisa sayuran) yang digunakan, pisahkan dengan koma.',
+      'Catat jenis bahan organik seperti kulit buah pilihan atau sisa sayuran yang digunakan, pisahkan dengan koma.',
     defaultIngredients: 'Kulit Jeruk, Kulit Nanas, Kulit Pepaya, Kulit Semangka',
   },
   CLASSIC_ENZYME: {
     value: 'CLASSIC_ENZYME',
     label: 'Classic Enzyme',
-    shortDescription:
-      'Dibuat dari buah segar pilihan & madu/gula berkualitas (untuk dikonsumsi/diminum)',
-    badgeText: 'Classic Enzyme (Konsumsi / Diminum)',
+    shortDescription: 'Dibuat dari buah segar pilihan dan berkualitas',
+    badgeText: 'Classic Enzyme',
     materialLabel: 'Buah Segar Pilihan',
     materialShortLabel: 'Buah Segar',
     ingredientsTitle: 'Komponen Buah Segar Pilihan',
     ingredientsSubtitle: 'Buah Segar Pilihan Berkualitas',
     ingredientsPlaceholder: 'cth. Semangka, Melon, Nanas, Pepaya, Mangga',
     ingredientsHelper:
-      'Catat jenis buah segar pilihan berkualitas yang digunakan untuk konsumsi/diminum, pisahkan dengan koma.',
+      'Catat jenis buah segar pilihan dan berkualitas yang digunakan, pisahkan dengan koma.',
     defaultIngredients: 'Semangka, Melon, Nanas, Pepaya, Mangga',
   },
 };
@@ -79,7 +78,7 @@ const SWEETENER_META: Record<EnzymeSweetenerType, EnzymeSweetenerMeta> = {
   MOLASE: {
     value: 'MOLASE',
     label: 'Molase',
-    description: 'Tetes tebu/molase untuk fermentasi Eco Enzyme non-konsumsi.',
+    description: 'Tetes tebu/molase sebagai pemanis fermentasi Eco Enzyme.',
   },
   GULA: {
     value: 'GULA',
@@ -89,7 +88,7 @@ const SWEETENER_META: Record<EnzymeSweetenerType, EnzymeSweetenerMeta> = {
   MADU: {
     value: 'MADU',
     label: 'Madu',
-    description: 'Madu murni berkualitas untuk fermentasi Classic Enzyme siap konsumsi.',
+    description: 'Madu murni berkualitas sebagai pemanis fermentasi Classic Enzyme.',
   },
 };
 

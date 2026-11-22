@@ -35,7 +35,6 @@ export interface EcoEnzymeModalSubmitData {
   organicWasteTypes: string;
   startDate: string;
   harvestEstimate?: string;
-  photoUrl?: string | null;
   notes?: string | null;
   status?: EcoEnzymeBatchStatus;
   failureReason?: EnzymeFailureReason | null;
@@ -49,18 +48,6 @@ interface EcoEnzymeModalProps {
   onSubmit: (data: EcoEnzymeModalSubmitData) => Promise<void>;
   initialData?: EcoEnzymeBatch | null;
   successorOfBatch?: EcoEnzymeBatch | null;
-}
-
-function isSafePhotoUrlInput(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return true;
-  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
 
 export function EcoEnzymeModal({
@@ -164,7 +151,6 @@ function EcoEnzymeModalContent({
       : addDaysToDateInput(todayWib)
   );
   const [isCustomHarvestDate, setIsCustomHarvestDate] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState(initialData?.photoUrl || '');
   const [notes, setNotes] = useState(
     initialData
       ? initialData.notes || ''
@@ -238,12 +224,6 @@ function EcoEnzymeModalContent({
       parsedHarvestIso = parsedHarvest.toISOString();
     }
 
-    const trimmedPhoto = photoUrl.trim();
-    if (!isSafePhotoUrlInput(trimmedPhoto)) {
-      toast.error('URL foto tidak valid. Gunakan awalan https://, http://, atau /.');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       await onSubmit({
@@ -261,7 +241,6 @@ function EcoEnzymeModalContent({
         organicWasteTypes: organicWasteTypes.trim() || enzymeMeta.defaultIngredients,
         startDate: parsedStart.toISOString(),
         harvestEstimate: parsedHarvestIso,
-        photoUrl: trimmedPhoto ? trimmedPhoto : initialData ? null : undefined,
         notes: notes.trim() || undefined,
         ...(initialData
           ? {
@@ -375,12 +354,9 @@ function EcoEnzymeModalContent({
                     <Leaf className="w-3.5 h-3.5 text-emerald-700" />
                     Eco Enzyme
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    Non-Konsumsi
-                  </span>
                 </div>
                 <p className="text-[11px] text-stone-600 leading-snug">
-                  Sampah organik (kulit buah/sayur) • Pemanis: Molase / Gula
+                  Dibuat dari bahan organik seperti kulit buah pilihan • Pemanis: Molase / Gula
                 </p>
               </button>
 
@@ -399,12 +375,9 @@ function EcoEnzymeModalContent({
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                     Classic Enzyme
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                    Konsumsi / Minum
-                  </span>
                 </div>
                 <p className="text-[11px] text-stone-600 leading-snug">
-                  Buah segar pilihan &amp; madu/gula berkualitas • Untuk dikonsumsi/diminum
+                  Dibuat dari buah segar pilihan dan berkualitas • Pemanis: Madu / Gula
                 </p>
               </button>
             </div>
@@ -449,9 +422,6 @@ function EcoEnzymeModalContent({
                 onChange={(e) => setContainerName(e.target.value)}
                 className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2.5 text-stone-900 focus:outline-none focus:border-emerald-600"
               />
-              <p className="text-[11px] text-stone-500 mt-1">
-                Jika nama wadah / kode galon sama dengan yang sudah ada, QR Code sebelumnya akan dipakai kembali (tidak membuat QR ganda).
-              </p>
             </div>
             <div>
               <label className="block text-xs font-bold text-stone-800 mb-1">
@@ -743,20 +713,6 @@ function EcoEnzymeModalContent({
               )}
             </div>
           )}
-
-          {/* URL Foto Galon (Opsional) */}
-          <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">
-              URL Foto Galon (Opsional)
-            </label>
-            <input
-              type="text"
-              placeholder="cth. https://... atau /images/galon-1.jpg"
-              value={photoUrl}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-              className="w-full text-xs bg-white border border-stone-300 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:border-emerald-600"
-            />
-          </div>
 
           {/* Catatan Tambahan (Opsional) */}
           <div>

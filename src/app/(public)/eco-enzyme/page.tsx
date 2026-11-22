@@ -395,7 +395,7 @@ export default function EcoEnzymePublicPage() {
           </h1>
 
           <p className="text-xs sm:text-base text-stone-200/90 max-w-2xl mx-auto leading-relaxed">
-            Pantau langsung fermentasi <strong>Eco Enzyme</strong> (sampah organik kulit buah/sayur + Molase/Gula untuk kebersihan &amp; lingkungan) maupun <strong>Classic Enzyme</strong> (buah segar pilihan + Madu/Gula berkualitas untuk dikonsumsi/diminum) pada setiap galon.
+            Pantau langsung fermentasi <strong>Eco Enzyme</strong> (dibuat dari bahan organik seperti kulit buah pilihan dengan pemanis Molase/Gula) maupun <strong>Classic Enzyme</strong> (dibuat dari buah segar pilihan dan berkualitas dengan pemanis Madu/Gula) pada setiap galon.
             Pindai barcode pada fisik galon atau masukkan kodenya di bawah ini.
           </p>
 
@@ -442,8 +442,8 @@ export default function EcoEnzymePublicPage() {
               <span className="font-bold text-stone-800">Pilih Jenis Enzim:</span>
               <span className="text-stone-500">
                 {calcEnzymeType === 'ECO_ENZYME'
-                  ? 'Sampah Organik + Molase/Gula (Non-Konsumsi)'
-                  : 'Buah Segar Pilihan + Madu/Gula (Konsumsi / Diminum)'}
+                  ? 'Bahan organik seperti kulit buah pilihan • Molase / Gula'
+                  : 'Buah segar pilihan dan berkualitas • Madu / Gula'}
               </span>
             </div>
 
@@ -485,8 +485,8 @@ export default function EcoEnzymePublicPage() {
               </h3>
               <p className="text-[11px] sm:text-xs text-stone-500 max-w-sm leading-relaxed">
                 {calcEnzymeType === 'ECO_ENZYME'
-                  ? 'Menggunakan sampah organik (kulit buah/sayur) & Molase/Gula untuk kebersihan, lingkungan, dan pertanian (bukan untuk diminum).'
-                  : 'Menggunakan buah segar pilihan & Madu/Gula berkualitas untuk fermentasi enzim alami siap dikonsumsi/diminum.'}
+                  ? 'Dibuat dari bahan organik seperti kulit buah pilihan dengan pemanis Molase atau Gula.'
+                  : 'Dibuat dari buah segar pilihan dan berkualitas dengan pemanis Madu atau Gula.'}
               </p>
             </div>
 
@@ -502,10 +502,10 @@ export default function EcoEnzymePublicPage() {
               <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center min-w-0">
                 <div className="text-xs sm:text-lg font-black text-[#2C5F2D] whitespace-nowrap">3 Bagian</div>
                 <div className="text-[10px] sm:text-[11px] font-bold text-stone-800 mt-0.5">
-                  {calcEnzymeType === 'ECO_ENZYME' ? 'Sampah Organik' : 'Buah Segar Pilihan'}
+                  {calcEnzymeType === 'ECO_ENZYME' ? 'Bahan Organik' : 'Buah Segar Pilihan'}
                 </div>
                 <div className="text-[9px] sm:text-[10px] text-stone-500 leading-tight">
-                  {calcEnzymeType === 'ECO_ENZYME' ? '(Kulit Buah/Sayur)' : '(Konsumsi/Diminum)'}
+                  {calcEnzymeType === 'ECO_ENZYME' ? '(Kulit Buah Pilihan)' : '(Buah Berkualitas)'}
                 </div>
               </div>
 
@@ -532,8 +532,8 @@ export default function EcoEnzymePublicPage() {
                   </h4>
                   <p className="text-[10px] sm:text-[11px] text-stone-500">
                     {calcEnzymeType === 'ECO_ENZYME'
-                      ? 'Hitung otomatis kebutuhan Molase / Gula, Sampah Organik (Kulit Buah/Sayur), dan Air.'
-                      : 'Hitung otomatis kebutuhan Madu / Gula, Buah Segar Pilihan (Konsumsi/Diminum), dan Air.'}
+                      ? 'Hitung otomatis kebutuhan Molase / Gula, Bahan Organik (Kulit Buah Pilihan), dan Air.'
+                      : 'Hitung otomatis kebutuhan Madu / Gula, Buah Segar Pilihan, dan Air.'}
                   </p>
                 </div>
               </div>
@@ -636,8 +636,8 @@ export default function EcoEnzymePublicPage() {
                 <div className="bg-[#F0F8EE] border border-[#CFE7CA] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center">
                   <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-[#2C5F2D] block leading-tight">
                     {calcEnzymeType === 'ECO_ENZYME'
-                      ? 'Sampah Organik (Kulit Buah/Sayur)'
-                      : 'Buah Segar Pilihan (Konsumsi/Diminum)'}
+                      ? 'Bahan Organik (Kulit Buah Pilihan)'
+                      : 'Buah Segar Pilihan'}
                   </span>
                   <div className="text-sm sm:text-xl font-black text-stone-900 mt-1">
                     {formatEcoWeight(calcResult.organicWasteKg)}
