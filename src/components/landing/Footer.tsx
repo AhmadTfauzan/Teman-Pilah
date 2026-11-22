@@ -147,14 +147,6 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link
-                  href="/admin"
-                  className="text-[11px] sm:text-xs text-white/40 hover:text-white/80 transition-colors pt-1 sm:pt-2 block"
-                >
-                  Panel Admin →
-                </Link>
-              </li>
             </ul>
           </div>
         </div>
@@ -165,7 +157,7 @@ export function Footer() {
             © {new Date().getFullYear()} Teman Pilah. Melestarikan lingkungan bersama melalui aksi nyata.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6 text-center sm:text-right">
+          <div className="flex flex-col items-center lg:items-end gap-0.5 sm:gap-1 text-center lg:text-right text-[10px] sm:text-xs leading-snug">
             <a
               href="https://www.linkedin.com/in/zhafran-suryananda-6430043b0/"
               target="_blank"
