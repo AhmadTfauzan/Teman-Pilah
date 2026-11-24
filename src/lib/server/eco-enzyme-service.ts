@@ -901,7 +901,51 @@ export async function markQrPrinted(id: string) {
 }
 
 export async function deleteBatch(id: string) {
-  return archiveBatch(id);
+  await assertBatchExists(id);
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.ecoEnzymeBatch.findUnique({
+      where: { id },
+      select: { id: true, qrCodeId: true },
+    });
+    if (!existing) {
+      throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+    }
+
+    // 1. Lepas referensi suksesi batch jika ada batch lanjutan yang mereferensikan batch ini
+    await tx.ecoEnzymeBatch.updateMany({
+      where: { previousBatchId: id },
+      data: { previousBatchId: null },
+    });
+
+    // 2. Hapus seluruh riwayat log inspeksi batch
+    await tx.ecoEnzymeLog.deleteMany({
+      where: { batchId: id },
+    });
+
+    // 3. Hapus permanen batch eco enzyme dari database
+    const deleted = await tx.ecoEnzymeBatch.delete({
+      where: { id },
+    });
+
+    // 4. Bersihkan QR Code orphan jika tidak lagi digunakan oleh batch atau produk lain
+    if (existing.qrCodeId) {
+      const remainingBatches = await tx.ecoEnzymeBatch.count({
+        where: { qrCodeId: existing.qrCodeId },
+      });
+      const remainingProducts = await tx.product.count({
+        where: { qrCodeId: existing.qrCodeId },
+      });
+      if (remainingBatches === 0 && remainingProducts === 0) {
+        await tx.qrCode
+          .delete({
+            where: { id: existing.qrCodeId },
+          })
+          .catch(() => null);
+      }
+    }
+
+    return deleted;
+  });
 }
 
 export async function addLog(batchId: string, input: {

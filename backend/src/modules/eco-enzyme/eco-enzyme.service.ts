@@ -594,10 +594,14 @@ export class EcoEnzymeService {
   }
 
   /**
-   * Operasi delete publik dialihkan ke soft delete archive agar QR galon tidak pernah mati.
+   * Operasi delete publik menghapus batch secara permanen beserta log terkait.
    */
   async deleteBatch(id: string): Promise<EcoEnzymeBatch> {
-    return this.archiveBatch(id);
+    const existing = await this.ecoEnzymeRepository.findById(id);
+    if (!existing) {
+      throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+    }
+    return this.ecoEnzymeRepository.delete(id);
   }
 
   async addLog(batchId: string, input: CreateLogInput): Promise<EcoEnzymeLog> {

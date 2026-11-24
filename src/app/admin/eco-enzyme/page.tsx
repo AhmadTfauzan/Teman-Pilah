@@ -150,6 +150,13 @@ export default function AdminEcoEnzymePage() {
   }>({ isOpen: false, id: '', name: '' });
   const [isArchivingBatch, setIsArchivingBatch] = useState(false);
 
+  const [permanentDeleteModal, setPermanentDeleteModal] = useState<{
+    isOpen: boolean;
+    id: string;
+    name: string;
+  }>({ isOpen: false, id: '', name: '' });
+  const [isDeletingPermanently, setIsDeletingPermanently] = useState(false);
+
   // ════════════════ STATE VIDEO EDUKASI ════════════════
   const [videos, setVideos] = useState<EcoEnzymeVideoItem[]>([]);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
@@ -359,6 +366,22 @@ export default function AdminEcoEnzymePage() {
       toast.error(err instanceof Error ? err.message : 'Gagal mengarsipkan galon');
     } finally {
       setIsArchivingBatch(false);
+    }
+  };
+
+  const confirmPermanentDelete = async () => {
+    if (!permanentDeleteModal.id || isDeletingPermanently) return;
+    const targetId = permanentDeleteModal.id;
+    setIsDeletingPermanently(true);
+    try {
+      await ecoEnzymeApi.delete(targetId);
+      toast.success('Galon berhasil dihapus permanen');
+      setPermanentDeleteModal({ isOpen: false, id: '', name: '' });
+      await loadData(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus galon secara permanen');
+    } finally {
+      setIsDeletingPermanently(false);
     }
   };
 
@@ -744,15 +767,32 @@ export default function AdminEcoEnzymePage() {
                             )}
 
                             {isArchived ? (
-                              <button
-                                type="button"
-                                onClick={() => handleRestore(batch)}
-                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold transition-colors"
-                                title="Pulihkan dari arsip"
-                              >
-                                <RotateCcw className="w-3 h-3" />
-                                <span>Pulihkan</span>
-                              </button>
+                              <div className="flex items-center gap-1.5 flex-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestore(batch)}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold transition-colors"
+                                  title="Pulihkan dari arsip"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>Pulihkan</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPermanentDeleteModal({
+                                      isOpen: true,
+                                      id: batch.id,
+                                      name: `${batch.containerName} (${batch.batchCode || batch.publicCode})`,
+                                    });
+                                  }}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors shrink-0"
+                                  title="Hapus permanen dari database"
+                                  aria-label={`Hapus permanen ${batch.containerName}`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             ) : (
                               <div className="flex items-center gap-1 ml-auto">
                                 <button
@@ -967,14 +1007,31 @@ export default function AdminEcoEnzymePage() {
                               )}
 
                               {isArchived ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRestore(batch)}
-                                  className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 transition-colors"
-                                  title="Pulihkan dari arsip"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestore(batch)}
+                                    className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                    title="Pulihkan dari arsip"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPermanentDeleteModal({
+                                        isOpen: true,
+                                        id: batch.id,
+                                        name: `${batch.containerName} (${batch.batchCode || batch.publicCode})`,
+                                      });
+                                    }}
+                                    className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                    title="Hapus permanen dari database"
+                                    aria-label={`Hapus permanen ${batch.containerName}`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               ) : (
                                 <button
                                   type="button"
@@ -1210,6 +1267,20 @@ export default function AdminEcoEnzymePage() {
         confirmText="Arsipkan Galon"
         description="Galon ini akan dipindahkan ke arsip. QR Code pada fisik galon tetap dapat dipindai oleh warga."
         isDeleting={isArchivingBatch}
+      />
+
+      {/* 4b. Modal Konfirmasi Hapus Permanen Galon */}
+      <DeleteModal
+        isOpen={permanentDeleteModal.isOpen}
+        onClose={() => {
+          if (!isDeletingPermanently) setPermanentDeleteModal({ isOpen: false, id: '', name: '' });
+        }}
+        onConfirm={confirmPermanentDelete}
+        title="Hapus Permanen Galon Eco Enzyme?"
+        itemName={permanentDeleteModal.name}
+        confirmText="Hapus Permanen"
+        description="PERINGATAN: Galon ini akan dihapus secara PERMANEN dari database beserta seluruh riwayat inspeksinya. QR Code tidak dapat digunakan lagi untuk galon ini. Tindakan ini TIDAK DAPAT dibatalkan."
+        isDeleting={isDeletingPermanently}
       />
 
       {/* 5. Modal Tambah / Edit Video Edukasi */}

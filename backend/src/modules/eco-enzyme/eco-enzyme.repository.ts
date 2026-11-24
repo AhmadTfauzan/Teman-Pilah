@@ -561,8 +561,45 @@ export class EcoEnzymeRepository {
   }
 
   async delete(id: string): Promise<EcoEnzymeBatch> {
-    return this.prisma.ecoEnzymeBatch.delete({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.ecoEnzymeBatch.findUnique({
+        where: { id },
+        select: { id: true, qrCodeId: true },
+      });
+      if (!existing) {
+        throw new AppError("Batch Eco Enzyme tidak ditemukan", 404);
+      }
+
+      await tx.ecoEnzymeBatch.updateMany({
+        where: { previousBatchId: id },
+        data: { previousBatchId: null },
+      });
+
+      await tx.ecoEnzymeLog.deleteMany({
+        where: { batchId: id },
+      });
+
+      const deleted = await tx.ecoEnzymeBatch.delete({
+        where: { id },
+      });
+
+      if (existing.qrCodeId) {
+        const remainingBatches = await tx.ecoEnzymeBatch.count({
+          where: { qrCodeId: existing.qrCodeId },
+        });
+        const remainingProducts = await tx.product.count({
+          where: { qrCodeId: existing.qrCodeId },
+        });
+        if (remainingBatches === 0 && remainingProducts === 0) {
+          await tx.qrCode
+            .delete({
+              where: { id: existing.qrCodeId },
+            })
+            .catch(() => null);
+        }
+      }
+
+      return deleted;
     });
   }
 

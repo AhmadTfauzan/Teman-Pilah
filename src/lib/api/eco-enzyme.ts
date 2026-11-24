@@ -227,7 +227,7 @@ export const ecoEnzymeApi = {
   },
 
   /**
-   * DELETE /api/eco-enzyme/batches/:id (Diarahkan ke soft delete di backend)
+   * DELETE /api/eco-enzyme/batches/:id (Hapus permanen galon dari database)
    */
   async delete(id: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/api/eco-enzyme/batches/${id}`, {
